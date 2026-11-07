@@ -9,11 +9,21 @@ Regenerate this file with `node scripts/licenses.mjs`.
 - Node.js (MIT) is embedded in Electron.
 - Icons are from Lucide (ISC), via lucide-react.
 
+## Platform libraries
+
+- Chrome extension support: electron-chrome-extensions and electron-chrome-web-store by Samuel Maddock (MIT, https://github.com/samuelmaddock/electron-browser-shell). Extensions installed from the Chrome Web Store are downloaded by the user's own action; swyr does not mirror or redistribute them.
+- Ad and tracker blocking: @ghostery/adblocker-electron, @ghostery/adblocker, @ghostery/adblocker-content, @ghostery/adblocker-electron-preload, @ghostery/adblocker-extended-selectors and @ghostery/url-parser, Copyright (c) 2017-present Ghostery GmbH.
+
+  This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+  swyr uses these files unmodified from npm; their source is available at https://github.com/ghostery/adblocker. The filter lists they download (EasyList and EasyPrivacy, via Ghostery's prebuilt engines) are dual licensed GPL-3.0 / CC BY-SA 3.0 by The EasyList authors (https://easylist.to) and are fetched at run time, not bundled.
+
 ## Direct dependencies
 
 | Package | Version | License |
 |---|---|---|
 | @eslint/js | 10.0.1 | MIT |
+| @ghostery/adblocker-electron | 2.20.3 | MPL-2.0 |
 | @tailwindcss/vite | 4.3.5 | MIT |
 | @types/node | 24.19.2 | MIT |
 | @types/react | 19.3.0 | MIT |
@@ -21,6 +31,8 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | @vitejs/plugin-react | 6.2.1 | MIT |
 | cmdk | 1.1.1 | MIT |
 | electron | 45.2.3 | MIT |
+| electron-chrome-extensions | 4.10.0 | MIT |
+| electron-chrome-web-store | 0.13.0 | MIT |
 | electron-vite | 6.0.0 | MIT |
 | eslint | 10.14.0 | MIT |
 | eslint-plugin-react-hooks | 7.1.1 | MIT |
@@ -39,6 +51,14 @@ Regenerate this file with `node scripts/licenses.mjs`.
 
 | Package | Version | License |
 |---|---|---|
+| @electron-internal/extract-zip | 1.0.8 | MIT |
+| @electron/get | 5.1.0 | MIT |
+| @ghostery/adblocker | 2.20.3 | MPL-2.0 |
+| @ghostery/adblocker-content | 2.20.3 | MPL-2.0 |
+| @ghostery/adblocker-electron | 2.20.3 | MPL-2.0 |
+| @ghostery/adblocker-electron-preload | 2.20.3 | MPL-2.0 |
+| @ghostery/adblocker-extended-selectors | 2.20.3 | MPL-2.0 |
+| @ghostery/url-parser | 1.3.1 | MPL-2.0 |
 | @radix-ui/primitive | 1.2.0 | MIT |
 | @radix-ui/react-compose-refs | 1.1.5 | MIT |
 | @radix-ui/react-context | 1.3.0 | MIT |
@@ -55,21 +75,50 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | @radix-ui/react-use-controllable-state | 1.3.0 | MIT |
 | @radix-ui/react-use-effect-event | 0.0.5 | MIT |
 | @radix-ui/react-use-layout-effect | 1.1.4 | MIT |
+| @remusao/guess-url-type | 2.1.0 | MPL-2.0 |
+| @remusao/small | 2.1.0 | MPL-2.0 |
+| @remusao/smaz | 2.2.0 | MPL-2.0 |
+| @remusao/smaz-compress | 2.2.0 | MPL-2.0 |
+| @remusao/smaz-decompress | 2.2.0 | MPL-2.0 |
+| @remusao/trie | 2.1.0 | MPL-2.0 |
+| @types/chrome | 0.0.287 | MIT |
+| @types/filesystem | 0.0.36 | MIT |
+| @types/filewriter | 0.0.33 | MIT |
+| @types/har-format | 1.2.16 | MIT |
+| @types/node | 24.19.2 | MIT |
 | @types/react | 19.3.0 | MIT |
 | @types/react-dom | 19.3.0 | MIT |
+| adm-zip | 0.5.18 | MIT |
 | aria-hidden | 1.2.6 | MIT |
 | cmdk | 1.1.1 | MIT |
 | csstype | 3.2.3 | MIT |
+| debug | 4.4.3 | MIT |
 | detect-node-es | 1.1.0 | MIT |
+| electron | 45.2.3 | MIT |
+| electron-chrome-extensions | 4.10.0 | MIT |
+| electron-chrome-web-store | 0.13.0 | MIT |
+| env-paths | 3.0.0 | MIT |
 | get-nonce | 1.0.1 | MIT |
+| graceful-fs | 4.2.11 | ISC |
 | lucide-react | 1.70.0 | ISC |
+| ms | 2.1.3 | MIT |
+| pbf | 4.0.2 | BSD-3-Clause |
+| progress | 2.0.3 | MIT |
+| protocol-buffers-schema | 3.6.1 | MIT |
 | react | 19.3.1 | MIT |
 | react-dom | 19.3.1 | MIT |
 | react-remove-scroll | 2.7.2 | MIT |
 | react-remove-scroll-bar | 2.3.8 | MIT |
 | react-style-singleton | 2.2.3 | MIT |
+| resolve-protobuf-schema | 2.1.0 | MIT |
 | scheduler | 0.28.0 | MIT |
+| semver | 7.8.6 | ISC |
+| sumchecker | 3.0.1 | Apache-2.0 |
+| tldts-core | 7.4.20 | MIT |
+| tldts-experimental | 7.4.19 | MIT |
 | tslib | 2.9.1 | 0BSD |
+| undici | 7.30.2 | MIT |
+| undici-types | 7.24.6 | MIT |
 | use-callback-ref | 1.3.3 | MIT |
 | use-sidecar | 1.1.3 | MIT |
 | zustand | 5.1.0 | MIT |
@@ -98,8 +147,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | @babel/types | 7.29.11 | MIT |
 | @cacheable/memory | 2.2.0 | MIT |
 | @cacheable/utils | 2.5.0 | MIT |
-| @electron-internal/extract-zip | 1.0.8 | MIT |
-| @electron/get | 5.1.0 | MIT |
 | @emnapi/core | 1.11.3 | MIT |
 | @emnapi/runtime | 1.11.3 | MIT |
 | @emnapi/wasi-threads | 1.2.3 | MIT |
@@ -160,7 +207,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | @types/esrecurse | 4.3.1 | MIT |
 | @types/estree | 1.0.10 | MIT |
 | @types/json-schema | 7.0.15 | MIT |
-| @types/node | 24.19.2 | MIT |
 | @typescript-eslint/eslint-plugin | 8.72.1 | MIT |
 | @typescript-eslint/parser | 8.72.1 | MIT |
 | @typescript-eslint/project-service | 8.72.1 | MIT |
@@ -184,14 +230,11 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | caniuse-lite | 1.0.30001823 | CC-BY-4.0 |
 | convert-source-map | 2.0.0 | MIT |
 | cross-spawn | 7.0.6 | MIT |
-| debug | 4.4.3 | MIT |
 | deep-is | 0.1.4 | MIT |
 | detect-libc | 2.1.2 | Apache-2.0 |
-| electron | 45.2.3 | MIT |
 | electron-to-chromium | 1.5.478 | ISC |
 | electron-vite | 6.0.0 | MIT |
 | enhanced-resolve | 5.26.1 | MIT |
-| env-paths | 3.0.0 | MIT |
 | escalade | 3.2.0 | MIT |
 | escape-string-regexp | 4.0.0 | MIT |
 | eslint | 10.14.0 | MIT |
@@ -216,7 +259,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | gensync | 1.0.0-beta.2 | MIT |
 | glob-parent | 6.0.2 | ISC |
 | globals | 17.14.0 | MIT |
-| graceful-fs | 4.2.11 | ISC |
 | hashery | 1.5.1 | MIT |
 | hermes-estree | 0.25.1 | MIT |
 | hermes-parser | 0.25.1 | MIT |
@@ -252,7 +294,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | lru-cache | 5.1.1 | ISC |
 | magic-string | 1.4.5 | MIT |
 | minimatch | 10.2.6 | BlueOak-1.0.0 |
-| ms | 2.1.3 | MIT |
 | nanoid | 3.3.20 | MIT |
 | natural-compare | 1.4.0 | MIT |
 | node-releases | 2.0.63 | MIT |
@@ -267,16 +308,13 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | playwright-core | 1.65.0 | Apache-2.0 |
 | postcss | 8.5.32 | MIT |
 | prelude-ls | 1.2.1 | MIT |
-| progress | 2.0.3 | MIT |
 | punycode | 2.3.1 | MIT |
 | qified | 0.10.1 | MIT |
 | rolldown | 1.2.16 | MIT |
 | semver | 6.3.2 | ISC |
-| semver | 7.8.6 | ISC |
 | shebang-command | 2.0.0 | MIT |
 | shebang-regex | 3.0.0 | MIT |
 | source-map-js | 1.2.2 | BSD-3-Clause |
-| sumchecker | 3.0.1 | Apache-2.0 |
 | tailwindcss | 4.3.5 | MIT |
 | tapable | 2.3.3 | MIT |
 | tinyglobby | 0.2.17 | MIT |
@@ -285,8 +323,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | type-check | 0.4.0 | MIT |
 | typescript | 6.0.3 | Apache-2.0 |
 | typescript-eslint | 8.72.1 | MIT |
-| undici | 7.30.2 | MIT |
-| undici-types | 7.24.6 | MIT |
 | update-browserslist-db | 1.3.4 | MIT |
 | uri-js | 4.4.1 | BSD-2-Clause |
 | vite | 8.3.6 | MIT |

@@ -1,6 +1,7 @@
 // IPC between renderers and the command registry, with per-sender permissions.
 import { ipcMain } from 'electron'
 import type { Core } from './windows/WindowManager'
+import { PLATFORM_PAGE_COMMANDS } from './commands/platform'
 
 /** commands an internal page (swyr://newtab, settings, archive) may run */
 const PAGE_COMMANDS = new Set([
@@ -11,7 +12,8 @@ const PAGE_COMMANDS = new Set([
   'settings.set',
   'tab.navigate',
   'tab.new',
-  'space.edit'
+  'space.edit',
+  ...PLATFORM_PAGE_COMMANDS // round 2c
 ])
 
 export function registerIpc(core: Core): void {

@@ -11,18 +11,21 @@ export const PAGES: Record<string, string> = {
   overlay: 'overlay/index.html',
   newtab: 'pages/newtab/index.html',
   settings: 'pages/settings/index.html',
-  archive: 'pages/archive/index.html'
+  archive: 'pages/archive/index.html',
+  extensions: 'pages/extensions/index.html'
 }
 
 /** pages that may be opened in a tab */
-export const TAB_PAGES = new Set(['newtab', 'settings', 'archive'])
+export const TAB_PAGES = new Set(['newtab', 'settings', 'archive', 'extensions'])
 
 export function registerSchemePrivileges(): void {
   protocol.registerSchemesAsPrivileged([
     {
       scheme: SCHEME,
       privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true }
-    }
+    },
+    // round 2c: electron-chrome-extensions serves extension icons over crx://
+    { scheme: 'crx', privileges: { bypassCSP: true } }
   ])
 }
 

@@ -7,6 +7,7 @@ import { displayUrl } from '@shared/url'
 import { Favicon } from '../common/Favicon'
 import { invoke } from '../common/store'
 import { activeSpace } from '../common/theme'
+import { ExtensionActions } from './urlrow/ExtensionActions'
 
 export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean }): ReactNode {
   const { state, window: win } = vs
@@ -36,6 +37,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
           <PanelLeft size={16} strokeWidth={1.9} />
         </button>
         <div className="flex-1" />
+        {space?.incognito && <span className="rounded-md bg-[#17181c] px-1.5 py-0.5 text-[11px] font-bold text-white">Private</span>}
         <button className="icon-btn" title="Back (⌘[)" disabled={!rt?.canGoBack} onClick={() => invoke('tab.back')}>
           <ArrowLeft size={16} strokeWidth={1.9} />
         </button>
@@ -53,6 +55,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
       </div>
 
       <UrlField item={active} loading={Boolean(rt?.loading)} />
+      <ExtensionActions vs={vs} />
 
       <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         {favorites.length > 0 && (

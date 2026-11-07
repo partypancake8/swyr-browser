@@ -7,6 +7,7 @@ import { clampSidebar } from '../layout/Layout'
 import { makeSpace } from '../state/defaults'
 import { newId } from '../util/id'
 import type { CommandContext, Commands } from './Commands'
+import { assignSpaceProfile, registerPlatformCommands } from './platform'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 
@@ -397,7 +398,8 @@ export function registerBuiltins(c: Commands): void {
     const space = spaceById(s, str(p.id) ?? w?.activeSpaceId)
     if (!space) return false
     const theme = p.theme && typeof p.theme === 'object' ? (p.theme as Partial<SpaceTheme>) : undefined
-    const hasPatch = 'name' in p || 'emoji' in p || theme
+    const profileId = str(p.profileId) // round 2c: a space can move to another profile
+    const hasPatch = 'name' in p || 'emoji' in p || theme || profileId
     if (!hasPatch) {
       w?.openOverlay({ kind: 'spaceEdit', spaceId: space.id })
       return true
@@ -412,6 +414,7 @@ export function registerBuiltins(c: Commands): void {
         if (theme.appearance === 'light' || theme.appearance === 'dark' || theme.appearance === 'auto') space.theme.appearance = theme.appearance
       }
     })
+    if (profileId) assignSpaceProfile(core, space, profileId)
     for (const win of core.windows) if (win.activeSpaceId === space.id) win.switchSpace(space.id)
     return true
   })
@@ -569,6 +572,8 @@ export function registerBuiltins(c: Commands): void {
     void shell.openPath(app.getPath('downloads'))
     return true
   })
+
+  registerPlatformCommands(c) // round 2c: extensions, ad blocker, downloads, link rules, importer, profiles
 
   c.register('debug.titles', ({ core, w }) => (w ? sidebarOrder(core.store.state, w.space()).map(itemTitle) : []))
 }

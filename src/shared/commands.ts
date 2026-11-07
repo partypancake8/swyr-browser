@@ -62,7 +62,32 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'tab.contextMenu', title: 'Tab Menu' },
   { name: 'space.contextMenu', title: 'Space Menu' },
   { name: 'settings.set', title: 'Change Setting' },
-  { name: 'app.quit', title: 'Quit swyr', palette: true }
+  { name: 'app.quit', title: 'Quit swyr', palette: true },
+  // round 2c: platform
+  { name: 'extensions.open', title: 'Extensions', palette: true },
+  { name: 'extensions.openStore', title: 'Open the Chrome Web Store', palette: true },
+  { name: 'extensions.loadUnpacked', title: 'Load Unpacked Extension…', palette: true },
+  { name: 'extensions.remove', title: 'Remove Extension' },
+  { name: 'extensions.toggle', title: 'Turn Extension On or Off' },
+  { name: 'extensions.openPopup', title: 'Open Extension Popup' },
+  { name: 'downloads.setDirectory', title: 'Change Downloads Folder…' },
+  { name: 'downloads.cancel', title: 'Cancel Download' },
+  { name: 'downloads.openFile', title: 'Open Downloaded File' },
+  { name: 'downloads.reveal', title: 'Show Download in Finder' },
+  { name: 'downloads.clear', title: 'Clear Downloads' },
+  { name: 'adblock.toggle', title: 'Turn Ad Blocker On or Off', palette: true },
+  { name: 'adblock.allowSite', title: 'Allow Ads on This Site', palette: true },
+  { name: 'linkRules.add', title: 'Add Link Rule' },
+  { name: 'linkRules.remove', title: 'Remove Link Rule' },
+  { name: 'link.openExternal', title: 'Open Link' },
+  { name: 'import.arc', title: 'Import Sidebar From Another Browser…', palette: true },
+  { name: 'data.export', title: 'Export swyr Data…', palette: true },
+  { name: 'profile.new', title: 'New Profile', palette: true },
+  { name: 'profile.rename', title: 'Rename Profile' },
+  { name: 'profile.delete', title: 'Delete Profile' },
+  { name: 'profile.switch', title: 'Switch Profile' },
+  { name: 'window.newIncognito', title: 'New Private Window', palette: true },
+  { name: 'browser.makeDefault', title: 'Make swyr the Default Browser', palette: true }
 ]
 
 export const COMMAND_TITLES: Record<string, string> = Object.fromEntries(COMMANDS.map((c) => [c.name, c.title]))
@@ -118,7 +143,11 @@ export const DEFAULT_BINDINGS: Binding[] = [
   { id: 'zoom.out', command: 'zoom.out', accelerator: 'Cmd+-' },
   { id: 'zoom.reset', command: 'zoom.reset', accelerator: 'Cmd+0' },
   { id: 'settings.open', command: 'settings.open', accelerator: 'Cmd+,' },
-  { id: 'app.quit', command: 'app.quit', accelerator: 'Cmd+Q' }
+  { id: 'app.quit', command: 'app.quit', accelerator: 'Cmd+Q' },
+  // round 2c: platform
+  { id: 'extensions.open', command: 'extensions.open', accelerator: 'Cmd+E' },
+  { id: 'downloads.open', command: 'downloads.open', accelerator: 'Cmd+Shift+J' },
+  { id: 'window.newIncognito', command: 'window.newIncognito', accelerator: 'Cmd+Shift+N' }
 ]
 
 export function resolveBindings(overrides: Record<string, string> | undefined): Binding[] {

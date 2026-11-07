@@ -1,0 +1,141 @@
+{
+ "sidebar": {
+  "containers": [
+   {
+    "global": {}
+   },
+   {
+    "spaces": [
+     "space-a",
+     {
+      "id": "space-a",
+      "title": "Imported Space A",
+      "newContainerIDs": [
+       {
+        "pinned": {}
+       },
+       "cont-a-pinned",
+       {
+        "unpinned": {}
+       },
+       "cont-a-unpinned"
+      ]
+     },
+     "space-b",
+     {
+      "id": "space-b",
+      "title": "Imported Space B",
+      "newContainerIDs": [
+       {
+        "pinned": {}
+       },
+       "cont-b-pinned",
+       {
+        "unpinned": {}
+       },
+       "cont-b-unpinned"
+      ]
+     }
+    ],
+    "items": [
+     "cont-a-pinned",
+     {
+      "id": "cont-a-pinned",
+      "parentID": null,
+      "childrenIds": [
+       "folder-1",
+       "tab-2"
+      ]
+     },
+     "cont-a-unpinned",
+     {
+      "id": "cont-a-unpinned",
+      "parentID": null,
+      "childrenIds": [
+       "tab-3"
+      ]
+     },
+     "cont-b-pinned",
+     {
+      "id": "cont-b-pinned",
+      "parentID": null,
+      "childrenIds": []
+     },
+     "cont-b-unpinned",
+     {
+      "id": "cont-b-unpinned",
+      "parentID": null,
+      "childrenIds": [
+       "tab-4"
+      ]
+     },
+     "folder-1",
+     {
+      "id": "folder-1",
+      "parentID": "cont-a-pinned",
+      "title": "Imported Folder",
+      "childrenIds": [
+       "tab-1"
+      ],
+      "data": {
+       "list": {}
+      }
+     },
+     "tab-1",
+     {
+      "id": "tab-1",
+      "parentID": "folder-1",
+      "title": null,
+      "childrenIds": [],
+      "data": {
+       "tab": {
+        "savedTitle": "Pinned in folder",
+        "savedURL": "https://imported-pinned.example/in-folder"
+       }
+      }
+     },
+     "tab-2",
+     {
+      "id": "tab-2",
+      "parentID": "cont-a-pinned",
+      "title": "Custom name",
+      "childrenIds": [],
+      "data": {
+       "tab": {
+        "savedTitle": "Pinned top",
+        "savedURL": "https://imported-pinned.example/top"
+       }
+      }
+     },
+     "tab-3",
+     {
+      "id": "tab-3",
+      "parentID": "cont-a-unpinned",
+      "title": null,
+      "childrenIds": [],
+      "data": {
+       "tab": {
+        "savedTitle": "Today tab",
+        "savedURL": "https://imported-today.example/"
+       }
+      }
+     },
+     "tab-4",
+     {
+      "id": "tab-4",
+      "parentID": "cont-b-unpinned",
+      "title": null,
+      "childrenIds": [],
+      "data": {
+       "tab": {
+        "savedTitle": "B today",
+        "savedURL": "https://imported-b.example/"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "version": 1
+}

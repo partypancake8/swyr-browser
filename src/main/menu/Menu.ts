@@ -2,6 +2,7 @@
 import { Menu, type MenuItemConstructorOptions } from 'electron'
 import { sortedSpaces } from '@shared/ops'
 import type { Core } from '../windows/WindowManager'
+import { IMPORT_FROM_LABEL } from '@shared/importer'
 
 export class AppMenu {
   private signature = ''
@@ -50,6 +51,7 @@ export class AppMenu {
           { role: 'about', label: 'About swyr' },
           sep,
           this.cmd('Settings…', 'settings.open'),
+          this.cmd('Extensions', 'extensions.open'),
           sep,
           { role: 'services' },
           sep,
@@ -65,11 +67,17 @@ export class AppMenu {
         submenu: [
           this.cmd('New Tab', 'commandbar.open', { mode: 'new' }),
           this.cmd('New Window', 'window.new'),
+          this.cmd('New Private Window', 'window.newIncognito'),
           sep,
           this.cmd('Open Location…', 'commandbar.open', { mode: 'current' }),
           sep,
           this.cmd('Close Tab', 'tab.close'),
-          this.cmd('Close Window', 'window.close')
+          this.cmd('Close Window', 'window.close'),
+          sep,
+          this.cmd(IMPORT_FROM_LABEL + '…', 'import.arc'),
+          this.cmd('Export swyr Data…', 'data.export'),
+          sep,
+          this.cmd('Downloads', 'downloads.open')
         ]
       },
       {

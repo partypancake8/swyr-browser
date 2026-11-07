@@ -4,6 +4,7 @@ import type { Item, Rect, TabRuntime } from '@shared/types'
 import { preloadPath } from './ShellView'
 import { profileSession } from '../profiles/Profiles'
 import { isInternalUrl } from '../protocol/Protocol'
+import { extensionsService } from '../extensions/Extensions'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 
 export const WARM_CACHE = 8
@@ -55,6 +56,7 @@ export class TabViews {
     this.views.set(item.id, view)
     this.runtime.set(item.id, { loading: true, canGoBack: false, canGoForward: false, zoom: 0 })
     this.wire(item.id, view)
+    extensionsService()?.tabAdded(view.webContents, this.w.win) // round 2c
     void view.webContents.loadURL(item.url || 'swyr://newtab').catch(() => undefined)
     this.touch(item.id)
     return view
@@ -156,6 +158,7 @@ export class TabViews {
     ids.forEach((id, i) => {
       const v = this.views.get(id)
       if (!v) return
+      if (i === 0 && this.attached[0] !== id) extensionsService()?.tabSelected(v.webContents) // round 2c
       if (!this.attached.includes(id)) content.addChildView(v)
       v.setBounds(rects[i])
       next.push(id)
@@ -173,13 +176,17 @@ export class TabViews {
     this.views.delete(id)
     this.runtime.delete(id)
     this.mru = this.mru.filter((x) => x !== id)
+    extensionsService()?.tabRemoved(v.webContents) // round 2c
     if (!v.webContents.isDestroyed()) v.webContents.close()
     this.w.core.scheduleBroadcast()
   }
 
   /** close every view without touching the (already destroyed) window */
   releaseAll(): void {
-    for (const [, v] of this.views) if (!v.webContents.isDestroyed()) v.webContents.close()
+    for (const [, v] of this.views) {
+      extensionsService()?.tabRemoved(v.webContents) // round 2c
+      if (!v.webContents.isDestroyed()) v.webContents.close()
+    }
     this.views.clear()
     this.runtime.clear()
     this.mru = []

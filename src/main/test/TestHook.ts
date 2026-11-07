@@ -5,12 +5,15 @@ import path from 'node:path'
 import type { Rect, TestState } from '@shared/types'
 import { TAB_RADIUS } from '../views/TabViews'
 import type { Core } from '../windows/WindowManager'
+import { activePartition, platformRuntime } from '../commands/platform'
 
 export interface SwyrTestHook {
   getState(): TestState | null
   dispatch(command: string, payload?: unknown): Promise<unknown>
   waitIdle(): Promise<void>
   capture(filePath: string): Promise<boolean>
+  /** round 2c: partition of the active tab's session in the first window */
+  activePartition(): string
 }
 
 declare global {
@@ -91,7 +94,12 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
     getState(): TestState | null {
       const core = current()
       if (!core) return null
-      return JSON.parse(JSON.stringify({ ...core.store.state, windows: core.windows.map((w) => w.runtime()) }))
+      const { extensions, downloads, adblockStats } = platformRuntime()
+      return JSON.parse(JSON.stringify({ ...core.store.state, windows: core.windows.map((w) => w.runtime()), extensions, downloads, adblockStats }))
+    },
+    activePartition(): string {
+      const core = current()
+      return core ? activePartition(core) : ''
     },
     async dispatch(command: string, payload?: unknown): Promise<unknown> {
       const core = await ready
