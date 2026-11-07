@@ -43,6 +43,7 @@ Regenerate this file with \`node scripts/licenses.mjs\`.
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
   swyr uses these files unmodified from npm; their source is available at https://github.com/ghostery/adblocker. The filter lists they download (EasyList and EasyPrivacy, via Ghostery's prebuilt engines) are dual licensed GPL-3.0 / CC BY-SA 3.0 by The EasyList authors (https://easylist.to) and are fetched at run time, not bundled.
+- Reader view: @mozilla/readability, Copyright (c) 2010 Arc90 Inc (as stated in its LICENSE.md), maintained by Mozilla, licensed under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0). swyr loads Readability.js unmodified from npm and runs it inside the page being read.
 
 ## Direct dependencies
 

@@ -56,6 +56,7 @@
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
     "@ghostery/adblocker-electron": "2.20.3",
+    "@mozilla/readability": "0.6.0",
     "cmdk": "1.1.1",
     "electron-chrome-extensions": "4.10.0",
     "electron-chrome-web-store": "0.13.0",

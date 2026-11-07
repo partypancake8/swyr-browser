@@ -9,6 +9,7 @@ import type { CommandContext, Commands } from './Commands'
 import { registerItemCommands } from './items'
 import { registerSpaceCommands } from './spaces'
 import { registerPlatformCommands } from './platform'
+import { registerPageCommands } from './pages'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { routeSplitClose } from './split'
@@ -406,6 +407,7 @@ export function registerBuiltins(c: Commands): void {
   registerItemCommands(c)
   registerSpaceCommands(c)
   registerPlatformCommands(c) // round 2c: extensions, ad blocker, downloads, link rules, importer, profiles
+  registerPageCommands(c) // round 3a: styles, site settings, reader, history, capture
 
   c.register('debug.titles', ({ core, w }) => (w ? sidebarOrder(core.store.state, w.space()).map(itemTitle) : []))
 }

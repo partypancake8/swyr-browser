@@ -140,6 +140,9 @@ export type OverlayState =
   // round 2a
   | { kind: 'preview'; seq: number }
   | { kind: 'splitDrop'; seq: number; edge?: SplitEdge | null; baseId?: string | null }
+  // round 3a: popovers anchored to the URL row
+  | { kind: 'siteSettings'; seq: number }
+  | { kind: 'stylePanel'; seq: number }
 
 /** an edge of the content area a tab can be dropped on to split */
 export type SplitEdge = 'left' | 'right' | 'top' | 'bottom'
@@ -372,4 +375,65 @@ export interface TestState {
   extensions?: ExtensionRuntime[]
   downloads?: DownloadEntry[]
   adblockStats?: AdblockStats
+}
+
+// round 3a: Styles, Site Settings, Reader, History, capture.
+
+export type SitePermission = 'camera' | 'microphone' | 'notifications' | 'location' | 'clipboard'
+export type PermissionDecision = 'allow' | 'deny'
+
+export interface Settings {
+  /** decisions per origin, recorded when pages ask (Site Settings lists and revokes them) */
+  sitePermissions?: Record<string, Partial<Record<SitePermission, PermissionDecision>>>
+}
+
+export interface LinkRule {
+  /** open matching links in a Mini Window instead of a space ("Always open this site in a mini window") */
+  mini?: boolean
+}
+
+export interface TabRuntime {
+  /** the tab shows the Reader view of its page */
+  reader?: boolean
+}
+
+export interface StyleSavePayload {
+  id?: string
+  hostPattern: string
+  enabled?: boolean
+  colors?: Style['colors']
+  font?: string
+  fontScale?: number
+  css?: string
+  js?: string
+  hiddenSelectors?: string[]
+}
+
+export interface HistoryEntry {
+  url: string
+  title: string
+  visitedAt: number
+  visitCount: number
+  profileId: string
+}
+
+/** what siteSettings.info returns for the popover */
+export interface SiteInfo {
+  itemId: string | null
+  url: string
+  origin: string
+  host: string
+  title: string
+  favicon: string | null
+  /** the page is a web page (http, https or file) */
+  web: boolean
+  adblockEnabled: boolean
+  /** ads allowed on this site (settings.adblockAllow) */
+  adblockAllowed: boolean
+  blocked: number
+  styles: Style[]
+  zoom: number
+  permissions: Partial<Record<SitePermission, PermissionDecision>>
+  mini: boolean
+  extensions: { id: string; name: string; iconDataUrl?: string }[]
 }

@@ -14,11 +14,14 @@ export const PAGES: Record<string, string> = {
   settings: 'pages/settings/index.html',
   archive: 'pages/archive/index.html',
   library: 'pages/library/index.html',
-  extensions: 'pages/extensions/index.html'
+  extensions: 'pages/extensions/index.html',
+  // round 3a
+  history: 'pages/history/index.html',
+  styles: 'pages/styles/index.html'
 }
 
 /** pages that may be opened in a tab */
-export const TAB_PAGES = new Set(['newtab', 'settings', 'archive', 'library', 'extensions'])
+export const TAB_PAGES = new Set(['newtab', 'settings', 'archive', 'library', 'extensions', 'history', 'styles'])
 
 export function registerSchemePrivileges(): void {
   protocol.registerSchemesAsPrivileged([
@@ -53,7 +56,9 @@ async function serve(request: Request): Promise<Response> {
   const host = url.hostname
   const dev = devUrl()
   const page = PAGES[host]
-  const isAsset = url.pathname !== '/' && url.pathname !== '' && !url.pathname.endsWith('.html')
+  // round 3a: page routes like swyr://styles/<id> (a path without a file extension) serve the page itself
+  const routed = Boolean(page) && !/\.[a-z0-9]+$/i.test(url.pathname)
+  const isAsset = url.pathname !== '/' && url.pathname !== '' && !url.pathname.endsWith('.html') && !routed
   if (dev) {
     const target = isAsset ? `${dev}${url.pathname}${url.search}` : page ? `${dev}/${page}` : ''
     if (target) return net.fetch(target)

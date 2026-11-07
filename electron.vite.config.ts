@@ -38,7 +38,10 @@ export default defineConfig({
           settings: r('src/renderer/pages/settings/index.html'),
           archive: r('src/renderer/pages/archive/index.html'),
           library: r('src/renderer/pages/library/index.html'),
-          extensions: r('src/renderer/pages/extensions/index.html')
+          extensions: r('src/renderer/pages/extensions/index.html'),
+          // round 3a
+          history: r('src/renderer/pages/history/index.html'),
+          styles: r('src/renderer/pages/styles/index.html')
         }
       }
     }

@@ -9,6 +9,8 @@ import { SpaceEditor } from './SpaceEditor'
 import { Dialogs } from './dialogs/Dialogs'
 import { Preview } from './Preview'
 import { SplitDropZones } from '../shell/SplitDropZones'
+import { SiteSettings } from './SiteSettings'
+import { StylePanel } from './StylePanel'
 
 export function App(): ReactNode {
   const vs = useView((s) => s.vs)
@@ -72,6 +74,11 @@ export function App(): ReactNode {
       return <Preview key={overlay.seq} vs={vs} />
     case 'splitDrop':
       return <SplitDropZones key={overlay.seq} hover={overlay.edge} />
+    // round 3a
+    case 'siteSettings':
+      return <SiteSettings key={overlay.seq} vs={vs} />
+    case 'stylePanel':
+      return <StylePanel key={overlay.seq} vs={vs} />
     default:
       return null
   }

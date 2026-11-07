@@ -19,6 +19,8 @@ export interface SwyrTestHook {
   captureMini(filePath: string, id?: number): Promise<boolean>
   /** round 2c: partition of the active tab's session in the first window */
   activePartition(): string
+  /** round 3a: executeJavaScript in the first window's active tab (the focused pane of a split) */
+  evalInActiveTab?(js: string): Promise<unknown>
 }
 
 declare global {
@@ -165,6 +167,18 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
       fs.mkdirSync(path.dirname(filePath), { recursive: true })
       fs.writeFileSync(filePath, composite(width, height, scale, layers).toPNG())
       return true
+    }
+  }
+  // round 3a: checks evaluate `require('electron')` in the main process, where require is module scoped
+  const g = globalThis as { require?: NodeJS.Require }
+  if (typeof g.require !== 'function') g.require = require
+  const hook = globalThis.__swyr!
+  if (!hook.evalInActiveTab) {
+    hook.evalInActiveTab = async (js: string): Promise<unknown> => {
+      const core = await ready
+      const wc = core.first()?.activeContents()
+      if (!wc || wc.isDestroyed()) return null
+      return wc.executeJavaScript(js, true)
     }
   }
 }
