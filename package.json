@@ -1,0 +1,49 @@
+{
+  "name": "swyr",
+  "productName": "swyr",
+  "version": "0.1.0",
+  "description": "swyr, an open-source macOS browser with a vertical sidebar, spaces and a command bar",
+  "license": "MIT",
+  "author": "Sawyer Smith",
+  "private": true,
+  "main": "out/main/index.js",
+  "build": {
+    "appId": "com.swyr.browser",
+    "productName": "swyr"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "lint": "eslint .",
+    "test": "npm run build && node tests/run.mjs",
+    "postinstall": "install-electron",
+    "licenses": "node scripts/licenses.mjs",
+    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/unit.mjs"
+  },
+  "dependencies": {
+    "cmdk": "1.1.1",
+    "lucide-react": "1.70.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zustand": "5.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@tailwindcss/vite": "4.3.5",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "electron": "45.2.3",
+    "electron-vite": "6.0.0",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.14.0",
+    "playwright": "1.65.0",
+    "tailwindcss": "4.3.5",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.6"
+  }
+}
