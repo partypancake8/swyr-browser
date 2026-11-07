@@ -15,7 +15,7 @@ import {
 } from '@dnd-kit/core'
 import { ArrowLeft, ArrowRight, Download, Folder, History, PanelLeft, RotateCw, X } from 'lucide-react'
 import type { Item, ViewState } from '@shared/types'
-import { itemTitle, sortedSpaces } from '@shared/ops'
+import { itemTitle, windowSpaces } from '@shared/ops'
 import { displayUrl } from '@shared/url'
 import { isDark } from '@shared/theme'
 import { Favicon } from '../common/Favicon'
@@ -29,6 +29,7 @@ import { TodayList } from './sidebar/TodayList'
 import { SpaceSwitcher } from './sidebar/SpaceSwitcher'
 import { focusedItem } from './SplitRow'
 import { MediaBar } from './MediaBar'
+import { ExtensionActions } from './urlrow/ExtensionActions'
 
 /** pointer drags start after 5 px; Option-drags and drags from inputs or buttons marked data-no-dnd are left alone */
 class SidebarPointerSensor extends PointerSensor {
@@ -56,7 +57,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
   const active = focusedItem(vs)
   const rt = active ? win.tabs[active.id] : undefined
   const dark = space ? isDark(space.theme, vs.systemDark) : vs.systemDark
-  const spaces = sortedSpaces(state)
+  const spaces = windowSpaces(state, win.activeSpaceId)
   const spaceIndex = spaces.findIndex((s) => s.id === space?.id)
 
   // ----- space switch animation: slide from the side the new space sits on
@@ -215,6 +216,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
             <PanelLeft size={16} strokeWidth={1.9} />
           </button>
           <div className="flex-1" />
+          {space?.incognito && <span className="rounded-md bg-[#17181c] px-1.5 py-0.5 text-[11px] font-bold text-white">Private</span>}
           <button className="icon-btn" title="Back (⌘[)" disabled={!rt?.canGoBack} onClick={() => invoke('tab.back')}>
             <ArrowLeft size={16} strokeWidth={1.9} />
           </button>
@@ -232,6 +234,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
         </div>
 
         <UrlField item={active} loading={Boolean(rt?.loading)} />
+        <ExtensionActions vs={vs} />
 
         <div
           className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"

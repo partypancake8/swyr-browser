@@ -5,7 +5,7 @@ import { Archive, Clapperboard, Download, LayoutGrid, Paintbrush, Pencil, Shapes
 import '../../common/base.css'
 import '../page.css'
 import type { LibrarySection, Space, ViewState } from '@shared/types'
-import { sortedSpaces, spaceCounts } from '@shared/ops'
+import { spaceCounts, regularSpaces } from '@shared/ops'
 import { NOISE_URL, gradientCss, isDark } from '@shared/theme'
 import { invoke, startViewSync, useView } from '../../common/store'
 import { activeSpace, useSpaceTheme } from '../../common/theme'
@@ -46,7 +46,7 @@ function Swatch({ space, dark, size = 44 }: { space: Space; dark: boolean; size?
 
 function SpacesView({ vs }: { vs: ViewState }): ReactNode {
   const [confirm, setConfirm] = useState<string | null>(null)
-  const spaces = sortedSpaces(vs.state)
+  const spaces = regularSpaces(vs.state)
   const profiles = new Map(vs.state.profiles.map((p) => [p.id, p.name]))
   return (
     <div>

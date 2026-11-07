@@ -3,7 +3,7 @@ import { BrowserWindow, WebContentsView, type Input, type Event as ElectronEvent
 import type { MiniViewState, MiniWindowRuntime, Profile } from '@shared/types'
 import { resolveBindings } from '@shared/commands'
 import { baseColor, isDark } from '@shared/theme'
-import { sortedSpaces, spaceById } from '@shared/ops'
+import { sortedSpaces, spaceById, regularSpaces } from '@shared/ops'
 import { preloadPath, rendererUrl } from '../views/ShellView'
 import { profileSession } from '../profiles/Profiles'
 import { isInternalUrl } from '../protocol/Protocol'
@@ -36,7 +36,7 @@ export class MiniWindow {
     readonly profile: Profile
   ) {
     const s = core.store.state
-    const space = spaceById(s, core.current()?.activeSpaceId) ?? sortedSpaces(s)[0]
+    const space = spaceById(s, core.current()?.activeSpaceId) ?? regularSpaces(s)[0] ?? sortedSpaces(s)[0]
     const dark = isDark(space.theme, core.systemDark())
     const last = core.lastMini && !core.lastMini.closed ? core.lastMini.win.getBounds() : null
     this.win = new BrowserWindow({
@@ -185,7 +185,7 @@ export class MiniWindow {
         canGoBack: Boolean(wc?.navigationHistory.canGoBack()),
         canGoForward: Boolean(wc?.navigationHistory.canGoForward())
       },
-      spaces: sortedSpaces(s),
+      spaces: regularSpaces(s),
       activeSpaceId: main?.activeSpaceId ?? null,
       systemDark: this.core.systemDark()
     }

@@ -5,6 +5,7 @@ import { useView, invoke } from '../common/store'
 import { SpaceBackground, activeSpace, useSpaceTheme } from '../common/theme'
 import { Sidebar } from './Sidebar'
 import { SplitDividers, useTabDragWatcher } from './SplitDropZones'
+import { DownloadsPanel } from './DownloadsPanel'
 
 const INSET = 8
 
@@ -49,6 +50,7 @@ export function App(): ReactNode {
       {visible ? (
         <div className="absolute inset-y-0 left-0" style={{ width }}>
           <Sidebar vs={vs} />
+          <DownloadsPanel windowId={vs.window.id} />
           <div
             className="no-drag absolute inset-y-0 right-0 z-10 w-[6px] cursor-col-resize"
             onPointerDown={onPointerDown}

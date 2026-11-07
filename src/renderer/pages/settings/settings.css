@@ -1,0 +1,18 @@
+/* tokens for swyr://settings and swyr://extensions (light, then dark) */
+:root {
+  --danger: #b42318;
+  --toggle-off: rgba(21, 23, 28, 0.28);
+  --nav-active: rgba(21, 23, 28, 0.08);
+  --ok: #1a7f37;
+}
+
+:root.dark {
+  --danger: #ff8a80;
+  --toggle-off: rgba(255, 255, 255, 0.28);
+  --nav-active: rgba(255, 255, 255, 0.1);
+  --ok: #6fdd8b;
+}
+
+kbd {
+  font-family: inherit;
+}

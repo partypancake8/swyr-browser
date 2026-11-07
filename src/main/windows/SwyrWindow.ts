@@ -2,7 +2,7 @@
 import { BaseWindow, type WebContents, type WebContentsView } from 'electron'
 import type { Item, OverlayInput, OverlayState, Rect, Space, ViewState, WindowRuntime } from '@shared/types'
 import { baseColor, isDark } from '@shared/theme'
-import { itemVisibleInSpace, sidebarOrder, sortedSpaces, spaceById } from '@shared/ops'
+import { itemVisibleInSpace, sidebarOrder, sortedSpaces, spaceById, regularSpaces } from '@shared/ops'
 import { computeLayout, type OverlayLayout } from '../layout/Layout'
 import { createShellView } from '../views/ShellView'
 import { createOverlayView } from '../views/OverlayView'
@@ -49,7 +49,7 @@ export class SwyrWindow {
     opts: WindowOptions = {}
   ) {
     const s = core.store.state
-    const space = spaceById(s, opts.spaceId) ?? sortedSpaces(s)[0]
+    const space = spaceById(s, opts.spaceId) ?? regularSpaces(s)[0] ?? sortedSpaces(s)[0]
     this.activeSpaceId = space.id
     const dark = isDark(space.theme, core.systemDark())
     this.win = new BaseWindow({
@@ -115,7 +115,7 @@ export class SwyrWindow {
 
   space(): Space {
     const s = this.core.store.state
-    return spaceById(s, this.activeSpaceId) ?? sortedSpaces(s)[0]
+    return spaceById(s, this.activeSpaceId) ?? regularSpaces(s)[0] ?? sortedSpaces(s)[0]
   }
 
   activeItem(): Item | undefined {

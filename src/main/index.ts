@@ -7,7 +7,7 @@ import { Core } from './windows/WindowManager'
 import { registerIpc } from './ipc'
 import { startAutoArchive, runAutoArchive } from './archive/AutoArchive'
 import { installTestHook } from './test/TestHook'
-import { openInMiniWindow } from './commands/mini'
+import { initPlatform } from './commands/platform'
 
 const TEST = process.env.SWYR_TEST === '1'
 
@@ -22,16 +22,17 @@ let markReady: (c: Core) => void = () => undefined
 const ready = new Promise<Core>((resolve) => (markReady = resolve))
 if (TEST) installTestHook(ready, () => core)
 
+/** every URL that arrives from outside (open-url, second instance, default browser) goes through Link Rules */
 function openUrl(url: string): void {
   if (!core) {
     pendingUrls.push(url)
     return
   }
-  // round 2a: external links can open in a Mini Window (the link-rules router may take this over)
-  if (core.store.state.settings.openExternalLinksInMiniWindow && openInMiniWindow(url) !== null) return
-  const w = core.current() ?? core.createWindow()
-  void core.commands.run('tab.new', { url }, w)
+  void core.commands.run('link.openExternal', { url }).catch((err) => console.error('[swyr] open url failed', err))
 }
+
+// cold start as the default browser: URLs passed on the command line
+for (const arg of process.argv.slice(1)) if (/^https?:\/\//i.test(arg)) pendingUrls.push(arg)
 
 app.on('open-url', (event, url) => {
   event.preventDefault()
@@ -52,6 +53,7 @@ if (!gotLock) {
     if (TEST) app.dock?.hide()
     setupDefaultSession()
     core = new Core()
+    initPlatform(core)
     core.commands.register('archive.runAuto', ({ core: c }) => runAutoArchive(c))
     registerIpc(core)
     core.menu.refresh()

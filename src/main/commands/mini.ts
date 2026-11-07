@@ -1,6 +1,6 @@
 // Mini Window commands, the chrome's IPC channel, and openInMiniWindow for external links.
 import { ipcMain, Menu } from 'electron'
-import { sortedSpaces, spaceById } from '@shared/ops'
+import { sortedSpaces, spaceById, regularSpaces } from '@shared/ops'
 import { resolveWithSettings } from '@shared/url'
 import { MiniWindow } from '../windows/MiniWindow'
 import { makeItem } from './builtins'
@@ -22,7 +22,10 @@ function findMini(core: Core, p: Record<string, unknown>): MiniWindow | undefine
 
 export function createMini(core: Core, url?: string): MiniWindow {
   const s = core.store.state
-  const space = spaceById(s, core.current()?.activeSpaceId) ?? sortedSpaces(s)[0]
+  // a private window's space never hands its profile to a mini window
+  const current = core.current()
+  const from = current && !current.space().incognito ? current : core.windows.find((x) => !x.closed && !x.space().incognito)
+  const space = spaceById(s, from?.activeSpaceId) ?? regularSpaces(s)[0] ?? sortedSpaces(s)[0]
   const profile = s.profiles.find((x) => x.id === space.profileId) ?? s.profiles[0]
   const target = url ? resolveWithSettings(url, s.settings).url : 'about:blank'
   const m = new MiniWindow(core, /^\s*(javascript|file|swyr):/i.test(target) ? 'about:blank' : target, profile)
@@ -31,12 +34,12 @@ export function createMini(core: Core, url?: string): MiniWindow {
 }
 
 /**
- * Opens a URL in a new Mini Window. The open-url handler calls this when
- * settings.openExternalLinksInMiniWindow is on (see src/main/index.ts openUrl).
+ * Opens a URL in a new Mini Window. External links reach this through link.openExternal
+ * (src/main/commands/platform.ts) when settings.openExternalLinksInMiniWindow is on and no link rule matched.
  */
-export function openInMiniWindow(url: string): number | null {
-  if (!coreRef) return null
-  return createMini(coreRef, url).id
+export function openInMiniWindow(url: string, core: Core | null = coreRef): number | null {
+  if (!core) return null
+  return createMini(core, url).id
 }
 
 /** move the mini window's page into a space of the main window as a Today tab */
@@ -133,10 +136,10 @@ export function registerMiniCommands(c: Commands, core: Core): void {
   c.register('mini.spaceMenu', ({ core: k }, p) => {
     const m = findMini(k, p)
     if (!m) return false
-    if (k.test) return sortedSpaces(k.store.state).map((x) => x.id)
+    if (k.test) return regularSpaces(k.store.state).map((x) => x.id)
     const current = k.current()?.activeSpaceId
     Menu.buildFromTemplate(
-      sortedSpaces(k.store.state).map((sp) => ({
+      regularSpaces(k.store.state).map((sp) => ({
         label: `${sp.emoji ? sp.emoji + '  ' : ''}${sp.name}`,
         type: 'checkbox' as const,
         checked: sp.id === current,

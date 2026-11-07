@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactNod
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { CornerUpLeft, X } from 'lucide-react'
 import type { Item, MenuEntry, Space, ViewState } from '@shared/types'
-import { awayFromPinned, itemTitle, sortedSpaces } from '@shared/ops'
+import { awayFromPinned, itemTitle, windowSpaces } from '@shared/ops'
 import { Favicon } from '../../common/Favicon'
 import { SEP, showMenu } from '../../common/menu'
 import { invoke } from '../../common/store'
@@ -72,7 +72,7 @@ export function DropLine({ indicator, depth }: { indicator: Indicator | null; de
 /** the shared right-click menu for a tab (rows and favorite tiles) */
 export function tabMenu(item: Item, vs: ViewState, space: Space | undefined): MenuEntry[] {
   const s = vs.state
-  const others = sortedSpaces(s).filter((x) => x.id !== (item.spaceId ?? space?.id))
+  const others = windowSpaces(s, vs.window.activeSpaceId).filter((x) => x.id !== (item.spaceId ?? space?.id))
   const folders = space ? s.items.filter((i) => i.kind === 'folder' && i.spaceId === space.id && i.id !== item.parentId) : []
   const fav = item.section === 'favorites'
   const entries: (MenuEntry | false)[] = [

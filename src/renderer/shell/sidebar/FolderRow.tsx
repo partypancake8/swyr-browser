@@ -2,14 +2,14 @@
 import type { ReactNode } from 'react'
 import { ChevronRight, Folder, FolderOpen } from 'lucide-react'
 import type { Item, MenuEntry, Space, ViewState } from '@shared/types'
-import { childrenOf, itemTitle, sortedSpaces } from '@shared/ops'
+import { childrenOf, itemTitle, windowSpaces } from '@shared/ops'
 import { SEP, showMenu } from '../../common/menu'
 import { invoke } from '../../common/store'
 import { justDragged } from './dnd'
 import { DropLine, ROW_INDENT, RenameInput, useItemDnd } from './TabRow'
 
 function folderMenu(folder: Item, vs: ViewState, space: Space | undefined): MenuEntry[] {
-  const others = sortedSpaces(vs.state).filter((x) => x.id !== space?.id)
+  const others = windowSpaces(vs.state, vs.window.activeSpaceId).filter((x) => x.id !== space?.id)
   return [
     { label: 'Rename…', command: 'folder.rename', payload: { itemId: folder.id } },
     { label: folder.collapsed ? 'Expand' : 'Collapse', command: 'folder.toggle', payload: { itemId: folder.id } },

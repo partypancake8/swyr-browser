@@ -103,7 +103,32 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'media.toggle', title: 'Play or Pause Media', palette: true },
   { name: 'media.close', title: 'Stop Media', palette: true },
   { name: 'media.activate', title: 'Go to Playing Tab', palette: true },
-  { name: 'media.pip', title: 'Picture in Picture', palette: true }
+  { name: 'media.pip', title: 'Picture in Picture', palette: true },
+  // round 2c: platform
+  { name: 'extensions.open', title: 'Extensions', palette: true },
+  { name: 'extensions.openStore', title: 'Open the Chrome Web Store', palette: true },
+  { name: 'extensions.loadUnpacked', title: 'Load Unpacked Extension…', palette: true },
+  { name: 'extensions.remove', title: 'Remove Extension' },
+  { name: 'extensions.toggle', title: 'Turn Extension On or Off' },
+  { name: 'extensions.openPopup', title: 'Open Extension Popup' },
+  { name: 'downloads.setDirectory', title: 'Change Downloads Folder…' },
+  { name: 'downloads.cancel', title: 'Cancel Download' },
+  { name: 'downloads.openFile', title: 'Open Downloaded File' },
+  { name: 'downloads.reveal', title: 'Show Download in Finder' },
+  { name: 'downloads.clear', title: 'Clear Downloads' },
+  { name: 'adblock.toggle', title: 'Turn Ad Blocker On or Off', palette: true },
+  { name: 'adblock.allowSite', title: 'Allow Ads on This Site', palette: true },
+  { name: 'linkRules.add', title: 'Add Link Rule' },
+  { name: 'linkRules.remove', title: 'Remove Link Rule' },
+  { name: 'link.openExternal', title: 'Open Link' },
+  { name: 'import.arc', title: 'Import Sidebar From Another Browser…', palette: true },
+  { name: 'data.export', title: 'Export swyr Data…', palette: true },
+  { name: 'profile.new', title: 'New Profile', palette: true },
+  { name: 'profile.rename', title: 'Rename Profile' },
+  { name: 'profile.delete', title: 'Delete Profile' },
+  { name: 'profile.switch', title: 'Switch Profile' },
+  { name: 'window.newIncognito', title: 'New Private Window', palette: true },
+  { name: 'browser.makeDefault', title: 'Make swyr the Default Browser', palette: true }
 ]
 
 export const COMMAND_TITLES: Record<string, string> = Object.fromEntries(COMMANDS.map((c) => [c.name, c.title]))
@@ -182,7 +207,11 @@ export const DEFAULT_BINDINGS: Binding[] = [
   { id: 'mini.focusUrl', command: 'mini.focusUrl', accelerator: 'Cmd+L', scope: 'mini' },
   { id: 'mini.back', command: 'mini.back', accelerator: 'Cmd+[', scope: 'mini' },
   { id: 'mini.forward', command: 'mini.forward', accelerator: 'Cmd+]', scope: 'mini' },
-  { id: 'mini.reload', command: 'mini.reload', accelerator: 'Cmd+R', scope: 'mini' }
+  { id: 'mini.reload', command: 'mini.reload', accelerator: 'Cmd+R', scope: 'mini' },
+  // round 2c: platform
+  { id: 'extensions.open', command: 'extensions.open', accelerator: 'Cmd+E' },
+  { id: 'downloads.open', command: 'downloads.open', accelerator: 'Cmd+Shift+J' },
+  { id: 'window.newIncognito', command: 'window.newIncognito', accelerator: 'Cmd+Shift+N' }
 ]
 
 export function resolveBindings(overrides: Record<string, string> | undefined): Binding[] {

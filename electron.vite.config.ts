@@ -37,7 +37,8 @@ export default defineConfig({
           newtab: r('src/renderer/pages/newtab/index.html'),
           settings: r('src/renderer/pages/settings/index.html'),
           archive: r('src/renderer/pages/archive/index.html'),
-          library: r('src/renderer/pages/library/index.html')
+          library: r('src/renderer/pages/library/index.html'),
+          extensions: r('src/renderer/pages/extensions/index.html')
         }
       }
     }

@@ -7,6 +7,7 @@ import { TAB_RADIUS } from '../views/TabViews'
 import { PREVIEW_RADIUS } from '../layout/Layout'
 import { MINI_RADIUS } from '../windows/MiniWindow'
 import type { Core } from '../windows/WindowManager'
+import { activePartition, platformRuntime } from '../commands/platform'
 
 export interface SwyrTestHook {
   getState(): TestState | null
@@ -16,6 +17,8 @@ export interface SwyrTestHook {
   // round 2a
   /** composite of a Mini Window (chrome + page); the main capture never includes mini windows */
   captureMini(filePath: string, id?: number): Promise<boolean>
+  /** round 2c: partition of the active tab's session in the first window */
+  activePartition(): string
 }
 
 declare global {
@@ -96,11 +99,16 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
     getState(): TestState | null {
       const core = current()
       if (!core) return null
+      const { extensions, downloads, adblockStats } = platformRuntime()
       const windows = [
         ...core.windows.map((w) => ({ ...w.runtime(), kind: 'main' as const })),
         ...core.minis.filter((m) => !m.closed).map((m) => m.runtime())
       ]
-      return JSON.parse(JSON.stringify({ ...core.store.state, windows }))
+      return JSON.parse(JSON.stringify({ ...core.store.state, windows, extensions, downloads, adblockStats }))
+    },
+    activePartition(): string {
+      const core = current()
+      return core ? activePartition(core) : ''
     },
     async dispatch(command: string, payload?: unknown): Promise<unknown> {
       const core = await ready

@@ -4,6 +4,7 @@ import type { Item, Rect, TabRuntime } from '@shared/types'
 import { preloadPath } from './ShellView'
 import { profileSession } from '../profiles/Profiles'
 import { isInternalUrl } from '../protocol/Protocol'
+import { extensionsService } from '../extensions/Extensions'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { leavesSite, previewSource } from '../commands/preview'
 
@@ -16,6 +17,8 @@ export class TabViews {
   /** loaded ids, most recent first */
   mru: string[] = []
   private attached: string[] = []
+  /** the tab last reported to the extensions host as selected (the focused pane of a split) */
+  private selected: string | null = null
 
   constructor(private readonly w: SwyrWindow) {}
 
@@ -56,6 +59,7 @@ export class TabViews {
     this.views.set(item.id, view)
     this.runtime.set(item.id, { loading: true, canGoBack: false, canGoForward: false, zoom: 0 })
     this.wire(item.id, view)
+    extensionsService()?.tabAdded(view.webContents, this.w.win) // round 2c
     void view.webContents.loadURL(item.url || 'swyr://newtab').catch(() => undefined)
     this.touch(item.id)
     return view
@@ -210,6 +214,14 @@ export class TabViews {
       next.push(id)
     })
     this.attached = next
+    // round 2c: tell the extensions host which tab has focus (the focused pane when a split is shown)
+    const focused = this.w.focusedItemId()
+    const selected = focused && next.includes(focused) ? focused : (next[0] ?? null)
+    if (selected && selected !== this.selected) {
+      this.selected = selected
+      const v = this.views.get(selected)
+      if (v) extensionsService()?.tabSelected(v.webContents)
+    }
     if (hidden.length || shown.length) this.w.media.onVisibility(hidden, shown)
   }
 
@@ -224,13 +236,17 @@ export class TabViews {
     this.runtime.delete(id)
     this.mru = this.mru.filter((x) => x !== id)
     this.w.media.forget(id)
+    extensionsService()?.tabRemoved(v.webContents) // round 2c
     if (!v.webContents.isDestroyed()) v.webContents.close()
     this.w.core.scheduleBroadcast()
   }
 
   /** close every view without touching the (already destroyed) window */
   releaseAll(): void {
-    for (const [, v] of this.views) if (!v.webContents.isDestroyed()) v.webContents.close()
+    for (const [, v] of this.views) {
+      extensionsService()?.tabRemoved(v.webContents) // round 2c
+      if (!v.webContents.isDestroyed()) v.webContents.close()
+    }
     this.views.clear()
     this.runtime.clear()
     this.mru = []

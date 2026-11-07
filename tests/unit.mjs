@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { computeLayout, normalizeRatios, splitRect, clampSidebar } from '../src/main/layout/Layout.ts'
 import { resolveInput, resolveWithSettings, looksLikeUrl, displayUrl } from '../src/shared/url.ts'
 import { acceleratorLabel, resolveBindings, DEFAULT_BINDINGS } from '../src/shared/commands.ts'
-import { sidebarOrder, sameUrl, awayFromPinned, isWithin, depthOf, descendantsOf } from '../src/shared/ops.ts'
+import { sidebarOrder, sameUrl, awayFromPinned, isWithin, depthOf, descendantsOf, windowSpaces } from '../src/shared/ops.ts'
 
 let n = 0
 const test = (name, fn) => {
@@ -11,6 +11,14 @@ const test = (name, fn) => {
   n++
   console.log('ok', name)
 }
+
+test('ops: a private space is listed only in its own window', () => {
+  const sp = (id, order, incognito) => ({ id, name: id, emoji: '', profileId: 'p', order, theme: { colors: ['#fff'], angle: 0, noise: 0, appearance: 'light' }, ...(incognito ? { incognito: true } : {}) })
+  const st = { spaces: [sp('a', 0), sp('priv', 1, true), sp('b', 2)] }
+  assert.deepEqual(windowSpaces(st, 'a').map((x) => x.id), ['a', 'b'])
+  assert.deepEqual(windowSpaces(st, null).map((x) => x.id), ['a', 'b'])
+  assert.deepEqual(windowSpaces(st, 'priv').map((x) => x.id), ['priv'])
+})
 
 test('layout: sidebar visible, one pane', () => {
   const L = computeLayout({ width: 1280, height: 800, sidebarVisible: true, sidebarWidth: 260, panes: 1, overlay: 'none' })

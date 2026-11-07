@@ -281,3 +281,95 @@ export interface MenuEntry {
 }
 
 export type LibrarySection = 'archive' | 'spaces' | 'downloads' | 'notes' | 'canvases' | 'styles' | 'media'
+// round 2c: platform layer (extensions, ad blocker, downloads, link rules, profiles, importer).
+// Interface merging keeps these additive; nothing above is renamed.
+
+export interface LinkRule {
+  /** stable id for linkRules.remove */
+  id: string
+}
+
+export interface Profile {
+  /** private window profile: non-persisted partition, never written to state.json */
+  incognito?: boolean
+}
+
+export interface Space {
+  /** the space of a private window, removed when that window closes */
+  incognito?: boolean
+}
+
+export interface ExtensionSetting {
+  id: string
+  /** unpacked extensions load from here; store installs live under userData/extensions/<profileId> */
+  path?: string
+  enabled: boolean
+  profileId: string
+  source?: 'unpacked' | 'store'
+}
+
+export interface Settings {
+  extensions?: ExtensionSetting[]
+  /** hostnames where the ad blocker is off */
+  adblockAllow?: string[]
+  /** where downloads are saved; defaults to ~/Downloads */
+  downloadDirectory?: string
+}
+
+export interface ExtensionRuntime {
+  id: string
+  name: string
+  version: string
+  enabled: boolean
+  profileId: string
+  actionTitle?: string
+  iconDataUrl?: string
+  hasAction?: boolean
+  description?: string
+  source?: 'unpacked' | 'store'
+}
+
+export type DownloadStateName = 'progressing' | 'completed' | 'cancelled' | 'interrupted'
+
+export interface DownloadEntry {
+  id: string
+  filename: string
+  url: string
+  path: string
+  state: DownloadStateName
+  receivedBytes: number
+  totalBytes: number
+  startedAt: number
+}
+
+export interface AdblockStats {
+  blocked: number
+  /** blocked requests per sidebar item id */
+  perTab: Record<string, number>
+}
+
+/** runtime-only platform state; pushed to the shell as a { type: 'platform' } event */
+export interface PlatformRuntime {
+  extensions: ExtensionRuntime[]
+  downloads: DownloadEntry[]
+  adblockStats: AdblockStats
+  /** window ids whose downloads panel is open */
+  downloadsPanel: number[]
+  defaultBrowser: boolean
+  adblockLists: 'bundled' | 'full'
+  downloadDirectory: string
+}
+
+export interface ImportSummary {
+  spaces: number
+  folders: number
+  pinned: number
+  today: number
+  favorites: number
+}
+
+export interface TestState {
+  extensions?: ExtensionRuntime[]
+  downloads?: DownloadEntry[]
+  adblockStats?: AdblockStats
+}

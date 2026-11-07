@@ -1,7 +1,7 @@
 // Space commands: create, edit (name, emoji, theme, profile), reorder and delete.
 import type { Appearance, Item, PersistedState, Space, SpaceTheme } from '@shared/types'
 import { baseColor, isDark } from '@shared/theme'
-import { sortedSpaces, spaceById } from '@shared/ops'
+import { sortedSpaces, spaceById, regularSpaces } from '@shared/ops'
 import { makeSpace } from '../state/defaults'
 import { archiveItems } from './builtins'
 import type { Commands } from './Commands'
@@ -99,19 +99,20 @@ export function registerSpaceCommands(c: Commands): void {
     const index = num(p.index)
     if (!space || index === undefined) return false
     core.store.update((st) => {
-      const list = sortedSpaces(st).filter((x) => x.id !== space.id)
+      const list = (space.incognito ? sortedSpaces(st) : regularSpaces(st)).filter((x) => x.id !== space.id)
       list.splice(Math.max(0, Math.min(list.length, Math.round(index))), 0, space)
       list.forEach((x, i) => (x.order = i))
       normalizeSpaces(st)
     })
-    return sortedSpaces(core.store.state).map((x) => x.id)
+    return regularSpaces(core.store.state).map((x) => x.id)
   })
 
   c.register('space.delete', ({ core, w }, p) => {
     const s = core.store.state
     const space = spaceById(s, str(p.id) ?? w?.activeSpaceId)
-    if (!space || s.spaces.length < 2) return false
-    const ordered = sortedSpaces(s)
+    // a private space goes with its window; every other window keeps at least one regular space
+    if (!space || (!space.incognito && regularSpaces(s).length < 2)) return false
+    const ordered = space.incognito ? sortedSpaces(s) : regularSpaces(s)
     const idx = ordered.findIndex((x) => x.id === space.id)
     const fallback = ordered[idx + 1] ?? ordered[idx - 1]
     for (const win of core.windows) if (win.activeSpaceId === space.id) win.switchSpace(fallback.id)

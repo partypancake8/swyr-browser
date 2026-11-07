@@ -9,7 +9,37 @@
   "main": "out/main/index.js",
   "build": {
     "appId": "com.swyr.browser",
-    "productName": "swyr"
+    "productName": "swyr",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "extendInfo": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "Web site URL",
+            "CFBundleURLSchemes": [
+              "http",
+              "https"
+            ],
+            "CFBundleTypeRole": "Viewer",
+            "LSHandlerRank": "Owner"
+          }
+        ],
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "HTML document",
+            "CFBundleTypeRole": "Viewer",
+            "LSHandlerRank": "Default",
+            "LSItemContentTypes": [
+              "public.html",
+              "public.xhtml"
+            ]
+          }
+        ],
+        "NSUserActivityTypes": [
+          "NSUserActivityTypeBrowsingWeb"
+        ]
+      }
+    }
   },
   "scripts": {
     "dev": "electron-vite dev",
@@ -25,7 +55,10 @@
     "@dnd-kit/core": "6.3.1",
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
+    "@ghostery/adblocker-electron": "2.20.3",
     "cmdk": "1.1.1",
+    "electron-chrome-extensions": "4.10.0",
+    "electron-chrome-web-store": "0.13.0",
     "lucide-react": "1.70.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",

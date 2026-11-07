@@ -1,13 +1,14 @@
 // Built-in commands. Menus, shortcuts, the command bar, IPC and the test hook all call these.
 import { app, clipboard, shell } from 'electron'
 import type { ArchiveReason, Item, PersistedState, Section, Settings } from '@shared/types'
-import { nextOrder, sectionItems, sidebarOrder, sortedSpaces, spaceById, favoritesFor, itemTitle } from '@shared/ops'
+import { nextOrder, sectionItems, sidebarOrder, spaceById, favoritesFor, itemTitle, windowSpaces } from '@shared/ops'
 import { resolveWithSettings } from '@shared/url'
 import { clampSidebar } from '../layout/Layout'
 import { newId } from '../util/id'
 import type { CommandContext, Commands } from './Commands'
 import { registerItemCommands } from './items'
 import { registerSpaceCommands } from './spaces'
+import { registerPlatformCommands } from './platform'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { routeSplitClose } from './split'
@@ -242,7 +243,7 @@ export function registerBuiltins(c: Commands): void {
   // ----- spaces
   c.register('space.switch', ({ core, w }, p) => {
     if (!w) return false
-    const spaces = sortedSpaces(core.store.state)
+    const spaces = windowSpaces(core.store.state, w.activeSpaceId)
     const target = str(p.id) ? spaces.find((x) => x.id === p.id) : spaces[num(p.index) ?? -1]
     if (!target) return false
     if (target.id !== w.activeSpaceId) w.switchSpace(target.id)
@@ -251,7 +252,7 @@ export function registerBuiltins(c: Commands): void {
 
   const spaceStep = (dir: 1 | -1) => ({ core, w }: CommandContext) => {
     if (!w) return false
-    const spaces = sortedSpaces(core.store.state)
+    const spaces = windowSpaces(core.store.state, w.activeSpaceId)
     if (spaces.length < 2) return false
     const idx = spaces.findIndex((x) => x.id === w.activeSpaceId)
     w.switchSpace(spaces[(idx + dir + spaces.length) % spaces.length].id)
@@ -404,6 +405,7 @@ export function registerBuiltins(c: Commands): void {
 
   registerItemCommands(c)
   registerSpaceCommands(c)
+  registerPlatformCommands(c) // round 2c: extensions, ad blocker, downloads, link rules, importer, profiles
 
   c.register('debug.titles', ({ core, w }) => (w ? sidebarOrder(core.store.state, w.space()).map(itemTitle) : []))
 }

@@ -11,6 +11,21 @@ export function sortedSpaces(s: PersistedState): Space[] {
   return [...s.spaces].sort((a, b) => a.order - b.order)
 }
 
+/**
+ * the spaces one window lists (space switcher, Ctrl+1..9, next/prev, move-to-space menus):
+ * a private window lists only its own space, and private spaces never show in any other window
+ */
+export function windowSpaces(s: PersistedState, activeSpaceId: string | null | undefined): Space[] {
+  const active = spaceById(s, activeSpaceId)
+  if (active?.incognito) return [active]
+  return sortedSpaces(s).filter((x) => !x.incognito)
+}
+
+/** spaces outside any private window: targets for menus and pickers that are not tied to a window */
+export function regularSpaces(s: PersistedState): Space[] {
+  return sortedSpaces(s).filter((x) => !x.incognito)
+}
+
 export function favoritesFor(s: PersistedState, profileId: string): Item[] {
   return s.items.filter((i) => i.section === 'favorites' && i.profileId === profileId && !i.parentId).sort(byOrder)
 }

@@ -35,6 +35,15 @@ Regenerate this file with \`node scripts/licenses.mjs\`.
 - Node.js (MIT) is embedded in Electron.
 - Icons are from Lucide (ISC), via lucide-react.
 
+## Platform libraries
+
+- Chrome extension support: electron-chrome-extensions and electron-chrome-web-store by Samuel Maddock (MIT, https://github.com/samuelmaddock/electron-browser-shell). Extensions installed from the Chrome Web Store are downloaded by the user's own action; swyr does not mirror or redistribute them.
+- Ad and tracker blocking: @ghostery/adblocker-electron, @ghostery/adblocker, @ghostery/adblocker-content, @ghostery/adblocker-electron-preload, @ghostery/adblocker-extended-selectors and @ghostery/url-parser, Copyright (c) 2017-present Ghostery GmbH.
+
+  This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+  swyr uses these files unmodified from npm; their source is available at https://github.com/ghostery/adblocker. The filter lists they download (EasyList and EasyPrivacy, via Ghostery's prebuilt engines) are dual licensed GPL-3.0 / CC BY-SA 3.0 by The EasyList authors (https://easylist.to) and are fetched at run time, not bundled.
+
 ## Direct dependencies
 
 ${table(sorted.filter((r) => r.direct))}

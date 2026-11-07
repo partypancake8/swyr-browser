@@ -16,7 +16,7 @@ export function defaultSettings(): Settings {
       { keyword: 'w', name: 'Wikipedia', urlTemplate: 'https://en.wikipedia.org/w/index.php?search=%s' }
     ],
     linkRules: [],
-    adblock: false,
+    adblock: true,
     openExternalLinksInMiniWindow: false,
     appearance: 'auto',
     pipAuto: false

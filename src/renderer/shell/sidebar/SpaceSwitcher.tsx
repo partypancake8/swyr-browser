@@ -4,7 +4,7 @@ import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dn
 import { CSS } from '@dnd-kit/utilities'
 import { Plus } from 'lucide-react'
 import type { MenuEntry, Space, ViewState } from '@shared/types'
-import { sortedSpaces } from '@shared/ops'
+import { windowSpaces } from '@shared/ops'
 import { gradientCss } from '@shared/theme'
 import { SEP, showMenu } from '../../common/menu'
 import { invoke } from '../../common/store'
@@ -61,7 +61,7 @@ function SpaceButton({ space, index, count, active, dark }: { space: Space; inde
 }
 
 export function SpaceSwitcher({ vs, dark }: { vs: ViewState; dark: boolean }): ReactNode {
-  const spaces = sortedSpaces(vs.state)
+  const spaces = windowSpaces(vs.state, vs.window.activeSpaceId)
   return (
     <div className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none]" role="tablist" aria-label="Spaces">
       <SortableContext items={spaces.map((s) => spaceDndId(s.id))} strategy={horizontalListSortingStrategy}>
