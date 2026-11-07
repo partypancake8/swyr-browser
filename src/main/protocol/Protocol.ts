@@ -17,11 +17,18 @@ export const PAGES: Record<string, string> = {
   extensions: 'pages/extensions/index.html',
   // round 3a
   history: 'pages/history/index.html',
-  styles: 'pages/styles/index.html'
+  styles: 'pages/styles/index.html',
+  // round 3b: swyr://note/<docId> and swyr://canvas/<docId>
+  note: 'pages/note/index.html',
+  canvas: 'pages/canvas/index.html'
 }
 
 /** pages that may be opened in a tab */
-export const TAB_PAGES = new Set(['newtab', 'settings', 'archive', 'library', 'extensions', 'history', 'styles'])
+export const TAB_PAGES = new Set(['newtab', 'settings', 'archive', 'library', 'extensions', 'history', 'styles', 'note', 'canvas'])
+
+/** round 3b: hosts whose page path is a document id (swyr://note/<id>) rather than an asset */
+const DOC_PAGE_HOSTS = new Set(['note', 'canvas'])
+const isDocPagePath = (host: string, pathname: string): boolean => DOC_PAGE_HOSTS.has(host) && /^\/[A-Za-z0-9_-]{1,64}\/?$/.test(pathname)
 
 export function registerSchemePrivileges(): void {
   protocol.registerSchemesAsPrivileged([
@@ -57,8 +64,9 @@ async function serve(request: Request): Promise<Response> {
   const dev = devUrl()
   const page = PAGES[host]
   // round 3a: page routes like swyr://styles/<id> (a path without a file extension) serve the page itself
+  // round 3b: swyr://note/<id> and swyr://canvas/<id> route a document id to the page
   const routed = Boolean(page) && !/\.[a-z0-9]+$/i.test(url.pathname)
-  const isAsset = url.pathname !== '/' && url.pathname !== '' && !url.pathname.endsWith('.html') && !routed
+  const isAsset = url.pathname !== '/' && url.pathname !== '' && !url.pathname.endsWith('.html') && !routed && !isDocPagePath(host, url.pathname)
   if (dev) {
     const target = isAsset ? `${dev}${url.pathname}${url.search}` : page ? `${dev}/${page}` : ''
     if (target) return net.fetch(target)

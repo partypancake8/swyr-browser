@@ -4,6 +4,7 @@ import type { DialogOverlay, ViewState } from '@shared/types'
 import { itemTitle, spaceCounts } from '@shared/ops'
 import { Favicon } from '../../common/Favicon'
 import { invoke } from '../../common/store'
+import { LiveFolderEditor } from '../../shell/sidebar/LiveFolderRow' // round 3b
 
 function Card({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }): ReactNode {
   return (
@@ -134,6 +135,8 @@ export function Dialogs({ vs, dialog }: { vs: ViewState; dialog: DialogOverlay }
       return dialog.spaceId ? <ConfirmDeleteSpace vs={vs} spaceId={dialog.spaceId} /> : null
     case 'confirmClearArchive':
       return <ConfirmClearArchive vs={vs} />
+    case 'liveFolder': // round 3b
+      return <LiveFolderEditor vs={vs} itemId={dialog.itemId} />
     default:
       return null
   }

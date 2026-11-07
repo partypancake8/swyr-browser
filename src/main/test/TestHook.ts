@@ -19,7 +19,7 @@ export interface SwyrTestHook {
   captureMini(filePath: string, id?: number): Promise<boolean>
   /** round 2c: partition of the active tab's session in the first window */
   activePartition(): string
-  /** round 3a: executeJavaScript in the first window's active tab (the focused pane of a split) */
+  /** round 3: run JavaScript in the first window's active tab or focused pane and return its result */
   evalInActiveTab?(js: string): Promise<unknown>
 }
 
@@ -169,15 +169,13 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
       return true
     }
   }
-  // round 3a: checks evaluate `require('electron')` in the main process, where require is module scoped
-  const g = globalThis as { require?: NodeJS.Require }
-  if (typeof g.require !== 'function') g.require = require
-  const hook = globalThis.__swyr!
-  if (!hook.evalInActiveTab) {
+  // round 3: run JavaScript in the first window's active tab (the focused pane of a split)
+  const hook = globalThis.__swyr
+  if (hook && !hook.evalInActiveTab) {
     hook.evalInActiveTab = async (js: string): Promise<unknown> => {
       const core = await ready
       const wc = core.first()?.activeContents()
-      if (!wc || wc.isDestroyed()) return null
+      if (!wc || wc.isDestroyed()) throw new Error('no active tab')
       return wc.executeJavaScript(js, true)
     }
   }

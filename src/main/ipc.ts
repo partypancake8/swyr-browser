@@ -3,6 +3,7 @@ import { ipcMain } from 'electron'
 import type { Core } from './windows/WindowManager'
 import { PLATFORM_PAGE_COMMANDS } from './commands/platform'
 import { PAGE_3A_COMMANDS } from './commands/pages'
+import { DOCUMENT_PAGE_COMMANDS } from './commands/documents' // round 3b
 
 /** commands an internal page (swyr://newtab, settings, archive) may run */
 const PAGE_COMMANDS = new Set([
@@ -21,7 +22,8 @@ const PAGE_COMMANDS = new Set([
   'space.delete',
   'space.switch',
   ...PLATFORM_PAGE_COMMANDS, // round 2c
-  ...PAGE_3A_COMMANDS // round 3a: swyr://styles, swyr://history
+  ...PAGE_3A_COMMANDS, // round 3a: swyr://styles, swyr://history
+  ...DOCUMENT_PAGE_COMMANDS // round 3b
 ])
 
 export function registerIpc(core: Core): void {

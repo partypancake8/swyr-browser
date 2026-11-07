@@ -30,6 +30,7 @@ import {
 import type { CommandContext, Commands } from './Commands'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
+import { exportDocuments } from './documents' // round 3b
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
 
@@ -659,7 +660,9 @@ export function registerPlatformCommands(c: Commands): void {
       if (res.canceled || !res.filePath) return false
       file = res.filePath
     }
-    fs.writeFileSync(file, JSON.stringify(withoutPrivate(core.store.state), null, 1))
+    // round 3b: notes and canvases go along in full; the GitHub token for Live Folders stays out
+    const data = withoutPrivate(core.store.state)
+    fs.writeFileSync(file, JSON.stringify({ ...data, settings: { ...data.settings, githubToken: undefined }, documents: exportDocuments() }, null, 1))
     return file
   })
 

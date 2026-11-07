@@ -1,7 +1,7 @@
 // One tab row in the Pinned or Today list: favicon, title, back-to-pinned, close, loading bar, drop line.
 import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { CornerUpLeft, X } from 'lucide-react'
+import { CornerUpLeft, Shapes, StickyNote, X } from 'lucide-react'
 import type { Item, MenuEntry, Space, ViewState } from '@shared/types'
 import { awayFromPinned, itemTitle, windowSpaces } from '@shared/ops'
 import { Favicon } from '../../common/Favicon'
@@ -153,7 +153,13 @@ export function TabRow({ item, depth, vs, space }: { item: Item; depth: number; 
         <SplitIcons item={item} vs={vs} />
       ) : (
         <span className="relative flex shrink-0" style={{ opacity: loaded || active ? 1 : 0.8 }}>
-          <Favicon item={item} size={16} />
+          {item.kind === 'note' ? (
+            <StickyNote size={16} strokeWidth={1.9} className="shrink-0" />
+          ) : item.kind === 'canvas' ? (
+            <Shapes size={16} strokeWidth={1.9} className="shrink-0" />
+          ) : (
+            <Favicon item={item} size={16} />
+          )}
         </span>
       )}
       {renaming ? (

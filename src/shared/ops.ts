@@ -44,11 +44,16 @@ export function flatten(s: PersistedState, roots: Item[], visibleOnly: boolean):
   const walk = (list: Item[]): void => {
     for (const it of list) {
       out.push(it)
-      if (it.kind === 'folder' && !(visibleOnly && it.collapsed)) walk(childrenOf(s, it.id))
+      if (isContainer(it) && !(visibleOnly && it.collapsed)) walk(childrenOf(s, it.id))
     }
   }
   walk(roots)
   return out
+}
+
+/** round 3b: folders and Live Folders hold tabs but are not tabs themselves */
+export function isContainer(item: Item): boolean {
+  return item.kind === 'folder' || item.kind === 'liveFolder'
 }
 
 /** every activatable item in sidebar order: favorites, pinned, today */
@@ -57,7 +62,7 @@ export function sidebarOrder(s: PersistedState, space: Space, visibleOnly = true
     ...favoritesFor(s, space.profileId),
     ...flatten(s, sectionItems(s, space.id, 'pinned'), visibleOnly),
     ...sectionItems(s, space.id, 'today')
-  ].filter((i) => i.kind !== 'folder')
+  ].filter((i) => !isContainer(i))
 }
 
 /** items that belong to a space for the purpose of switching (favorites of its profile included) */

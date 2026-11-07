@@ -234,7 +234,7 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
 export type OverlayInput = DistributiveOmit<OverlayState, 'seq'>
 
 // round 2b: sidebar, folders, archive, library, space editor
-export type DialogKind = 'rename' | 'confirmDeleteSpace' | 'confirmClearArchive'
+export type DialogKind = 'rename' | 'confirmDeleteSpace' | 'confirmClearArchive' | 'liveFolder' // round 3b: liveFolder
 
 /** a modal dialog drawn by the overlay view (src/renderer/overlay/dialogs) */
 export interface DialogOverlay {
@@ -436,4 +436,80 @@ export interface SiteInfo {
   permissions: Partial<Record<SitePermission, PermissionDecision>>
   mini: boolean
   extensions: { id: string; name: string; iconDataUrl?: string }[]
+}
+
+// round 3b: notes, canvases, live folders, library sections
+export type DocumentKind = 'note' | 'canvas'
+
+export interface NoteDocument {
+  id: string
+  kind: 'note'
+  title: string
+  markdown: string
+  updatedAt: number
+}
+
+/** a canvas board: Excalidraw elements, a small subset of its appState, and its binary files (images) */
+export interface CanvasDocument {
+  id: string
+  kind: 'canvas'
+  title: string
+  elements: Record<string, unknown>[]
+  appState: Record<string, unknown>
+  files: Record<string, unknown>
+  updatedAt: number
+}
+
+export type SwyrDocument = NoteDocument | CanvasDocument
+
+/** one row of the Library's Notes or Canvases list */
+export interface DocumentSummary {
+  id: string
+  kind: DocumentKind
+  title: string
+  updatedAt: number
+  /** sidebar items that open this document */
+  itemIds: string[]
+  spaceIds: string[]
+  /** a short preview: the first text of a note, or the element count of a canvas */
+  preview: string
+}
+
+export type LiveFolderSource = 'github-prs' | 'github-issues' | 'rss' | 'test'
+
+export interface LiveFolderConfig {
+  /** GitHub search query, e.g. "is:pr is:open author:@me" */
+  query?: string
+  /** RSS or Atom feed URL */
+  url?: string
+  /** test source only: path of a JSON file with [{ title, url }] */
+  fixture?: string
+}
+
+export interface LiveFolderInfo {
+  source: LiveFolderSource
+  sourceConfig: LiveFolderConfig
+  lastRefreshedAt?: number
+  /** message of the last failed refresh, cleared on success */
+  error?: string | null
+}
+
+export interface Item {
+  /** liveFolder items: where the folder fills itself from */
+  live?: LiveFolderInfo
+}
+
+export interface Settings {
+  /** personal access token for GitHub Live Folders, entered in the folder editor */
+  githubToken?: string
+}
+
+/** one tab with media, for the Library's Media section */
+export interface MediaEntry {
+  itemId: string
+  windowId: number
+  title: string
+  url: string
+  favicon: string | null
+  playing: boolean
 }
