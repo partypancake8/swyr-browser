@@ -69,6 +69,11 @@ export class AppMenu {
           this.cmd('New Window', 'window.new'),
           this.cmd('New Private Window', 'window.newIncognito'),
           sep,
+          // round 3b
+          this.cmd('New Note', 'note.new'),
+          this.cmd('New Canvas', 'canvas.new'),
+          this.cmd('New Live Folder…', 'liveFolder.editor'),
+          sep,
           this.cmd('Open Location…', 'commandbar.open', { mode: 'current' }),
           sep,
           this.cmd('Close Tab', 'tab.close'),

@@ -19,6 +19,16 @@ for (const [key, meta] of Object.entries(lock.packages)) {
       /* not installed on this platform */
     }
   }
+  if (!license) {
+    // round 3b: a few packages ship only a license file (fuzzy, khroma)
+    try {
+      const dir = path.join(root, key)
+      const file = fs.readdirSync(dir).find((f) => /^licen[cs]e/i.test(f))
+      if (file && /Permission is hereby granted, free of charge/.test(fs.readFileSync(path.join(dir, file), 'utf8'))) license = 'MIT'
+    } catch {
+      /* not installed on this platform */
+    }
+  }
   const id = `${name}@${meta.version}`
   if (!rows.has(id)) rows.set(id, { name, version: meta.version, license: license ?? 'UNKNOWN', dev: Boolean(meta.dev), direct: direct.has(name) && !key.includes('/node_modules/', 13) })
 }
@@ -43,6 +53,11 @@ Regenerate this file with \`node scripts/licenses.mjs\`.
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
   swyr uses these files unmodified from npm; their source is available at https://github.com/ghostery/adblocker. The filter lists they download (EasyList and EasyPrivacy, via Ghostery's prebuilt engines) are dual licensed GPL-3.0 / CC BY-SA 3.0 by The EasyList authors (https://easylist.to) and are fetched at run time, not bundled.
+
+## Notes and canvases
+
+- The note editor is built on TipTap (@tiptap/*, MIT, Copyright (c) 2025 Tiptap GmbH, https://github.com/ueberdosis/tiptap) and ProseMirror (MIT, Marijn Haverbeke and others), with Markdown through @tiptap/markdown and marked (MIT).
+- Canvases embed Excalidraw (@excalidraw/excalidraw, MIT, https://github.com/excalidraw/excalidraw). It is bundled into the app and its fonts ship inside the app (served from swyr://canvas/excalidraw-assets/); nothing is loaded from a CDN. The bundled fonts keep their own licenses: Excalifont, Virgil, Cascadia Code, Nunito, Lilita One, Liberation Sans and Xiaolai are under the SIL Open Font License 1.1; Assistant is also OFL 1.1; Comic Shanns is MIT. Excalidraw's optional diagram import pulls in Mermaid (MIT) and its dependencies listed below.
 
 ## Direct dependencies
 

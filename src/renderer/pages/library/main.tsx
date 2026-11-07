@@ -10,6 +10,7 @@ import { NOISE_URL, gradientCss, isDark } from '@shared/theme'
 import { invoke, startViewSync, useView } from '../../common/store'
 import { activeSpace, useSpaceTheme } from '../../common/theme'
 import { ArchiveView } from '../archive/ArchiveView'
+import { DocumentsView, MediaView } from './DocumentsView' // round 3b
 
 interface SectionDef {
   id: LibrarySection
@@ -163,7 +164,19 @@ function LibraryPage(): ReactNode {
       </nav>
       <main className="min-w-0 flex-1">
         <div className="mx-auto max-w-[760px] px-8 py-10">
-          {section === 'archive' ? <ArchiveView vs={vs} /> : section === 'spaces' ? vs ? <SpacesView vs={vs} /> : null : <Empty def={def} />}
+          {section === 'archive' ? (
+            <ArchiveView vs={vs} />
+          ) : section === 'spaces' ? (
+            vs ? <SpacesView vs={vs} /> : null
+          ) : section === 'notes' ? ( // round 3b
+            <DocumentsView vs={vs} kind="note" />
+          ) : section === 'canvases' ? (
+            <DocumentsView vs={vs} kind="canvas" />
+          ) : section === 'media' ? (
+            <MediaView vs={vs} />
+          ) : (
+            <Empty def={def} />
+          )}
         </div>
       </main>
     </div>

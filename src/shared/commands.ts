@@ -128,7 +128,30 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'profile.delete', title: 'Delete Profile' },
   { name: 'profile.switch', title: 'Switch Profile' },
   { name: 'window.newIncognito', title: 'New Private Window', palette: true },
-  { name: 'browser.makeDefault', title: 'Make swyr the Default Browser', palette: true }
+  { name: 'browser.makeDefault', title: 'Make swyr the Default Browser', palette: true },
+  // round 3b: notes, canvases, live folders, library
+  { name: 'note.new', title: 'New Note', palette: true },
+  { name: 'note.get', title: 'Read Note' },
+  { name: 'note.setContent', title: 'Set Note Content' },
+  { name: 'note.setTitle', title: 'Rename Note' },
+  { name: 'canvas.new', title: 'New Canvas', palette: true },
+  { name: 'canvas.get', title: 'Read Canvas' },
+  { name: 'canvas.save', title: 'Save Canvas' },
+  { name: 'canvas.setTitle', title: 'Rename Canvas' },
+  { name: 'canvas.addText', title: 'Add Text to Canvas' },
+  { name: 'canvas.addLink', title: 'Add Link to Canvas' },
+  { name: 'canvas.getElements', title: 'Canvas Elements' },
+  { name: 'documents.list', title: 'List Notes and Canvases' },
+  { name: 'documents.delete', title: 'Delete Note or Canvas' },
+  { name: 'document.open', title: 'Open Note or Canvas' },
+  { name: 'library.media', title: 'Media in Tabs' },
+  { name: 'liveFolder.editor', title: 'New Live Folder…', palette: true },
+  { name: 'liveFolder.new', title: 'New Live Folder' },
+  { name: 'liveFolder.refresh', title: 'Refresh Live Folder' },
+  { name: 'liveFolder.refreshAll', title: 'Refresh All Live Folders', palette: true },
+  { name: 'liveFolder.edit', title: 'Edit Live Folder' },
+  { name: 'liveFolder.toggle', title: 'Expand or Collapse Live Folder' },
+  { name: 'liveFolder.delete', title: 'Delete Live Folder' }
 ]
 
 export const COMMAND_TITLES: Record<string, string> = Object.fromEntries(COMMANDS.map((c) => [c.name, c.title]))

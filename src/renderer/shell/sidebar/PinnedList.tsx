@@ -6,6 +6,7 @@ import { childrenOf, sectionItems } from '@shared/ops'
 import { invoke } from '../../common/store'
 import { useDndUi, zoneDndId, type DragData } from './dnd'
 import { FolderRow } from './FolderRow'
+import { LiveFolderRow } from './LiveFolderRow' // round 3b
 import { TabRow } from './TabRow'
 
 interface Row {
@@ -19,7 +20,7 @@ export function pinnedRows(vs: ViewState, space: Space): Row[] {
   const walk = (list: Item[], depth: number): void => {
     for (const it of list) {
       out.push({ item: it, depth })
-      if (it.kind === 'folder' && !it.collapsed && depth < 16) walk(childrenOf(vs.state, it.id), depth + 1)
+      if ((it.kind === 'folder' || it.kind === 'liveFolder') && !it.collapsed && depth < 16) walk(childrenOf(vs.state, it.id), depth + 1)
     }
   }
   walk(sectionItems(vs.state, space.id, 'pinned'), 0)
@@ -37,6 +38,8 @@ export function PinnedList({ vs, space }: { vs: ViewState; space: Space }): Reac
       {rows.map(({ item, depth }) =>
         item.kind === 'folder' ? (
           <FolderRow key={item.id} folder={item} depth={depth} vs={vs} space={space} />
+        ) : item.kind === 'liveFolder' ? (
+          <LiveFolderRow key={item.id} folder={item} depth={depth} vs={vs} space={space} />
         ) : (
           <TabRow key={item.id} item={item} depth={depth} vs={vs} space={space} />
         )

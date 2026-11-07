@@ -19,6 +19,9 @@ export interface SwyrTestHook {
   captureMini(filePath: string, id?: number): Promise<boolean>
   /** round 2c: partition of the active tab's session in the first window */
   activePartition(): string
+  // round 3
+  /** run JavaScript in the first window's active tab or focused pane and return its result */
+  evalInActiveTab?(js: string): Promise<unknown>
 }
 
 declare global {
@@ -165,6 +168,16 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
       fs.mkdirSync(path.dirname(filePath), { recursive: true })
       fs.writeFileSync(filePath, composite(width, height, scale, layers).toPNG())
       return true
+    }
+  }
+  // round 3: run JavaScript in the first window's active tab (the focused pane of a split)
+  const hook = globalThis.__swyr
+  if (hook && !hook.evalInActiveTab) {
+    hook.evalInActiveTab = async (js: string): Promise<unknown> => {
+      const core = await ready
+      const wc = core.first()?.activeContents()
+      if (!wc) throw new Error('no active tab')
+      return wc.executeJavaScript(js, true)
     }
   }
 }

@@ -243,6 +243,10 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
               [
                 { label: 'New Tab', command: 'commandbar.open', payload: { mode: 'new' } },
                 { label: 'New Folder', command: 'folder.new', payload: { name: 'New Folder', rename: true } },
+                // round 3b
+                { label: 'New Note', command: 'note.new' },
+                { label: 'New Canvas', command: 'canvas.new' },
+                { label: 'New Live Folder…', command: 'liveFolder.editor' },
                 SEP,
                 { label: 'New Space', command: 'space.new' },
                 { label: 'Edit Space…', command: 'space.edit', payload: { id: space?.id } },
