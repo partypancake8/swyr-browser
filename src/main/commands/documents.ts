@@ -264,7 +264,23 @@ function startAutoRefresh(c: Commands): void {
 
 export function registerDocumentCommands(c: Commands): void {
   // ----- notes
-  c.register('note.new', ({ core, w }, p) => createDocItem(core, w, 'note', p))
+  c.register('note.new', async ({ core, w }, p) => {
+    if (p.split !== true || !w) return createDocItem(core, w, 'note', p)
+    // "New Note in Split View": the note opens as a new pane of the active tab's split. Split panes are tabs, so
+    // the pane is a tab on swyr://note/<id>; the standalone sidebar item is dropped once the pane exists.
+    const itemId = createDocItem(core, w, 'note', { ...p, activate: false })
+    const item = itemId ? core.store.state.items.find((i) => i.id === itemId) : undefined
+    if (!item) return itemId
+    const splitId = await core.commands.run('split.add', { url: item.url }, w)
+    if (typeof splitId !== 'string') {
+      w.activate(item.id)
+      return itemId
+    }
+    core.store.update((st) => {
+      st.items = st.items.filter((i) => i.id !== item.id)
+    })
+    return splitId
+  })
 
   c.register('note.get', ({ core, w }, p) => {
     const doc = docOf(core, p, w, 'note')
