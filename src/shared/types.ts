@@ -133,6 +133,7 @@ export type OverlayState =
   | { kind: 'spaceEdit'; spaceId: string; seq: number }
   | { kind: 'sidebar'; seq: number }
   | { kind: 'toast'; message: string; seq: number }
+  | DialogOverlay
 
 export interface WindowRuntime {
   id: number
@@ -167,3 +168,55 @@ export interface ShellEvent {
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 export type OverlayInput = DistributiveOmit<OverlayState, 'seq'>
+
+// round 2b: sidebar, folders, archive, library, space editor
+export type DialogKind = 'rename' | 'confirmDeleteSpace' | 'confirmClearArchive'
+
+/** a modal dialog drawn by the overlay view (src/renderer/overlay/dialogs) */
+export interface DialogOverlay {
+  kind: 'dialog'
+  dialog: DialogKind
+  itemId?: string
+  spaceId?: string
+  seq: number
+}
+
+export interface FolderNewPayload {
+  name?: string
+  section?: 'pinned'
+  parentId?: string | null
+  spaceId?: string
+  /** item ids to move into the new folder */
+  itemIds?: string[]
+  /** start an inline rename in the sidebar */
+  rename?: boolean
+}
+
+export interface TabMovePayload {
+  itemId: string
+  section: Section
+  parentId?: string | null
+  index?: number
+  spaceId?: string
+}
+
+export interface SpaceEditPayload {
+  id: string
+  name?: string
+  emoji?: string
+  theme?: Partial<SpaceTheme>
+  profileId?: string
+}
+
+/** one entry of a native menu built by the renderer (command: menu.popup) */
+export interface MenuEntry {
+  label?: string
+  type?: 'separator' | 'normal' | 'checkbox'
+  command?: string
+  payload?: unknown
+  enabled?: boolean
+  checked?: boolean
+  submenu?: MenuEntry[]
+}
+
+export type LibrarySection = 'archive' | 'spaces' | 'downloads' | 'notes' | 'canvases' | 'styles' | 'media'

@@ -62,7 +62,20 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'tab.contextMenu', title: 'Tab Menu' },
   { name: 'space.contextMenu', title: 'Space Menu' },
   { name: 'settings.set', title: 'Change Setting' },
-  { name: 'app.quit', title: 'Quit swyr', palette: true }
+  { name: 'app.quit', title: 'Quit swyr', palette: true },
+  // round 2b: sidebar, folders, archive, library
+  { name: 'tab.unfavorite', title: 'Remove from Favorites', palette: true },
+  { name: 'item.copyUrl', title: 'Copy Tab URL' },
+  { name: 'folder.new', title: 'New Folder', palette: true },
+  { name: 'folder.rename', title: 'Rename Folder' },
+  { name: 'folder.toggle', title: 'Expand or Collapse Folder' },
+  { name: 'folder.delete', title: 'Delete Folder' },
+  { name: 'archive.delete', title: 'Delete from Archive' },
+  { name: 'archive.clear', title: 'Clear Archive' },
+  { name: 'library.open', title: 'Open Library', palette: true },
+  { name: 'space.reorder', title: 'Reorder Spaces' },
+  { name: 'dialog.open', title: 'Open Dialog' },
+  { name: 'menu.popup', title: 'Show Menu' }
 ]
 
 export const COMMAND_TITLES: Record<string, string> = Object.fromEntries(COMMANDS.map((c) => [c.name, c.title]))
@@ -118,7 +131,8 @@ export const DEFAULT_BINDINGS: Binding[] = [
   { id: 'zoom.out', command: 'zoom.out', accelerator: 'Cmd+-' },
   { id: 'zoom.reset', command: 'zoom.reset', accelerator: 'Cmd+0' },
   { id: 'settings.open', command: 'settings.open', accelerator: 'Cmd+,' },
-  { id: 'app.quit', command: 'app.quit', accelerator: 'Cmd+Q' }
+  { id: 'app.quit', command: 'app.quit', accelerator: 'Cmd+Q' },
+  { id: 'library.open', command: 'library.open', accelerator: 'Cmd+Shift+L', raw: true }
 ]
 
 export function resolveBindings(overrides: Record<string, string> | undefined): Binding[] {

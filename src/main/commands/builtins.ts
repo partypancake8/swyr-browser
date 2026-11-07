@@ -1,12 +1,13 @@
 // Built-in commands. Menus, shortcuts, the command bar, IPC and the test hook all call these.
 import { app, clipboard, shell } from 'electron'
-import type { ArchiveReason, Item, PersistedState, Section, Settings, SpaceTheme } from '@shared/types'
+import type { ArchiveReason, Item, PersistedState, Section, Settings } from '@shared/types'
 import { nextOrder, sectionItems, sidebarOrder, sortedSpaces, spaceById, favoritesFor, itemTitle } from '@shared/ops'
 import { resolveWithSettings } from '@shared/url'
 import { clampSidebar } from '../layout/Layout'
-import { makeSpace } from '../state/defaults'
 import { newId } from '../util/id'
 import type { CommandContext, Commands } from './Commands'
+import { registerItemCommands } from './items'
+import { registerSpaceCommands } from './spaces'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 
@@ -75,29 +76,6 @@ function archiveItems(core: Core, items: Item[], reason: ArchiveReason): void {
 }
 
 export { archiveItems }
-
-function moveItem(core: Core, item: Item, section: Section, w: SwyrWindow | undefined, opts: { spaceId?: string; index?: number } = {}): void {
-  core.store.update((s) => {
-    const space = spaceById(s, opts.spaceId ?? item.spaceId ?? w?.activeSpaceId) ?? sortedSpaces(s)[0]
-    item.section = section
-    item.parentId = null
-    if (section === 'favorites') {
-      item.spaceId = null
-      item.profileId = space.profileId
-    } else {
-      item.spaceId = space.id
-      item.profileId = space.profileId
-    }
-    if (section === 'pinned' || section === 'favorites') item.pinnedUrl = item.pinnedUrl ?? item.url
-    else item.pinnedUrl = null
-    const siblings =
-      section === 'favorites' ? favoritesFor(s, item.profileId) : sectionItems(s, space.id, section)
-    const others = siblings.filter((i) => i.id !== item.id)
-    const index = Math.max(0, Math.min(others.length, opts.index ?? others.length))
-    others.splice(index, 0, item)
-    others.forEach((it, i) => (it.order = i))
-  })
-}
 
 function openInternal(ctx: CommandContext, url: string): unknown {
   const { core, w } = ctx
@@ -178,114 +156,12 @@ export function registerBuiltins(c: Commands): void {
     return true
   })
 
-  c.register('archive.restore', ({ core, w }, p) => {
-    if (!w) return false
-    const s = core.store.state
-    const entry = str(p.id) ? s.archive.find((a) => a.id === p.id) : [...s.archive].sort((a, b) => b.archivedAt - a.archivedAt)[0]
-    if (!entry) return false
-    const snap = entry.item
-    const space = spaceById(s, snap.spaceId) ?? (snap.section === 'favorites' ? undefined : w.space())
-    const section: Section = snap.section === 'favorites' && s.profiles.some((x) => x.id === snap.profileId) ? 'favorites' : space && snap.section === 'pinned' && entry.reason === 'manual' ? 'pinned' : 'today'
-    const target = space ?? w.space()
-    const item = makeItem(s, {
-      ...snap,
-      id: s.items.some((i) => i.id === snap.id) ? newId('tab') : snap.id,
-      section,
-      parentId: null,
-      spaceId: section === 'favorites' ? null : target.id,
-      profileId: section === 'favorites' ? snap.profileId : target.profileId,
-      lastActiveAt: Date.now()
-    })
-    core.store.update((st) => {
-      st.archive = st.archive.filter((a) => a.id !== entry.id)
-      st.items.push(item)
-    })
-    if (section !== 'favorites' && target.id !== w.activeSpaceId) w.switchSpace(target.id)
-    w.activate(item.id)
-    return item.id
-  })
-
   c.register('tab.reopen', ({ core, w }) => core.commands.run('archive.restore', {}, w))
-
-  c.register('tab.pin', ({ core, w }, p) => {
-    const item = findItem(core, p.id, w)
-    if (!item) return false
-    if (item.section !== 'pinned') moveItem(core, item, 'pinned', w, { index: num(p.index) })
-    return true
-  })
-
-  c.register('tab.unpin', ({ core, w }, p) => {
-    const item = findItem(core, p.id, w)
-    if (!item) return false
-    if (item.section !== 'today') moveItem(core, item, 'today', w, { spaceId: item.spaceId ?? w?.activeSpaceId })
-    return true
-  })
-
-  c.register('tab.togglePin', ({ core, w }, p) => {
-    const item = findItem(core, p.id, w)
-    if (!item) return false
-    return core.commands.run(item.section === 'today' ? 'tab.pin' : 'tab.unpin', { id: item.id }, w)
-  })
-
-  c.register('tab.favorite', ({ core, w }, p) => {
-    const item = findItem(core, p.id, w)
-    if (!item) return false
-    if (item.section === 'favorites' && p.toggle !== false) moveItem(core, item, 'today', w, { spaceId: w?.activeSpaceId })
-    else moveItem(core, item, 'favorites', w, { index: num(p.index) })
-    return true
-  })
-
-  c.register('tab.move', ({ core, w }, p) => {
-    const item = findItem(core, p.id, w)
-    if (!item) return false
-    const section = (str(p.section) as Section | undefined) ?? item.section
-    moveItem(core, item, section, w, { spaceId: str(p.spaceId), index: num(p.index) })
-    return true
-  })
-
-  c.register('tab.rename', ({ core, w }, p) => {
-    const item = findItem(core, p.id, w)
-    if (!item || !w) return false
-    if (typeof p.title === 'string') {
-      core.store.update(() => (item.customTitle = (p.title as string).trim() || null))
-      w.renamingItemId = null
-    } else if (p.cancel === true) {
-      w.renamingItemId = null
-    } else {
-      if (!core.store.state.settings.sidebarVisible) core.store.update((s) => (s.settings.sidebarVisible = true))
-      w.renamingItemId = item.id
-      w.layout()
-      w.shell.webContents.focus()
-    }
-    core.scheduleBroadcast()
-    return true
-  })
 
   c.register('tab.duplicate', ({ core, w }, p) => {
     const item = findItem(core, p.id, w)
     if (!item || !w) return undefined
     return core.commands.run('tab.new', { url: item.url, spaceId: item.spaceId ?? w.activeSpaceId }, w)
-  })
-
-  c.register('tab.resetToPinnedUrl', ({ core, w }, p) => {
-    const item = findItem(core, p.id, w)
-    if (!item?.pinnedUrl || !w) return false
-    return core.commands.run('tab.navigate', { id: item.id, url: item.pinnedUrl }, w)
-  })
-
-  c.register('tab.navigate', ({ core, w }, p) => {
-    if (!w) return false
-    const input = str(p.url) ?? str(p.input)
-    if (!input) return false
-    const url = resolveWithSettings(input, core.store.state.settings).url
-    const item = findItem(core, p.id, w)
-    if (!item) return core.commands.run('tab.new', { url }, w)
-    core.store.update(() => (item.url = url))
-    const view = w.tabs.get(item.id)
-    if (view) void view.webContents.loadURL(url).catch(() => undefined)
-    if (w.activeItemId !== item.id) w.activate(item.id)
-    else w.focusContent()
-    return true
   })
 
   const withContents = (fn: (wc: Electron.WebContents, w: SwyrWindow) => void) => ({ w }: CommandContext) => {
@@ -361,17 +237,6 @@ export function registerBuiltins(c: Commands): void {
   })
 
   // ----- spaces
-  c.register('space.new', ({ core, w }, p) => {
-    const s = core.store.state
-    const profileId = str(p.profileId) && s.profiles.some((x) => x.id === p.profileId) ? (p.profileId as string) : (w?.space().profileId ?? s.profiles[0].id)
-    const order = s.spaces.reduce((m, x) => Math.max(m, x.order), -1) + 1
-    const space = makeSpace(str(p.name) || `Space ${s.spaces.length + 1}`, profileId, order, str(p.emoji) ?? '')
-    if (Array.isArray(p.colors) && p.colors.every((x) => typeof x === 'string')) space.theme.colors = (p.colors as string[]).slice(0, 3)
-    core.store.update((st) => st.spaces.push(space))
-    if (w) w.switchSpace(space.id)
-    return space.id
-  })
-
   c.register('space.switch', ({ core, w }, p) => {
     if (!w) return false
     const spaces = sortedSpaces(core.store.state)
@@ -391,42 +256,6 @@ export function registerBuiltins(c: Commands): void {
   }
   c.register('space.next', spaceStep(1))
   c.register('space.prev', spaceStep(-1))
-
-  c.register('space.edit', ({ core, w }, p) => {
-    const s = core.store.state
-    const space = spaceById(s, str(p.id) ?? w?.activeSpaceId)
-    if (!space) return false
-    const theme = p.theme && typeof p.theme === 'object' ? (p.theme as Partial<SpaceTheme>) : undefined
-    const hasPatch = 'name' in p || 'emoji' in p || theme
-    if (!hasPatch) {
-      w?.openOverlay({ kind: 'spaceEdit', spaceId: space.id })
-      return true
-    }
-    core.store.update(() => {
-      if (typeof p.name === 'string' && p.name.trim()) space.name = p.name.trim()
-      if (typeof p.emoji === 'string') space.emoji = p.emoji
-      if (theme) {
-        if (Array.isArray(theme.colors) && theme.colors.length) space.theme.colors = theme.colors.slice(0, 3)
-        if (typeof theme.angle === 'number') space.theme.angle = theme.angle
-        if (typeof theme.noise === 'number') space.theme.noise = Math.max(0, Math.min(1, theme.noise))
-        if (theme.appearance === 'light' || theme.appearance === 'dark' || theme.appearance === 'auto') space.theme.appearance = theme.appearance
-      }
-    })
-    for (const win of core.windows) if (win.activeSpaceId === space.id) win.switchSpace(space.id)
-    return true
-  })
-
-  c.register('space.delete', ({ core, w }, p) => {
-    const s = core.store.state
-    const space = spaceById(s, str(p.id) ?? w?.activeSpaceId)
-    if (!space || s.spaces.length < 2) return false
-    const items = s.items.filter((i) => i.spaceId === space.id)
-    const fallback = sortedSpaces(s).find((x) => x.id !== space.id)!
-    for (const win of core.windows) if (win.activeSpaceId === space.id) win.switchSpace(fallback.id)
-    archiveItems(core, items, 'manual')
-    core.store.update((st) => (st.spaces = st.spaces.filter((x) => x.id !== space.id)))
-    return true
-  })
 
   c.register('space.contextMenu', ({ core, w }, p) => {
     if (w) core.contextMenus.space(w, str(p.id) ?? w.activeSpaceId)
@@ -569,6 +398,9 @@ export function registerBuiltins(c: Commands): void {
     void shell.openPath(app.getPath('downloads'))
     return true
   })
+
+  registerItemCommands(c)
+  registerSpaceCommands(c)
 
   c.register('debug.titles', ({ core, w }) => (w ? sidebarOrder(core.store.state, w.space()).map(itemTitle) : []))
 }

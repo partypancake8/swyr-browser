@@ -16,6 +16,7 @@
   --backdrop: rgba(17, 18, 22, 0.18);
   --shadow: 0 1px 2px rgba(17, 18, 22, 0.12), 0 6px 18px rgba(17, 18, 22, 0.08);
   --space-bg: #f1f1f1;
+  --danger: #b42318;
   color-scheme: light;
 }
 
@@ -34,6 +35,7 @@
   --accent: #8cc4f0;
   --backdrop: rgba(0, 0, 0, 0.32);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --danger: #ff8a80;
   color-scheme: dark;
 }
 
@@ -117,5 +119,98 @@
 
   .loading-bar {
     animation: swyr-loading 1.1s ease-in-out infinite;
+  }
+
+  /* space switch: the sidebar lists slide in from the side the new space sits on */
+  @keyframes swyr-space-in-next {
+    0% {
+      transform: translateX(36px);
+      opacity: 0.2;
+    }
+    70% {
+      transform: translateX(-3px);
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes swyr-space-in-prev {
+    0% {
+      transform: translateX(-36px);
+      opacity: 0.2;
+    }
+    70% {
+      transform: translateX(3px);
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  .space-in-next {
+    animation: swyr-space-in-next 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+
+  .space-in-prev {
+    animation: swyr-space-in-prev 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+
+  .drop-line {
+    position: absolute;
+    right: 4px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .drop-line::before {
+    content: '';
+    position: absolute;
+    left: -3px;
+    top: -2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: 1.5px solid var(--accent);
+    background: var(--content);
+  }
+
+  .drop-into {
+    box-shadow: inset 0 0 0 1.5px var(--accent);
+    background: var(--row-hover);
+  }
+
+  .drop-zone {
+    border: 1.5px dashed var(--divider);
+    border-radius: 10px;
+  }
+
+  .drop-zone-on {
+    border-color: var(--accent);
+    background: var(--row-hover);
+  }
+
+  .slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--select);
+    outline: none;
+  }
+
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   }
 }

@@ -11,7 +11,13 @@ const PAGE_COMMANDS = new Set([
   'settings.set',
   'tab.navigate',
   'tab.new',
-  'space.edit'
+  'space.edit',
+  // round 2b: archive and library pages
+  'archive.delete',
+  'archive.clear',
+  'library.open',
+  'space.delete',
+  'space.switch'
 ])
 
 export function registerIpc(core: Core): void {
