@@ -128,7 +128,34 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'profile.delete', title: 'Delete Profile' },
   { name: 'profile.switch', title: 'Switch Profile' },
   { name: 'window.newIncognito', title: 'New Private Window', palette: true },
-  { name: 'browser.makeDefault', title: 'Make swyr the Default Browser', palette: true }
+  { name: 'browser.makeDefault', title: 'Make swyr the Default Browser', palette: true },
+  // round 3a: Styles, Site Settings, Reader, History, capture
+  { name: 'style.save', title: 'Save Style' },
+  { name: 'style.toggle', title: 'Turn Style On or Off' },
+  { name: 'style.delete', title: 'Delete Style' },
+  { name: 'style.list', title: 'List Styles' },
+  { name: 'style.forActiveSite', title: 'Styles for This Site' },
+  { name: 'style.siteDefaults', title: 'Style Defaults for This Site' },
+  { name: 'style.pickElement', title: 'Hide an Element on This Page', palette: true },
+  { name: 'style.panel', title: 'Style This Site', palette: true },
+  { name: 'style.edit', title: 'Edit Style Code for This Site', palette: true },
+  { name: 'style.open', title: 'Styles', palette: true },
+  { name: 'siteSettings.open', title: 'Site Settings', palette: true },
+  { name: 'siteSettings.info', title: 'Site Information' },
+  { name: 'siteSettings.setPermission', title: 'Change Site Permission' },
+  { name: 'siteSettings.clearData', title: 'Clear Cookies and Site Data', palette: true },
+  { name: 'siteSettings.setMini', title: 'Always Open This Site in a Mini Window' },
+  { name: 'siteSettings.setAdblock', title: 'Ad Blocking for This Site' },
+  { name: 'page.readerMode', title: 'Reader Mode', palette: true },
+  { name: 'page.copyUrlMarkdown', title: 'Copy URL as Markdown', palette: true },
+  { name: 'page.capture', title: 'Capture Page', palette: true },
+  { name: 'page.viewSource', title: 'View Page Source', palette: true },
+  { name: 'page.print', title: 'Print…', palette: true },
+  { name: 'page.saveAs', title: 'Save Page As…', palette: true },
+  { name: 'history.query', title: 'Search History' },
+  { name: 'history.clear', title: 'Clear History' },
+  { name: 'history.remove', title: 'Remove from History' },
+  { name: 'history.open', title: 'History', palette: true }
 ]
 
 export const COMMAND_TITLES: Record<string, string> = Object.fromEntries(COMMANDS.map((c) => [c.name, c.title]))

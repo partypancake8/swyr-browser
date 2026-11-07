@@ -1,8 +1,8 @@
 // The command bar: open tabs, suggestions, commands and archive in one list.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Command } from 'cmdk'
-import { ArrowRight, Globe, History, Search, TerminalSquare } from 'lucide-react'
-import type { Item, ViewState } from '@shared/types'
+import { ArrowRight, Clock, Globe, History, Search, TerminalSquare } from 'lucide-react'
+import type { HistoryEntry, Item, ViewState } from '@shared/types'
 import { COMMANDS, shortcutLabels } from '@shared/commands'
 import { itemTitle } from '@shared/ops'
 import { displayUrl, resolveWithSettings, searchUrl } from '@shared/url'
@@ -74,6 +74,28 @@ export function CommandBar({ vs, mode, initialQuery }: Props): ReactNode {
       .slice(0, 5)
       .map((x) => x.a)
   }, [state.archive, query])
+
+  // round 3a: history matches for the typed query, minus pages already open as tabs
+  const [historyRows, setHistoryRows] = useState<HistoryEntry[]>([])
+  useEffect(() => {
+    const q = query.trim()
+    let live = true
+    const t = window.setTimeout(
+      () =>
+        void invoke('history.query', { query: q, limit: 20 }).then((r) => {
+          if (live) setHistoryRows(q && Array.isArray(r) ? (r as HistoryEntry[]) : [])
+        }),
+      q ? 60 : 0
+    )
+    return () => {
+      live = false
+      window.clearTimeout(t)
+    }
+  }, [query])
+  const history = useMemo(() => {
+    const open = new Set(state.items.filter((i) => i.kind === 'tab').map((i) => i.url))
+    return historyRows.filter((h) => !open.has(h.url)).slice(0, 5)
+  }, [historyRows, state.items])
 
   const go = async (url: string): Promise<void> => {
     await close()
@@ -163,6 +185,17 @@ export function CommandBar({ vs, mode, initialQuery }: Props): ReactNode {
                 <TerminalSquare size={16} strokeWidth={1.9} />
                 <span className="min-w-0 flex-1 truncate font-medium">{c.title}</span>
                 {labels[c.name] && <kbd className="cb-kbd">{labels[c.name]}</kbd>}
+              </Command.Item>
+            ))}
+          </Command.Group>
+        )}
+        {query.trim() !== '' && history.length > 0 && (
+          <Command.Group heading="History" className="cb-group">
+            {history.map((h) => (
+              <Command.Item key={`${h.profileId}:${h.url}`} value={`hist:${h.url}`} className="cb-item" onSelect={() => go(h.url)}>
+                <Clock size={16} strokeWidth={1.9} />
+                <span className="min-w-0 flex-1 truncate font-medium">{h.title || displayUrl(h.url)}</span>
+                <span className="max-w-[40%] shrink-0 truncate text-[12px]">{displayUrl(h.url)}</span>
               </Command.Item>
             ))}
           </Command.Group>

@@ -13,7 +13,7 @@ import {
   type DragStartEvent,
   type PointerSensorOptions
 } from '@dnd-kit/core'
-import { ArrowLeft, ArrowRight, Download, Folder, History, PanelLeft, RotateCw, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Download, Folder, History, Paintbrush, PanelLeft, RotateCw, SlidersHorizontal, X } from 'lucide-react'
 import type { Item, ViewState } from '@shared/types'
 import { itemTitle, windowSpaces } from '@shared/ops'
 import { displayUrl } from '@shared/url'
@@ -233,7 +233,20 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
           </button>
         </div>
 
-        <UrlField item={active} loading={Boolean(rt?.loading)} />
+        <div className="flex shrink-0 items-center gap-1">
+          <UrlField item={active} loading={Boolean(rt?.loading)} />
+          {/* round 3a: Styles and Site Settings for the active site */}
+          {active && /^(https?|file):/i.test(active.url) && (
+            <>
+              <button className="icon-btn no-drag !h-9 !w-8 shrink-0" title="Styles for this site" data-testid="url-styles" onClick={() => invoke('style.panel')}>
+                <Paintbrush size={15} strokeWidth={1.9} />
+              </button>
+              <button className="icon-btn no-drag !h-9 !w-8 shrink-0" title="Site Settings" data-testid="url-site-settings" onClick={() => invoke('siteSettings.open')}>
+                <SlidersHorizontal size={15} strokeWidth={1.9} />
+              </button>
+            </>
+          )}
+        </div>
         <ExtensionActions vs={vs} />
 
         <div
@@ -307,7 +320,7 @@ function UrlField({ item, loading }: { item: Item | undefined; loading: boolean 
   const text = item ? (item.url.startsWith('swyr://newtab') ? 'Search or enter URL' : displayUrl(item.url)) : 'Search or enter URL'
   return (
     <button
-      className="no-drag relative flex h-9 w-full shrink-0 items-center gap-2 overflow-hidden rounded-[10px] bg-[var(--field)] px-2.5 text-left hover:brightness-[1.02]"
+      className="no-drag relative flex h-9 w-full min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-[10px] bg-[var(--field)] px-2.5 text-left hover:brightness-[1.02]"
       title={item?.url}
       onClick={() => invoke('commandbar.open', { mode: 'current' })}
     >

@@ -77,7 +77,12 @@ export class AppMenu {
           this.cmd(IMPORT_FROM_LABEL + '…', 'import.arc'),
           this.cmd('Export swyr Data…', 'data.export'),
           sep,
-          this.cmd('Downloads', 'downloads.open')
+          this.cmd('Downloads', 'downloads.open'),
+          // round 3a
+          sep,
+          this.cmd('Save Page As…', 'page.saveAs'),
+          this.cmd('Capture Page', 'page.capture'),
+          this.cmd('Print…', 'page.print')
         ]
       },
       {
@@ -97,7 +102,8 @@ export class AppMenu {
           this.cmd('Find Next', 'find.next'),
           this.cmd('Find Previous', 'find.prev'),
           sep,
-          this.cmd('Copy URL', 'page.copyUrl')
+          this.cmd('Copy URL', 'page.copyUrl'),
+          this.cmd('Copy URL as Markdown', 'page.copyUrlMarkdown') // round 3a
         ]
       },
       {
@@ -121,6 +127,10 @@ export class AppMenu {
           this.cmd('Actual Size', 'zoom.reset'),
           sep,
           this.cmd('Developer Tools', 'page.devtools'),
+          // round 3a
+          this.cmd('View Page Source', 'page.viewSource'),
+          this.cmd('Reader Mode', 'page.readerMode'),
+          this.cmd('History', 'history.open'),
           { role: 'togglefullscreen' }
         ]
       },

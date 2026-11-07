@@ -17,6 +17,7 @@ Regenerate this file with `node scripts/licenses.mjs`.
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
   swyr uses these files unmodified from npm; their source is available at https://github.com/ghostery/adblocker. The filter lists they download (EasyList and EasyPrivacy, via Ghostery's prebuilt engines) are dual licensed GPL-3.0 / CC BY-SA 3.0 by The EasyList authors (https://easylist.to) and are fetched at run time, not bundled.
+- Reader view: @mozilla/readability, Copyright (c) 2010 Arc90 Inc (as stated in its LICENSE.md), maintained by Mozilla, licensed under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0). swyr loads Readability.js unmodified from npm and runs it inside the page being read.
 
 ## Direct dependencies
 
@@ -27,6 +28,7 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | @dnd-kit/utilities | 3.2.2 | MIT |
 | @eslint/js | 10.0.1 | MIT |
 | @ghostery/adblocker-electron | 2.20.3 | MPL-2.0 |
+| @mozilla/readability | 0.6.0 | Apache-2.0 |
 | @tailwindcss/vite | 4.3.5 | MIT |
 | @types/node | 24.19.2 | MIT |
 | @types/react | 19.3.0 | MIT |
@@ -66,6 +68,7 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | @ghostery/adblocker-electron-preload | 2.20.3 | MPL-2.0 |
 | @ghostery/adblocker-extended-selectors | 2.20.3 | MPL-2.0 |
 | @ghostery/url-parser | 1.3.1 | MPL-2.0 |
+| @mozilla/readability | 0.6.0 | Apache-2.0 |
 | @radix-ui/primitive | 1.2.0 | MIT |
 | @radix-ui/react-compose-refs | 1.1.5 | MIT |
 | @radix-ui/react-context | 1.3.0 | MIT |
