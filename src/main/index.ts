@@ -13,6 +13,8 @@ const TEST = process.env.SWYR_TEST === '1'
 
 app.setName('swyr')
 if (TEST && process.env.SWYR_USER_DATA) app.setPath('userData', path.resolve(process.env.SWYR_USER_DATA))
+// headless test runs keep their renderer count small: same-site pages share a process past this limit
+if (TEST) app.commandLine.appendSwitch('renderer-process-limit', process.env.SWYR_RENDERER_LIMIT || '4')
 
 registerSchemePrivileges()
 

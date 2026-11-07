@@ -4,7 +4,7 @@ import type { MiniViewState, MiniWindowRuntime, Profile } from '@shared/types'
 import { resolveBindings } from '@shared/commands'
 import { baseColor, isDark } from '@shared/theme'
 import { sortedSpaces, spaceById, regularSpaces } from '@shared/ops'
-import { preloadPath, rendererUrl } from '../views/ShellView'
+import { preloadPath, rendererUrl, reviveOnCrash } from '../views/ShellView'
 import { profileSession } from '../profiles/Profiles'
 import { isInternalUrl } from '../protocol/Protocol'
 import { parseAccelerator } from '../shortcuts/Shortcuts'
@@ -90,6 +90,7 @@ export class MiniWindow {
       core.onMiniClosed(this)
     })
     void this.win.loadURL(rendererUrl('mini'))
+    reviveOnCrash(this.win.webContents, rendererUrl('mini'))
     this.layout()
     void view.webContents.loadURL(url || 'about:blank').catch(() => undefined)
   }

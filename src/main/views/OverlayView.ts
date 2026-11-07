@@ -1,6 +1,6 @@
 // One transparent view on top of everything, attached only while an overlay is open.
 import { WebContentsView } from 'electron'
-import { preloadPath, rendererUrl } from './ShellView'
+import { preloadPath, rendererUrl, reviveOnCrash } from './ShellView'
 
 export function createOverlayView(): WebContentsView {
   const view = new WebContentsView({
@@ -16,5 +16,6 @@ export function createOverlayView(): WebContentsView {
   })
   view.setBackgroundColor('#00000000')
   void view.webContents.loadURL(rendererUrl('overlay'))
+  reviveOnCrash(view.webContents, rendererUrl('overlay'))
   return view
 }

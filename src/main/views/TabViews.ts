@@ -19,6 +19,8 @@ export class TabViews {
   private attached: string[] = []
   /** the tab last reported to the extensions host as selected (the focused pane of a split) */
   private selected: string | null = null
+  /** recent automatic reloads per tab after a renderer crash */
+  private readonly revived = new Map<string, number[]>()
 
   constructor(private readonly w: SwyrWindow) {}
 
@@ -180,10 +182,12 @@ export class TabViews {
       const r = rt()
       if (r) r.zoom = wc.getZoomLevel()
     })
-    wc.on('render-process-gone', () => {
+    wc.on('render-process-gone', (_e, details) => {
       const r = rt()
       if (r) r.loading = false
       core.scheduleBroadcast()
+      // a tab on screen reloads at once; a hidden one reloads when it is shown again (see show)
+      if (details.reason !== 'clean-exit' && this.attached.includes(id)) setTimeout(() => this.reviveIfCrashed(id), 50)
     })
     wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
       if (!isMainFrame || code === -3) return
@@ -191,6 +195,20 @@ export class TabViews {
         `document.documentElement.innerHTML = ${JSON.stringify(failPage(url, desc))}`
       ).catch(() => undefined)
     })
+  }
+
+  /** reload a tab whose renderer process died (crash, out of memory, killed) */
+  private reviveIfCrashed(id: string): void {
+    const wc = this.views.get(id)?.webContents
+    if (!wc || wc.isDestroyed() || !wc.isCrashed()) return
+    // a page that keeps crashing is left alone after a few quick attempts
+    const now = Date.now()
+    const recent = (this.revived.get(id) ?? []).filter((t) => now - t < 30000)
+    if (recent.length >= 3) return
+    this.revived.set(id, [...recent, now])
+    // load the item's URL rather than reload: a crash during a navigation leaves the old entry committed
+    const url = this.w.core.store.state.items.find((i) => i.id === id)?.url || wc.getURL() || 'swyr://newtab'
+    void wc.loadURL(url).catch(() => undefined)
   }
 
   /** attach the given ids at the given rects, detach every other tab view */
@@ -209,7 +227,10 @@ export class TabViews {
     ids.forEach((id, i) => {
       const v = this.views.get(id)
       if (!v) return
-      if (!this.attached.includes(id)) content.addChildView(v)
+      if (!this.attached.includes(id)) {
+        content.addChildView(v)
+        this.reviveIfCrashed(id)
+      }
       v.setBounds(rects[i])
       next.push(id)
     })
@@ -234,6 +255,7 @@ export class TabViews {
     }
     this.views.delete(id)
     this.runtime.delete(id)
+    this.revived.delete(id)
     this.mru = this.mru.filter((x) => x !== id)
     this.w.media.forget(id)
     extensionsService()?.tabRemoved(v.webContents) // round 2c

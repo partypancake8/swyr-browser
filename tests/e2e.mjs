@@ -57,8 +57,17 @@ try {
   step('find overlay')
   await t.dispatch('find.open')
   await sleep(300)
-  await t.dispatch('find.update', { query: 'domain' })
-  s = await t.waitFor((s) => s.windows[0].overlay?.kind === 'find' && s.windows[0].overlay.matches > 0, 'find matches')
+  // the page may still be painting (or reloading after its renderer was reclaimed under load): ask again until it answers
+  for (let attempt = 1; ; attempt++) {
+    await t.waitIdle()
+    await t.dispatch('find.update', { query: 'domain' })
+    try {
+      s = await t.waitFor((s) => s.windows[0].overlay?.kind === 'find' && s.windows[0].overlay.matches > 0, 'find matches', 5000)
+      break
+    } catch (err) {
+      if (attempt >= 5) throw err
+    }
+  }
   await sleep(300)
   await t.capture(frame('03-find'))
   await t.dispatch('find.close')
@@ -129,16 +138,36 @@ try {
   s = await t.waitFor((s) => s.windows[0].activeSpaceId === s.spaces[1].id, 'space prev wraps')
 
   step('raw shortcuts through before-input-event')
+  /** send a key to the shell once its renderer is up; true when it was delivered */
   const key = (keyCode, modifiers) =>
-    t.app.evaluate(({ webContents }, [k, m]) => {
-      const wc = webContents.getAllWebContents().find((w) => w.getURL().startsWith('swyr://shell'))
-      wc.sendInputEvent({ type: 'keyDown', keyCode: k, modifiers: m })
-      wc.sendInputEvent({ type: 'keyUp', keyCode: k, modifiers: m })
+    t.app.evaluate(async ({ webContents }, [k, m]) => {
+      const shell = () => webContents.getAllWebContents().find((w) => w.getURL().startsWith('swyr://shell'))
+      for (let i = 0; i < 100; i++) {
+        const wc = shell()
+        if (wc && !wc.isDestroyed() && !wc.isCrashed() && !wc.isLoading()) {
+          wc.sendInputEvent({ type: 'keyDown', keyCode: k, modifiers: m })
+          wc.sendInputEvent({ type: 'keyUp', keyCode: k, modifiers: m })
+          return true
+        }
+        await new Promise((r) => setTimeout(r, 100))
+      }
+      return false
     }, [keyCode, modifiers])
-  await key('2', ['control'])
-  await t.waitFor((s) => s.windows[0].activeSpaceId === s.spaces[1].id, 'ctrl+2')
-  await key('Left', ['meta', 'alt'])
-  await t.waitFor((s) => s.windows[0].activeSpaceId === s.spaces[0].id, 'cmd+opt+left')
+  /** press until the state shows the effect: a key sent while the shell renderer is being replaced is lost, not delayed */
+  const press = async (keyCode, modifiers, pred, label) => {
+    for (let attempt = 1; ; attempt++) {
+      assert.ok(await key(keyCode, modifiers), 'shell renderer ready for ' + label)
+      try {
+        return await t.waitFor(pred, label, 5000)
+      } catch (err) {
+        const now = await t.state()
+        if (pred(now)) return now
+        if (attempt >= 3) throw err
+      }
+    }
+  }
+  await press('2', ['control'], (s) => s.windows[0].activeSpaceId === s.spaces[1].id, 'ctrl+2')
+  await press('Left', ['meta', 'alt'], (s) => s.windows[0].activeSpaceId === s.spaces[0].id, 'cmd+opt+left')
 
   step('profile session user agent has no Electron or swyr token')
   const ua = await t.app.evaluate(({ session }, part) => session.fromPartition(part).getUserAgent(), s.profiles[0].partition)
