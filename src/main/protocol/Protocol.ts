@@ -11,11 +11,13 @@ export const PAGES: Record<string, string> = {
   overlay: 'overlay/index.html',
   newtab: 'pages/newtab/index.html',
   settings: 'pages/settings/index.html',
-  archive: 'pages/archive/index.html'
+  archive: 'pages/archive/index.html',
+  library: 'pages/library/index.html'
 }
 
 /** pages that may be opened in a tab */
 export const TAB_PAGES = new Set(['newtab', 'settings', 'archive'])
+TAB_PAGES.add('library')
 
 export function registerSchemePrivileges(): void {
   protocol.registerSchemesAsPrivileged([

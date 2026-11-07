@@ -6,6 +6,7 @@ import { Sidebar } from '../shell/Sidebar'
 import { CommandBar } from './CommandBar'
 import { FindBar } from './FindBar'
 import { SpaceEditor } from './SpaceEditor'
+import { Dialogs } from './dialogs/Dialogs'
 
 export function App(): ReactNode {
   const vs = useView((s) => s.vs)
@@ -42,7 +43,7 @@ export function App(): ReactNode {
           style={{ paddingTop: '18vh' }}
           onMouseDown={(e) => e.target === e.currentTarget && invoke('overlay.close')}
         >
-          <SpaceEditor key={overlay.seq} space={target} canDelete={vs.state.spaces.length > 1} />
+          <SpaceEditor key={overlay.seq} space={target} canDelete={vs.state.spaces.length > 1} profiles={vs.state.profiles} systemDark={vs.systemDark} />
         </div>
       )
     }
@@ -54,6 +55,8 @@ export function App(): ReactNode {
           </SpaceBackground>
         </div>
       )
+    case 'dialog':
+      return <Dialogs key={overlay.seq} vs={vs} dialog={overlay} />
     case 'toast':
       return (
         <div className="flex h-full items-center justify-center p-1">

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { computeLayout, normalizeRatios, splitRect, clampSidebar } from '../src/main/layout/Layout.ts'
 import { resolveInput, resolveWithSettings, looksLikeUrl, displayUrl } from '../src/shared/url.ts'
 import { acceleratorLabel, resolveBindings, DEFAULT_BINDINGS } from '../src/shared/commands.ts'
-import { sidebarOrder } from '../src/shared/ops.ts'
+import { sidebarOrder, sameUrl, awayFromPinned, isWithin, depthOf, descendantsOf } from '../src/shared/ops.ts'
 
 let n = 0
 const test = (name, fn) => {
@@ -87,6 +87,20 @@ test('ops: sidebar order is favorites, pinned, today', () => {
   const it = (id, section, order, extra = {}) => ({ id, section, order, kind: 'tab', spaceId: section === 'favorites' ? null : 's1', profileId: 'p1', parentId: null, ...extra })
   const state = { items: [it('t2', 'today', 1), it('p1', 'pinned', 0), it('f1', 'favorites', 0), it('t1', 'today', 0), it('x', 'today', 0, { spaceId: 's2' })] }
   assert.deepEqual(sidebarOrder(state, space).map((i) => i.id), ['f1', 'p1', 't1', 't2'])
+})
+
+test('ops: pinned url, nesting helpers', () => {
+  assert.ok(sameUrl('https://example.com/', 'https://example.com'))
+  assert.ok(!sameUrl('https://example.com/other', 'https://example.com/'))
+  const tab = { kind: 'tab', section: 'pinned', url: 'https://a.b/x', pinnedUrl: 'https://a.b/' }
+  assert.ok(awayFromPinned(tab))
+  assert.ok(!awayFromPinned({ ...tab, section: 'today' }))
+  const f = (id, parentId, kind = 'folder') => ({ id, parentId, kind, order: 0 })
+  const state = { items: [f('r', null), f('i', 'r'), f('t', 'i', 'tab')] }
+  assert.ok(isWithin(state, 't', 'r'))
+  assert.ok(!isWithin(state, 'r', 'i'))
+  assert.equal(depthOf(state, state.items[2]), 2)
+  assert.deepEqual(descendantsOf(state, 'r').map((x) => x.id), ['i', 't'])
 })
 
 console.log(`unit: ${n} passed`)

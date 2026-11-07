@@ -13,6 +13,9 @@ Regenerate this file with `node scripts/licenses.mjs`.
 
 | Package | Version | License |
 |---|---|---|
+| @dnd-kit/core | 6.3.1 | MIT |
+| @dnd-kit/sortable | 10.0.0 | MIT |
+| @dnd-kit/utilities | 3.2.2 | MIT |
 | @eslint/js | 10.0.1 | MIT |
 | @tailwindcss/vite | 4.3.5 | MIT |
 | @types/node | 24.19.2 | MIT |
@@ -39,6 +42,10 @@ Regenerate this file with `node scripts/licenses.mjs`.
 
 | Package | Version | License |
 |---|---|---|
+| @dnd-kit/accessibility | 3.1.1 | MIT |
+| @dnd-kit/core | 6.3.1 | MIT |
+| @dnd-kit/sortable | 10.0.0 | MIT |
+| @dnd-kit/utilities | 3.2.2 | MIT |
 | @radix-ui/primitive | 1.2.0 | MIT |
 | @radix-ui/react-compose-refs | 1.1.5 | MIT |
 | @radix-ui/react-context | 1.3.0 | MIT |

@@ -35,7 +35,8 @@ export default defineConfig({
           overlay: r('src/renderer/overlay/index.html'),
           newtab: r('src/renderer/pages/newtab/index.html'),
           settings: r('src/renderer/pages/settings/index.html'),
-          archive: r('src/renderer/pages/archive/index.html')
+          archive: r('src/renderer/pages/archive/index.html'),
+          library: r('src/renderer/pages/library/index.html')
         }
       }
     }

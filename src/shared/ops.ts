@@ -56,5 +56,75 @@ export function nextOrder(items: Item[]): number {
 }
 
 export function itemTitle(item: Item): string {
+  if (item.kind === 'folder') return item.customTitle || item.title || 'Folder'
   return item.customTitle || item.title || item.url || 'Untitled'
+}
+
+/** every item below a folder, depth first */
+export function descendantsOf(s: PersistedState, id: string): Item[] {
+  const out: Item[] = []
+  const walk = (pid: string, depth: number): void => {
+    if (depth > 32) return
+    for (const c of childrenOf(s, pid)) {
+      out.push(c)
+      if (c.kind === 'folder') walk(c.id, depth + 1)
+    }
+  }
+  walk(id, 0)
+  return out
+}
+
+/** true when `id` is `ancestorId` or sits somewhere below it */
+export function isWithin(s: PersistedState, id: string | null | undefined, ancestorId: string): boolean {
+  let cur = s.items.find((i) => i.id === id)
+  for (let guard = 0; cur && guard < 64; guard++) {
+    if (cur.id === ancestorId) return true
+    const pid = cur.parentId
+    cur = pid ? s.items.find((i) => i.id === pid) : undefined
+  }
+  return false
+}
+
+/** nesting depth of an item inside pinned folders (0 at the top level) */
+export function depthOf(s: PersistedState, item: Item): number {
+  let d = 0
+  let pid = item.parentId
+  while (pid && d < 32) {
+    const parent = s.items.find((i) => i.id === pid)
+    if (!parent) break
+    d++
+    pid = parent.parentId
+  }
+  return d
+}
+
+/** the items an item is ordered among: same section and parent, same space (or same profile for favorites) */
+export function siblingsOf(s: PersistedState, where: { section: Section; spaceId: string | null; profileId: string; parentId: string | null }): Item[] {
+  if (where.section === 'favorites') return favoritesFor(s, where.profileId)
+  if (where.parentId) return childrenOf(s, where.parentId)
+  return sectionItems(s, where.spaceId ?? '', where.section)
+}
+
+/** URLs compare equal ignoring a trailing slash and the fragment */
+export function sameUrl(a: string | null | undefined, b: string | null | undefined): boolean {
+  const norm = (u: string): string => u.replace(/#.*$/, '').replace(/\/$/, '')
+  return norm(a ?? '') === norm(b ?? '')
+}
+
+/** a pinned or favorite tab that navigated away from its pinned URL */
+export function awayFromPinned(item: Item): boolean {
+  return item.kind === 'tab' && item.section !== 'today' && Boolean(item.pinnedUrl) && !sameUrl(item.url, item.pinnedUrl)
+}
+
+export function spaceCounts(s: PersistedState, spaceId: string): { pinned: number; today: number; folders: number } {
+  let pinned = 0
+  let today = 0
+  let folders = 0
+  for (const i of s.items) {
+    if (i.spaceId !== spaceId) continue
+    if (i.kind === 'folder') folders++
+    else if (i.section === 'pinned') pinned++
+    else if (i.section === 'today') today++
+  }
+  return { pinned, today, folders }
 }

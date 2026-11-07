@@ -4,9 +4,11 @@ import type { ViewState } from '@shared/types'
 
 interface ViewStore {
   vs: ViewState | null
+  /** the sidebar item being dragged right now (dnd-kit drag), for drop zones outside the sidebar */
+  draggingItemId: string | null
 }
 
-export const useView = create<ViewStore>(() => ({ vs: null }))
+export const useView = create<ViewStore>(() => ({ vs: null, draggingItemId: null }))
 
 let started = false
 export function startViewSync(): void {
