@@ -68,6 +68,7 @@ function Manager(): ReactNode {
             <Plus size={14} /> New Style
           </span>
         </Button>
+        <Button onClick={() => void invoke('style.import', {}).then(refresh)}>Install from Clipboard</Button>
       </div>
       {list && sorted.length === 0 ? (
         <Card>
@@ -191,6 +192,7 @@ function Editor({ id }: { id: string }): ReactNode {
           {style.enabled ? 'On' : 'Off'}
           <Toggle label={style.enabled ? 'Turn style off' : 'Turn style on'} on={style.enabled} onChange={(v) => void invoke('style.toggle', { id: style.id, enabled: v }).then(refresh)} />
         </span>
+        <Button onClick={() => void invoke('style.export', { id: style.id })}>Copy Share Code</Button>
         {confirm ? (
           <>
             <Button onClick={() => setConfirm(false)}>Keep</Button>

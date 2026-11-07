@@ -95,6 +95,39 @@ function openInternal(ctx: CommandContext, url: string): unknown {
   return core.commands.run('tab.new', { url }, w)
 }
 
+/** page script: replace the first (or every) case-insensitive match in editable fields; returns the count */
+const REPLACE_IN_PAGE = String.raw`(query, replacement, all) => {
+  const esc = query.replace(/[.*+?^\${}()|[\]\\]/g, '\\$&')
+  let left = all ? Infinity : 1
+  let count = 0
+  const swap = (text) => text.replace(new RegExp(esc, 'gi'), (m) => {
+    if (left <= 0) return m
+    left--
+    count++
+    return replacement
+  })
+  const fields = [...document.querySelectorAll('textarea, input:not([type]), input[type=text], input[type=search], input[type=url], input[type=email], [contenteditable=""], [contenteditable=true]')]
+  for (const el of fields) {
+    if (left <= 0) break
+    if ('value' in el && el.tagName !== 'DIV') {
+      if (el.readOnly || el.disabled) continue
+      const next = swap(el.value)
+      if (next !== el.value) {
+        el.value = next
+        el.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    } else {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      for (let node = walker.nextNode(); node && left > 0; node = walker.nextNode()) {
+        const next = swap(node.nodeValue || '')
+        if (next !== node.nodeValue) node.nodeValue = next
+      }
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+  }
+  return count
+}`
+
 export function registerBuiltins(c: Commands): void {
   // ----- tabs
   c.register('tab.new', ({ core, w }, p) => {
@@ -143,6 +176,11 @@ export function registerBuiltins(c: Commands): void {
     const routed = routeSplitClose(core, w, p)
     if (routed !== undefined) return routed
     const item = findItem(core, p.id, w)
+    if (w && !item && p.id === undefined && !w.activeItemId) {
+      // Cmd+W with no tab left in the window closes the window
+      w.win.close()
+      return 'window'
+    }
     if (!w || !item) return false
     if (item.section !== 'today' && p.remove !== true) {
       // pinned and favorite tabs stay in the sidebar; closing unloads them
@@ -321,11 +359,25 @@ export function registerBuiltins(c: Commands): void {
     return true
   })
 
-  c.register('find.open', ({ w }) => {
+  c.register('find.open', ({ w }, p) => {
     if (!w || !w.activeContents()) return false
     const prev = w.overlayState?.kind === 'find' ? w.overlayState.query : lastFind
-    w.openOverlay({ kind: 'find', query: prev, active: 0, matches: 0 })
+    w.openOverlay({ kind: 'find', query: prev, active: 0, matches: 0, replace: p.replace === true })
     return true
+  })
+  // Find and Replace: replaces matches inside the page's editable fields (inputs, text areas, contenteditable)
+  c.register('find.replace', async ({ w }, p) => {
+    const wc = w?.activeContents()
+    if (!wc || !w) return 0
+    const query = str(p.query) ?? (w.overlayState?.kind === 'find' ? w.overlayState.query : lastFind)
+    const replacement = typeof p.replacement === 'string' ? p.replacement : ''
+    if (!query) return 0
+    const n = Number(await wc.executeJavaScript(`(${REPLACE_IN_PAGE})(${JSON.stringify(query)}, ${JSON.stringify(replacement)}, ${p.all === true})`, true).catch(() => 0)) || 0
+    if (n) {
+      wc.stopFindInPage('keepSelection')
+      wc.findInPage(query)
+    }
+    return n
   })
   let lastFind = ''
   c.register('find.update', ({ w }, p) => {
@@ -412,6 +464,10 @@ export function registerBuiltins(c: Commands): void {
   registerPageCommands(c) // round 3a: styles, site settings, reader, history, capture
   registerDocumentCommands(c) // round 3b: notes, canvases, live folders, library
   registerAppCommands(c) // round 3c: onboarding, window bounds, shortcut table, About, page commands
+
+  // test mode: native menus never pop up headless, so the last one is inspectable and clickable by label
+  c.register('contextMenu.last', ({ core }) => core.contextMenus.lastLabels())
+  c.register('contextMenu.click', ({ core }, p) => core.contextMenus.clickLast(str(p.label) ?? ''))
 
   c.register('debug.titles', ({ core, w }) => (w ? sidebarOrder(core.store.state, w.space()).map(itemTitle) : []))
 }

@@ -10,6 +10,8 @@ import { leavesSite, previewSource } from '../commands/preview'
 import { isErrorPageUrl, showErrorPage } from '../errorpage/ErrorPage'
 
 export const WARM_CACHE = 8
+/** test runs may shrink the warm cache (SWYR_WARM_TABS) to stay under a machine's renderer process limit */
+const WARM_LIMIT = process.env.SWYR_TEST === '1' && Number(process.env.SWYR_WARM_TABS) > 0 ? Math.floor(Number(process.env.SWYR_WARM_TABS)) : WARM_CACHE
 export const TAB_RADIUS = 10
 
 export class TabViews {
@@ -103,7 +105,7 @@ export class TabViews {
     this.mru = [id, ...this.mru.filter((x) => x !== id)]
     const keep = this.protectedIds()
     keep.add(id)
-    while (this.mru.length > WARM_CACHE) {
+    while (this.mru.length > WARM_LIMIT) {
       const victim = [...this.mru].reverse().find((x) => !this.attached.includes(x) && !keep.has(x))
       if (!victim) break
       this.destroy(victim)

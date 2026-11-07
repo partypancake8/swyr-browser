@@ -16,7 +16,7 @@ export const RATIO_MAX = 0.8
 export const MAX_PANES = 4
 
 /** 'content' covers just the content area (split drop zones); 'preview' is full window plus a preview card */
-export type OverlayLayout = 'none' | 'full' | 'find' | 'sidebar' | 'toast' | 'content' | 'preview'
+export type OverlayLayout = 'none' | 'full' | 'find' | 'findReplace' | 'sidebar' | 'toast' | 'content' | 'preview'
 
 export interface SplitLayout {
   layout: 'horizontal' | 'vertical'
@@ -174,9 +174,10 @@ export function computeLayout(input: LayoutInput): LayoutOutput {
     case 'content':
       overlay = content
       break
-    case 'find': {
+    case 'find':
+    case 'findReplace': {
       const w = Math.min(360, content.width)
-      overlay = { x: content.x + content.width - w - 12, y: content.y + 10, width: w, height: 52 }
+      overlay = { x: content.x + content.width - w - 12, y: content.y + 10, width: w, height: input.overlay === 'findReplace' ? 96 : 52 }
       break
     }
     case 'sidebar':

@@ -60,7 +60,7 @@ if (!gotLock) {
     setupDefaultSession()
     core = new Core()
     initPlatform(core)
-    core.commands.register('archive.runAuto', ({ core: c }) => runAutoArchive(c))
+    core.commands.register('archive.runAuto', ({ core: c }, p) => runAutoArchive(c, typeof p.now === 'number' && Number.isFinite(p.now) ? p.now : undefined))
     registerIpc(core)
     core.menu.refresh()
     core.createWindow()

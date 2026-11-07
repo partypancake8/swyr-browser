@@ -37,7 +37,7 @@ export function App(): ReactNode {
         </div>
       )
     case 'find':
-      return <FindBar key={overlay.seq} query={overlay.query} active={overlay.active} matches={overlay.matches} />
+      return <FindBar key={overlay.seq} query={overlay.query} active={overlay.active} matches={overlay.matches} replace={overlay.replace} />
     case 'spaceEdit': {
       const target = vs.state.spaces.find((s) => s.id === overlay.spaceId)
       if (!target) return null

@@ -132,7 +132,7 @@ export interface TabRuntime {
 
 export type OverlayState =
   | { kind: 'commandbar'; mode: 'new' | 'current'; query: string; seq: number }
-  | { kind: 'find'; query: string; active: number; matches: number; seq: number }
+  | { kind: 'find'; query: string; active: number; matches: number; seq: number; replace?: boolean }
   | { kind: 'spaceEdit'; spaceId: string; seq: number }
   | { kind: 'sidebar'; seq: number }
   | { kind: 'toast'; message: string; seq: number }
@@ -541,6 +541,8 @@ export interface ShortcutEntry {
 }
 
 export interface OnboardingCompletePayload {
+  /** web apps picked on the Defaults step; each becomes a Favorite */
+  favorites?: { url: string; title: string }[]
   themeColors?: string[]
   adblock?: boolean
   archiveAfter?: ArchiveAfter

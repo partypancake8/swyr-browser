@@ -35,13 +35,22 @@ export const MEDIA_TOGGLE = `(() => {
   const els = [...document.querySelectorAll('video, audio')]
   const playing = els.filter((e) => !e.paused && !e.ended)
   if (playing.length) {
-    playing.forEach((e) => e.pause())
+    els.forEach((e) => delete e.dataset.swyrPaused)
+    playing.forEach((e) => {
+      e.dataset.swyrPaused = '1'
+      e.pause()
+    })
     return 'paused'
   }
-  const last = els.find((e) => e.currentTime > 0) || els[0]
-  if (!last) return 'none'
-  const p = last.play()
-  if (p && p.catch) p.catch(() => undefined)
+  // resume everything the last toggle paused, else the most recent element
+  const marked = els.filter((e) => e.dataset.swyrPaused === '1')
+  const resume = marked.length ? marked : [els.find((e) => e.currentTime > 0) || els[0]].filter(Boolean)
+  if (!resume.length) return 'none'
+  resume.forEach((e) => {
+    delete e.dataset.swyrPaused
+    const p = e.play()
+    if (p && p.catch) p.catch(() => undefined)
+  })
   return 'playing'
 })()`
 

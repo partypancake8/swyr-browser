@@ -219,7 +219,7 @@ export class SwyrWindow {
   overlayLayout(): OverlayLayout {
     const o = this.overlayState
     if (!o) return 'none'
-    if (o.kind === 'find') return 'find'
+    if (o.kind === 'find') return o.replace ? 'findReplace' : 'find'
     if (o.kind === 'sidebar') return 'sidebar'
     if (o.kind === 'toast') return 'toast'
     if (o.kind === 'preview') return this.preview.isOpen() ? 'preview' : 'full'

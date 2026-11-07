@@ -14,6 +14,7 @@ import type { SwyrWindow } from '../windows/SwyrWindow'
 import { StyleApplier, PICKER_SCRIPT, saveStyle, siteStyle } from '../styles/Styles'
 import { sitePattern, stylesFor } from '../styles/match'
 import { History } from '../history/History'
+import { defaultHistoryPath, readBrowserHistory, type HistoryBrowser } from '../import/BrowserHistory'
 import { showReader } from '../reader/Reader'
 import { SITE_PERMISSIONS, attachPermissions, decisions, originOf, setDecision } from '../sitesettings/SiteSettings'
 import { onProfileSession } from '../profiles/Profiles'
@@ -31,6 +32,8 @@ export const PAGE_3A_COMMANDS = [
   'style.delete',
   'style.list',
   'style.open',
+  'style.export',
+  'style.import',
   'history.query',
   'history.clear',
   'history.remove',
@@ -46,6 +49,7 @@ let S: Services | null = null
 /** web contents showing the Reader view */
 const readers = new WeakSet<WebContents>()
 const PICKER_WORLD = 1032
+const STYLE_CODE_PREFIX = 'swyr-style:'
 
 export function historyService(): History | null {
   return S?.history ?? null
@@ -179,6 +183,29 @@ export function registerPageCommands(c: Commands): void {
     return core.store.state.styles.length < before
   })
   c.register('style.list', ({ core }) => core.store.state.styles)
+  // sharing: a style travels as a "swyr-style:" code (base64url JSON) that anyone can install
+  c.register('style.export', ({ core, w }, p) => {
+    const style = core.store.state.styles.find((s) => s.id === str(p.id))
+    if (!style) return null
+    const { hostPattern, colors, font, fontScale, css, js, hiddenSelectors } = style
+    const code = STYLE_CODE_PREFIX + Buffer.from(JSON.stringify({ v: 1, hostPattern, colors, font, fontScale, css, js, hiddenSelectors }), 'utf8').toString('base64url')
+    clipboard.writeText(code)
+    w?.toast('Style share code copied')
+    return code
+  })
+  c.register('style.import', async ({ core, w }, p) => {
+    const text = (str(p.code) ?? str(p.text) ?? (await clipboard.readText())).trim()
+    if (!text.startsWith(STYLE_CODE_PREFIX)) return { error: 'That is not a swyr style code.' }
+    try {
+      const data = JSON.parse(Buffer.from(text.slice(STYLE_CODE_PREFIX.length), 'base64url').toString('utf8')) as Record<string, unknown>
+      const style = saveStyle(core, { ...data, id: undefined, enabled: true } as unknown as Record<string, unknown> & { hostPattern: string })
+      if (!style) return { error: 'That style code has no site.' }
+      w?.toast(`Installed a style for ${style.hostPattern}`)
+      return style
+    } catch {
+      return { error: 'That style code is damaged.' }
+    }
+  })
   c.register('style.forActiveSite', ({ core, w }) => {
     const url = pageUrl(w)
     return /^(https?|file):/i.test(url) ? stylesFor(core.store.state.styles ?? [], url, false) : []
@@ -376,6 +403,29 @@ export function registerPageCommands(c: Commands): void {
     return url ? start(core).history.remove(url, str(p.profileId)) : 0
   })
   c.register('history.open', (ctx) => openPage(ctx, 'swyr://history'))
+  c.register('import.history', async ({ core, w }, p) => {
+    const browsers: HistoryBrowser[] = ['chrome', 'edge', 'brave', 'firefox', 'safari']
+    const browser = browsers.find((b) => b === str(p.browser)) ?? 'chrome'
+    let file = str(p.path) ?? defaultHistoryPath(browser) ?? undefined
+    if (!str(p.path) && !core.test && (!file || !fs.existsSync(file))) {
+      const res = await dialog.showOpenDialog({ title: 'Choose a browser history file', buttonLabel: 'Import', properties: ['openFile', 'showHiddenFiles'] })
+      if (res.canceled || !res.filePaths[0]) return null
+      file = res.filePaths[0]
+    }
+    if (!file) return { error: 'No history file was found for that browser.' }
+    try {
+      const { format, visits } = readBrowserHistory(file)
+      const profileId = str(p.profileId) ?? w?.space().profileId ?? core.store.state.profiles[0]?.id
+      if (!profileId) return { error: 'There is no profile to import into.' }
+      const added = start(core).history.importVisits(profileId, visits)
+      if (!core.test) w?.toast(`Imported ${added} history entries`)
+      return { browser, format, visits: visits.length, added, profileId }
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code
+      if (code === 'EPERM' || code === 'EACCES') return { error: 'macOS blocked reading that file. Give swyr Full Disk Access in System Settings, or choose a copy of the file.' }
+      return { error: code === 'ENOENT' ? 'No history file was found at that path.' : (err as Error).message }
+    }
+  })
 
   void c.run('pages.start')
 }

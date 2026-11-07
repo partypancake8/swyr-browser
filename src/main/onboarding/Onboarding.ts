@@ -5,6 +5,7 @@ import type { ArchiveAfter, Item, OnboardingCompletePayload } from '@shared/type
 import { regularSpaces, siblingsOf, spaceById } from '@shared/ops'
 import { baseColor, isDark } from '@shared/theme'
 import { newId } from '../util/id'
+import { makeItem } from '../commands/builtins'
 import type { Commands } from '../commands/Commands'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
@@ -99,6 +100,17 @@ export function registerOnboardingCommands(c: Commands): void {
       if (typeof choice.adblock === 'boolean') s.settings.adblock = choice.adblock
       if (archiveAfter) s.settings.archiveAfter = archiveAfter
       s.settings.onboarded = true
+      // picked web apps become Favorites of the first space's profile (skipping ones already there)
+      const picks = Array.isArray(choice.favorites) ? choice.favorites.filter((f) => f && typeof f.url === 'string' && /^https:\/\//i.test(f.url)).slice(0, 12) : []
+      if (first) {
+        for (const f of picks) {
+          const exists = s.items.some((i) => i.section === 'favorites' && i.profileId === first.profileId && i.url === f.url)
+          if (exists) continue
+          const fav = makeItem(s, { url: f.url, section: 'favorites', profileId: first.profileId, title: typeof f.title === 'string' ? f.title.slice(0, 200) : '' })
+          fav.pinnedUrl = f.url
+          s.items.push(fav)
+        }
+      }
     })
     // the onboarding tab turns into a new tab page in place
     for (const item of core.store.state.items.filter(isOnboardingItem)) {

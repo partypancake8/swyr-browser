@@ -118,6 +118,16 @@ export class AppMenu {
           sep,
           this.cmd(IMPORT_FROM_LABEL + '…', 'import.arc'),
           this.cmd('Import Bookmarks from Chrome…', 'import.chrome'),
+          {
+            label: 'Import History',
+            submenu: [
+              this.cmd('From Chrome', 'import.history', { browser: 'chrome' }),
+              this.cmd('From Edge', 'import.history', { browser: 'edge' }),
+              this.cmd('From Brave', 'import.history', { browser: 'brave' }),
+              this.cmd('From Firefox', 'import.history', { browser: 'firefox' }),
+              this.cmd('From Safari', 'import.history', { browser: 'safari' })
+            ]
+          },
           this.cmd('Export swyr Data…', 'data.export')
         ]
       },
@@ -135,6 +145,7 @@ export class AppMenu {
           { role: 'selectAll' },
           sep,
           this.cmd('Find…', 'find.open'),
+          this.cmd('Find and Replace…', 'find.open', { replace: true }),
           this.cmd('Find Next', 'find.next'),
           this.cmd('Find Previous', 'find.prev'),
           this.cmd('Jump to Selection', 'page.jumpToSelection'),

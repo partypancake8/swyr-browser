@@ -95,6 +95,20 @@ export class History {
     )
   }
 
+  /** merge visits imported from another browser; returns how many were new */
+  importVisits(profileId: string, visits: Visit[]): number {
+    const l = this.list(profileId)
+    const seen = new Set(l.map((v) => v.url + '\u0000' + v.visitedAt))
+    const fresh = visits.filter((v) => !seen.has(v.url + '\u0000' + v.visitedAt))
+    if (!fresh.length) return 0
+    const merged = [...l, ...fresh].sort((a, b) => a.visitedAt - b.visitedAt)
+    if (merged.length > HISTORY_LIMIT) merged.splice(0, merged.length - HISTORY_LIMIT)
+    this.lists.set(profileId, merged)
+    this.touch(profileId)
+    this.flush()
+    return fresh.length
+  }
+
   clear(profileId?: string): number {
     let n = 0
     for (const id of profileId ? [profileId] : this.knownProfiles()) {

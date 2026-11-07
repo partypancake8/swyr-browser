@@ -246,7 +246,26 @@ function ThemeStep(props: { colors: string[]; setColors: (c: string[]) => void; 
 
 // ----- step 4
 
-function DefaultsStep(props: { adblock: boolean; setAdblock: (v: boolean) => void; archiveAfter: ArchiveAfter; setArchiveAfter: (v: ArchiveAfter) => void }): ReactNode {
+/** web apps the Defaults step offers as Favorites */
+const WEB_APPS = [
+  { title: 'Gmail', url: 'https://mail.google.com/' },
+  { title: 'Google Calendar', url: 'https://calendar.google.com/' },
+  { title: 'Google Drive', url: 'https://drive.google.com/' },
+  { title: 'Notion', url: 'https://www.notion.so/' },
+  { title: 'GitHub', url: 'https://github.com/' },
+  { title: 'Slack', url: 'https://app.slack.com/' },
+  { title: 'YouTube', url: 'https://www.youtube.com/' },
+  { title: 'Figma', url: 'https://www.figma.com/' }
+]
+
+function DefaultsStep(props: {
+  adblock: boolean
+  setAdblock: (v: boolean) => void
+  archiveAfter: ArchiveAfter
+  setArchiveAfter: (v: ArchiveAfter) => void
+  apps: string[]
+  setApps: (v: string[]) => void
+}): ReactNode {
   const [isDefault, setIsDefault] = useState<boolean | null>(null)
   return (
     <>
@@ -271,6 +290,26 @@ function DefaultsStep(props: { adblock: boolean; setAdblock: (v: boolean) => voi
             </div>
           </div>
           <Toggle on={props.adblock} onChange={props.setAdblock} label="Block ads and trackers" />
+        </div>
+        <div className="rounded-xl bg-[var(--select)] p-4">
+          <div className="text-[15px] font-bold">Pick your web apps</div>
+          <div className="mb-3 text-[13px]">The ones you pick become Favorites at the top of the sidebar, in every space.</div>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Web apps">
+            {WEB_APPS.map((a) => {
+              const on = props.apps.includes(a.url)
+              return (
+                <button
+                  key={a.url}
+                  aria-pressed={on}
+                  data-app={a.title}
+                  onClick={() => props.setApps(on ? props.apps.filter((u) => u !== a.url) : [...props.apps, a.url])}
+                  className={`flex h-8 items-center gap-1 rounded-lg px-3 text-[13px] font-semibold ${on ? 'bg-[var(--fg)] text-[var(--content)]' : 'bg-[var(--card)]'}`}
+                >
+                  {on && <Check size={13} strokeWidth={3} />} {a.title}
+                </button>
+              )
+            })}
+          </div>
         </div>
         <div className="rounded-xl bg-[var(--select)] p-4">
           <div className="text-[15px] font-bold">Archive Today tabs after</div>
@@ -335,6 +374,7 @@ function Onboarding(): ReactNode {
   const [colors, setColors] = useState<string[] | null>(null)
   const [adblock, setAdblock] = useState<boolean | null>(null)
   const [archiveAfter, setArchiveAfter] = useState<ArchiveAfter | null>(null)
+  const [apps, setApps] = useState<string[]>([])
   const [finishing, setFinishing] = useState(false)
   const chosen = colors ?? space?.theme.colors ?? ONBOARDING_PRESETS[0].colors
   const theme: SpaceTheme = { colors: chosen, angle: space?.theme.angle ?? 150, noise: space?.theme.noise ?? 0.18, appearance: space?.theme.appearance ?? 'auto' }
@@ -345,7 +385,7 @@ function Onboarding(): ReactNode {
   const arch = archiveAfter ?? settings?.archiveAfter ?? '12h'
   const finish = async (): Promise<void> => {
     setFinishing(true)
-    await invoke('onboarding.complete', { themeColors: chosen, adblock: ad, archiveAfter: arch })
+    await invoke('onboarding.complete', { themeColors: chosen, adblock: ad, archiveAfter: arch, favorites: WEB_APPS.filter((a) => apps.includes(a.url)) })
   }
   return (
     <SpaceBackground space={preview} dark={isDark(theme, systemDark)} className="flex h-full flex-col items-center justify-center overflow-y-auto px-6 py-8">
@@ -371,7 +411,7 @@ function Onboarding(): ReactNode {
             {step === 0 && <Welcome />}
             {step === 1 && <ImportStep />}
             {step === 2 && <ThemeStep colors={chosen} setColors={setColors} theme={theme} dark={dark} />}
-            {step === 3 && <DefaultsStep adblock={ad} setAdblock={setAdblock} archiveAfter={arch} setArchiveAfter={setArchiveAfter} />}
+            {step === 3 && <DefaultsStep adblock={ad} setAdblock={setAdblock} archiveAfter={arch} setArchiveAfter={setArchiveAfter} apps={apps} setApps={setApps} />}
             {step === 4 && <DoneStep overrides={settings?.shortcuts ?? {}} />}
           </div>
           <div className="mt-6 flex items-center justify-between">

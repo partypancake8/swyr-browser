@@ -11,6 +11,7 @@ import { invoke, startViewSync, useView } from '../../common/store'
 import { activeSpace, useSpaceTheme } from '../../common/theme'
 import { ArchiveView } from '../archive/ArchiveView'
 import { DocumentsView, MediaView } from './DocumentsView' // round 3b
+import { DownloadsView, StylesView } from './LibraryLists'
 
 interface SectionDef {
   id: LibrarySection
@@ -174,6 +175,10 @@ function LibraryPage(): ReactNode {
             <DocumentsView vs={vs} kind="canvas" />
           ) : section === 'media' ? (
             <MediaView vs={vs} />
+          ) : section === 'styles' ? (
+            <StylesView vs={vs} />
+          ) : section === 'downloads' ? (
+            <DownloadsView />
           ) : (
             <Empty def={def} />
           )}

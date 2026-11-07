@@ -6,7 +6,30 @@ import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 
 export class ContextMenus {
+  /** test mode only: the last menu that would have been shown (menus never pop up headless) */
+  last: MenuItemConstructorOptions[] | null = null
+
   constructor(private readonly core: Core) {}
+
+  private show(w: SwyrWindow, template: MenuItemConstructorOptions[]): void {
+    if (this.core.test) {
+      this.last = template
+      return
+    }
+    Menu.buildFromTemplate(template).popup({ window: w.win })
+  }
+
+  /** test mode: labels of the last menu, and running one of its entries by label */
+  lastLabels(): string[] {
+    return (this.last ?? []).map((e) => (e.type === 'separator' ? '-' : (e.label ?? e.role ?? '')))
+  }
+
+  clickLast(label: string): boolean {
+    const entry = (this.last ?? []).find((e) => e.label === label)
+    if (!entry || typeof entry.click !== 'function') return false
+    ;(entry.click as () => void)()
+    return true
+  }
 
   private run(w: SwyrWindow, command: string, payload?: unknown): () => void {
     return () => {
@@ -31,17 +54,17 @@ export class ContextMenus {
       template.push({ label: 'Go Back to Pinned URL', click: this.run(w, 'tab.resetToPinnedUrl', { id: item.id }) })
     }
     template.push(sep, { label: 'Archive', click: this.run(w, 'tab.close', { id: item.id, remove: true }) })
-    Menu.buildFromTemplate(template).popup({ window: w.win })
+    this.show(w, template)
   }
 
   space(w: SwyrWindow, spaceId: string): void {
     const many = this.core.store.state.spaces.length > 1
-    Menu.buildFromTemplate([
+    this.show(w, [
       { label: 'Edit Space…', click: this.run(w, 'space.edit', { id: spaceId }) },
       { label: 'New Space', click: this.run(w, 'space.new') },
       { type: 'separator' },
       { label: 'Delete Space', enabled: many, click: this.run(w, 'space.delete', { id: spaceId }) }
-    ]).popup({ window: w.win })
+    ])
   }
 
   page(w: SwyrWindow, itemId: string, params: ContextMenuParams): void {
@@ -52,6 +75,8 @@ export class ContextMenus {
     if (params.linkURL) {
       t.push(
         { label: 'Open Link in New Tab', click: this.run(w, 'tab.new', { url: params.linkURL, background: true }) },
+        { label: 'Open Link in Mini Window', click: this.run(w, 'mini.new', { url: params.linkURL }) },
+        { label: 'Open Link in Split View', click: this.run(w, 'split.add', { url: params.linkURL }) },
         { label: 'Copy Link', click: () => clipboard.writeText(params.linkURL) },
         sep
       )
@@ -74,6 +99,6 @@ export class ContextMenus {
       sep,
       { label: 'Inspect', click: () => wc.inspectElement(params.x, params.y) }
     )
-    Menu.buildFromTemplate(t).popup({ window: w.win })
+    this.show(w, t)
   }
 }
