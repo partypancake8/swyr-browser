@@ -10,6 +10,7 @@ import { registerItemCommands } from './items'
 import { registerSpaceCommands } from './spaces'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
+import { routeSplitClose } from './split'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
@@ -135,6 +136,8 @@ export function registerBuiltins(c: Commands): void {
   })
 
   c.register('tab.close', ({ core, w }, p) => {
+    const routed = routeSplitClose(core, w, p)
+    if (routed !== undefined) return routed
     const item = findItem(core, p.id, w)
     if (!w || !item) return false
     if (item.section !== 'today' && p.remove !== true) {

@@ -4,6 +4,7 @@ import type { DialogKind, Item, MenuEntry, PersistedState, Section } from '@shar
 import { childrenOf, descendantsOf, isWithin, itemVisibleInSpace, nextOrder, siblingsOf, sortedSpaces, spaceById } from '@shared/ops'
 import { resolveWithSettings } from '@shared/url'
 import { newId } from '../util/id'
+import { splitTarget } from './split'
 import type { Commands } from './Commands'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
@@ -83,6 +84,20 @@ export function moveItem(core: Core, w: SwyrWindow | undefined, item: Item, targ
       else item.pinnedUrl = item.pinnedUrl ?? item.url
     }
     if (oldProfile !== space.profileId && item.kind === 'tab') reload.add(item.id)
+    if (item.kind === 'split') {
+      // split panes mirror their split's section, space and profile
+      for (const pane of childrenOf(st, item.id)) {
+        moved.add(pane.id)
+        if (pane.profileId !== space.profileId && pane.kind === 'tab') {
+          reload.add(pane.id)
+          reload.add(item.id)
+        }
+        pane.section = section
+        pane.spaceId = item.spaceId
+        pane.profileId = space.profileId
+        if (pane.kind === 'tab') pane.pinnedUrl = section === 'today' ? null : (pane.pinnedUrl ?? pane.url)
+      }
+    }
     if (item.kind === 'folder') {
       for (const d of descendantsOf(st, item.id)) {
         moved.add(d.id)
@@ -244,7 +259,7 @@ export function registerItemCommands(c: Commands): void {
     const input = str(p.url) ?? str(p.input)
     if (!input) return false
     const url = resolveWithSettings(input, core.store.state.settings).url
-    const item = findItem(core, p, w)
+    const item = splitTarget(core, findItem(core, p, w))
     if (!item || item.kind === 'folder') return core.commands.run('tab.new', { url }, w)
     core.store.update(() => (item.url = url))
     const view = w.tabs.get(item.id)

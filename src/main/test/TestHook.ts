@@ -4,6 +4,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { Rect, TestState } from '@shared/types'
 import { TAB_RADIUS } from '../views/TabViews'
+import { PREVIEW_RADIUS } from '../layout/Layout'
+import { MINI_RADIUS } from '../windows/MiniWindow'
 import type { Core } from '../windows/WindowManager'
 
 export interface SwyrTestHook {
@@ -11,6 +13,9 @@ export interface SwyrTestHook {
   dispatch(command: string, payload?: unknown): Promise<unknown>
   waitIdle(): Promise<void>
   capture(filePath: string): Promise<boolean>
+  // round 2a
+  /** composite of a Mini Window (chrome + page); the main capture never includes mini windows */
+  captureMini(filePath: string, id?: number): Promise<boolean>
 }
 
 declare global {
@@ -23,7 +28,7 @@ interface Layer {
   radius: number
 }
 
-async function grab(view: WebContentsView): Promise<NativeImage | null> {
+async function grab(view: Pick<WebContentsView, 'webContents'>): Promise<NativeImage | null> {
   try {
     if (view.webContents.isDestroyed()) return null
     const img = await view.webContents.capturePage(undefined, { stayHidden: true })
@@ -91,7 +96,11 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
     getState(): TestState | null {
       const core = current()
       if (!core) return null
-      return JSON.parse(JSON.stringify({ ...core.store.state, windows: core.windows.map((w) => w.runtime()) }))
+      const windows = [
+        ...core.windows.map((w) => ({ ...w.runtime(), kind: 'main' as const })),
+        ...core.minis.filter((m) => !m.closed).map((m) => m.runtime())
+      ]
+      return JSON.parse(JSON.stringify({ ...core.store.state, windows }))
     },
     async dispatch(command: string, payload?: unknown): Promise<unknown> {
       const core = await ready
@@ -121,9 +130,32 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
         const img = await grab(w.overlay)
         if (img) layers.push({ image: img, bounds: w.overlay.getBounds(), radius: 0 })
       }
+      // round 2a: the preview card's page sits above the overlay
+      const pv = w.preview.view
+      if (pv && w.preview.isAttached()) {
+        const img = await grab(pv)
+        if (img) layers.push({ image: img, bounds: pv.getBounds(), radius: PREVIEW_RADIUS })
+      }
       const png = composite(width, height, scale, layers).toPNG()
       fs.mkdirSync(path.dirname(filePath), { recursive: true })
       fs.writeFileSync(filePath, png)
+      return true
+    },
+    async captureMini(filePath: string, id?: number): Promise<boolean> {
+      const core = await ready
+      const m = core.minis.find((x) => !x.closed && (id === undefined || x.id === id))
+      if (!m) return false
+      const [width, height] = m.win.getContentSize()
+      const chrome = await grab(m.win)
+      if (!chrome) return false
+      const scale = chrome.getSize().width / Math.max(1, width)
+      const layers: Layer[] = [{ image: chrome, bounds: { x: 0, y: 0, width, height }, radius: 0 }]
+      if (m.page) {
+        const img = await grab(m.page)
+        if (img) layers.push({ image: img, bounds: m.page.getBounds(), radius: MINI_RADIUS })
+      }
+      fs.mkdirSync(path.dirname(filePath), { recursive: true })
+      fs.writeFileSync(filePath, composite(width, height, scale, layers).toPNG())
       return true
     }
   }

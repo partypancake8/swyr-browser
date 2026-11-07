@@ -1,6 +1,6 @@
 // One browser window: BaseWindow + shell view + tab views + overlay view.
 import { BaseWindow, type WebContents, type WebContentsView } from 'electron'
-import type { Item, OverlayInput, OverlayState, Space, ViewState, WindowRuntime } from '@shared/types'
+import type { Item, OverlayInput, OverlayState, Rect, Space, ViewState, WindowRuntime } from '@shared/types'
 import { baseColor, isDark } from '@shared/theme'
 import { itemVisibleInSpace, sidebarOrder, sortedSpaces, spaceById } from '@shared/ops'
 import { computeLayout, type OverlayLayout } from '../layout/Layout'
@@ -8,6 +8,9 @@ import { createShellView } from '../views/ShellView'
 import { createOverlayView } from '../views/OverlayView'
 import { TabViews } from '../views/TabViews'
 import type { Core } from './WindowManager'
+import { PreviewController } from '../views/PreviewView'
+import { MediaTracker } from '../media/Media'
+import { focusedPaneId, isSplit, resolveActivation, visiblePanes } from '../commands/split'
 
 export const TRAFFIC_LIGHTS = { x: 14, y: 14 }
 
@@ -22,6 +25,12 @@ export class SwyrWindow {
   readonly shell: WebContentsView
   readonly overlay: WebContentsView
   readonly tabs: TabViews
+  // round 2a
+  readonly preview: PreviewController
+  readonly media: MediaTracker
+  private paneRects: WindowRuntime['paneRects'] = []
+  private dividers: WindowRuntime['dividers'] = []
+  private previewBounds: WindowRuntime['previewBounds'] = null
   activeSpaceId: string
   activeItemId: string | null = null
   overlayState: OverlayState | null = null
@@ -59,6 +68,8 @@ export class SwyrWindow {
     this.id = this.win.id
     this.shell = createShellView(baseColor(space, dark))
     this.overlay = createOverlayView()
+    this.media = new MediaTracker(this)
+    this.preview = new PreviewController(this)
     this.tabs = new TabViews(this)
     this.win.contentView.addChildView(this.shell)
 
@@ -88,6 +99,7 @@ export class SwyrWindow {
     this.win.on('closed', () => {
       this.closed = true
       try {
+        this.preview.dispose()
         this.tabs.releaseAll()
         for (const v of [this.shell, this.overlay]) if (!v.webContents.isDestroyed()) v.webContents.close()
       } catch (err) {
@@ -110,8 +122,13 @@ export class SwyrWindow {
     return this.core.store.state.items.find((i) => i.id === this.activeItemId)
   }
 
+  /** the item whose page has focus: the focused pane when a split is active */
+  focusedItemId(): string | null {
+    return focusedPaneId(this.core.store.state, this.activeItem()) ?? this.activeItemId
+  }
+
   activeContents(): WebContents | undefined {
-    const v = this.tabs.get(this.activeItemId)
+    const v = this.tabs.get(this.focusedItemId())
     return v && !v.webContents.isDestroyed() ? v.webContents : undefined
   }
 
@@ -132,15 +149,29 @@ export class SwyrWindow {
 
   activate(itemId: string | null, opts: { focus?: boolean } = {}): void {
     const s = this.core.store.state
-    const item = s.items.find((i) => i.id === itemId)
+    const found = s.items.find((i) => i.id === itemId)
+    // a pane activates its split, focused on that pane
+    const resolved = found ? resolveActivation(this.core, found) : undefined
+    const item = resolved?.item
     if (!item || item.kind === 'folder') {
       this.activeItemId = null
     } else {
       if (item.spaceId && item.spaceId !== this.activeSpaceId) this.activeSpaceId = item.spaceId
       this.activeItemId = item.id
-      item.lastActiveAt = Date.now()
+      const now = Date.now()
+      item.lastActiveAt = now
       this.lastActiveBySpace.set(this.activeSpaceId, item.id)
-      this.tabs.ensure(item)
+      if (isSplit(item)) {
+        if (resolved?.focus !== undefined && resolved.focus >= 0) item.panes.focused = resolved.focus
+        for (const id of item.panes.itemIds) {
+          const pane = s.items.find((i) => i.id === id)
+          if (!pane) continue
+          pane.lastActiveAt = now
+          this.tabs.ensure(pane)
+        }
+      } else {
+        this.tabs.ensure(item)
+      }
       this.core.store.changed()
     }
     if (this.overlayState?.kind === 'find') this.closeOverlay(false)
@@ -171,6 +202,8 @@ export class SwyrWindow {
     if (o.kind === 'find') return 'find'
     if (o.kind === 'sidebar') return 'sidebar'
     if (o.kind === 'toast') return 'toast'
+    if (o.kind === 'preview') return this.preview.isOpen() ? 'preview' : 'full'
+    if (o.kind === 'splitDrop') return 'content'
     return 'full'
   }
 
@@ -179,17 +212,21 @@ export class SwyrWindow {
     const [width, height] = this.win.getContentSize()
     const settings = this.core.store.state.settings
     const visible = this.sidebarVisible()
-    const active = this.activeItemId && this.tabs.get(this.activeItemId) ? [this.activeItemId] : []
+    const { ids: active, split } = visiblePanes(this)
     const L = computeLayout({
       width,
       height,
       sidebarVisible: visible,
       sidebarWidth: settings.sidebarWidth,
       panes: active.length,
+      split,
       overlay: this.overlayLayout()
     })
     this.shell.setBounds(L.shell)
     this.tabs.show(active, L.panes)
+    this.paneRects = L.panes
+    this.dividers = L.dividers.map((d) => ({ ...d, layout: split?.layout ?? 'horizontal' }))
+    this.previewBounds = L.preview
     const content = this.win.contentView
     if (L.overlay) {
       // adding an existing child moves it to the top of the z-order
@@ -200,7 +237,17 @@ export class SwyrWindow {
       content.removeChildView(this.overlay)
       this.overlayAttached = false
     }
+    if (L.preview && this.preview.isOpen()) this.preview.attach(L.preview.page)
+    else this.preview.detach()
     this.win.setWindowButtonVisibility(visible || this.overlayState?.kind === 'sidebar' || this.fullscreen)
+  }
+
+  /** the content area (the region drop zones cover), window coordinates */
+  contentRect(): Rect {
+    const [width, height] = this.win.getContentSize()
+    const settings = this.core.store.state.settings
+    const L = computeLayout({ width, height, sidebarVisible: this.sidebarVisible(), sidebarWidth: settings.sidebarWidth, panes: 1, overlay: 'content' })
+    return L.overlay ?? { x: 0, y: 0, width, height }
   }
 
   isOverlayAttached(): boolean {
@@ -212,6 +259,8 @@ export class SwyrWindow {
       clearTimeout(this.toastTimer)
       this.toastTimer = null
     }
+    // another overlay replaces an open preview
+    if (state.kind !== 'preview' && state.kind !== 'toast' && this.preview.isOpen()) this.preview.dispose()
     this.overlayState = { ...state, seq: ++this.overlaySeq } as OverlayState
     this.layout()
     if (focus) this.overlay.webContents.focus()
@@ -221,6 +270,7 @@ export class SwyrWindow {
   closeOverlay(refocus = true): void {
     if (!this.overlayState) return
     if (this.overlayState.kind === 'find') this.activeContents()?.stopFindInPage('clearSelection')
+    if (this.overlayState.kind === 'preview') this.preview.dispose()
     this.overlayState = null
     this.layout()
     if (refocus) this.focusContent()
@@ -239,7 +289,7 @@ export class SwyrWindow {
 
   onFindResult(itemId: string, active: number, matches: number): void {
     const o = this.overlayState
-    if (itemId !== this.activeItemId || o?.kind !== 'find') return
+    if (itemId !== this.focusedItemId() || o?.kind !== 'find') return
     o.active = active
     o.matches = matches
     this.core.scheduleBroadcast()
@@ -257,8 +307,32 @@ export class SwyrWindow {
       tabs: Object.fromEntries(this.tabs.runtime),
       overlay: this.overlayState,
       renamingItemId: this.renamingItemId,
-      fullscreen: this.fullscreen
+      fullscreen: this.fullscreen,
+      // round 2a
+      kind: 'main',
+      focusedPane: this.focusedPane(),
+      paneRects: this.paneRects,
+      dividers: this.dividers,
+      preview: this.preview.isOpen() && this.preview.state ? { ...this.preview.state } : null,
+      previewBounds: this.preview.isOpen() ? this.previewBounds : null,
+      media: this.media.runtime()
     }
+  }
+
+  /** 0-based focused pane of the active split */
+  focusedPane(): number {
+    const item = this.activeItem()
+    if (!isSplit(item)) return 0
+    return Math.max(0, Math.min(item.panes.itemIds.length - 1, item.panes.focused ?? 0))
+  }
+
+  /** a tab page got keyboard focus: if it is a pane of the active split, focus that pane */
+  onTabFocus(itemId: string): void {
+    const item = this.activeItem()
+    if (!isSplit(item)) return
+    const idx = item.panes.itemIds.indexOf(itemId)
+    if (idx < 0 || idx === (item.panes.focused ?? 0)) return
+    this.core.store.update(() => (item.panes.focused = idx))
   }
 
   viewState(): ViewState {
@@ -284,6 +358,7 @@ export class SwyrWindow {
   ownsContents(wc: WebContents): 'shell' | 'overlay' | 'tab' | null {
     if (wc === this.shell.webContents) return 'shell'
     if (wc === this.overlay.webContents) return 'overlay'
+    if (this.preview.view && wc === this.preview.view.webContents) return null
     return this.tabs.idOf(wc) ? 'tab' : null
   }
 }

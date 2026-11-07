@@ -27,6 +27,8 @@ import { FavoritesGrid } from './sidebar/FavoritesGrid'
 import { Divider, PinnedList } from './sidebar/PinnedList'
 import { TodayList } from './sidebar/TodayList'
 import { SpaceSwitcher } from './sidebar/SpaceSwitcher'
+import { focusedItem } from './SplitRow'
+import { MediaBar } from './MediaBar'
 
 /** pointer drags start after 5 px; Option-drags and drags from inputs or buttons marked data-no-dnd are left alone */
 class SidebarPointerSensor extends PointerSensor {
@@ -51,7 +53,7 @@ const SWIPE_MIN_GAP_MS = 380
 export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean }): ReactNode {
   const { state, window: win } = vs
   const space = activeSpace(vs)
-  const active = state.items.find((i) => i.id === win.activeItemId)
+  const active = focusedItem(vs)
   const rt = active ? win.tabs[active.id] : undefined
   const dark = space ? isDark(space.theme, vs.systemDark) : vs.systemDark
   const spaces = sortedSpaces(state)
@@ -207,7 +209,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
       onDragEnd={onDragEnd}
       onDragCancel={resetDrag}
     >
-      <div ref={rootRef} className="flex h-full flex-col px-2 pb-2" onWheel={onWheel}>
+      <div ref={rootRef} data-sidebar-root className="flex h-full flex-col px-2 pb-2" onWheel={onWheel}>
         <div className="drag flex h-10 shrink-0 items-center gap-0.5" style={{ paddingLeft: win.fullscreen ? 2 : 72 }}>
           <button className="icon-btn" title="Hide sidebar (⌘S)" onClick={() => invoke('sidebar.toggle')}>
             <PanelLeft size={16} strokeWidth={1.9} />
@@ -263,6 +265,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
           )}
         </div>
 
+        <MediaBar vs={vs} />
         <div className="flex h-10 shrink-0 items-center gap-1 pt-1">
           <button className="icon-btn" title="Archive" onClick={() => invoke('archive.open')} onContextMenu={(e) => showMenu([{ label: 'Open Library', command: 'library.open' }], e)}>
             <History size={16} strokeWidth={1.9} />

@@ -9,6 +9,7 @@ export const SCHEME = 'swyr'
 export const PAGES: Record<string, string> = {
   shell: 'shell/index.html',
   overlay: 'overlay/index.html',
+  mini: 'mini/index.html',
   newtab: 'pages/newtab/index.html',
   settings: 'pages/settings/index.html',
   archive: 'pages/archive/index.html',

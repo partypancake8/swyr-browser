@@ -75,7 +75,35 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'library.open', title: 'Open Library', palette: true },
   { name: 'space.reorder', title: 'Reorder Spaces' },
   { name: 'dialog.open', title: 'Open Dialog' },
-  { name: 'menu.popup', title: 'Show Menu' }
+  { name: 'menu.popup', title: 'Show Menu' },
+  // round 2a
+  { name: 'split.add', title: 'Add Split View', palette: true },
+  { name: 'split.remove', title: 'Close Split Pane', palette: true },
+  { name: 'split.focus', title: 'Focus Split Pane' },
+  { name: 'split.focusNext', title: 'Next Split Pane', palette: true },
+  { name: 'split.focusPrev', title: 'Previous Split Pane', palette: true },
+  { name: 'split.swap', title: 'Swap Split Panes' },
+  { name: 'split.setLayout', title: 'Toggle Split Layout', palette: true },
+  { name: 'split.setRatios', title: 'Resize Split Panes' },
+  { name: 'split.drop', title: 'Drop Tab into Split View' },
+  { name: 'split.dropZones', title: 'Split Drop Zones' },
+  { name: 'preview.open', title: 'Open Preview' },
+  { name: 'preview.close', title: 'Close Preview' },
+  { name: 'preview.expand', title: 'Open Preview as Tab' },
+  { name: 'mini.new', title: 'New Mini Window', palette: true },
+  { name: 'mini.openInMain', title: 'Open in Main Window' },
+  { name: 'mini.close', title: 'Close Mini Window' },
+  { name: 'mini.navigate', title: 'Navigate Mini Window' },
+  { name: 'mini.back', title: 'Back' },
+  { name: 'mini.forward', title: 'Forward' },
+  { name: 'mini.reload', title: 'Reload Page' },
+  { name: 'mini.stop', title: 'Stop Loading' },
+  { name: 'mini.focusUrl', title: 'Edit Address' },
+  { name: 'mini.spaceMenu', title: 'Choose Space' },
+  { name: 'media.toggle', title: 'Play or Pause Media', palette: true },
+  { name: 'media.close', title: 'Stop Media', palette: true },
+  { name: 'media.activate', title: 'Go to Playing Tab', palette: true },
+  { name: 'media.pip', title: 'Picture in Picture', palette: true }
 ]
 
 export const COMMAND_TITLES: Record<string, string> = Object.fromEntries(COMMANDS.map((c) => [c.name, c.title]))
@@ -88,6 +116,9 @@ export interface Binding {
   accelerator: string
   /** handled by before-input-event instead of a menu accelerator */
   raw?: boolean
+  // round 2a
+  /** 'mini': only active inside a Mini Window (its own before-input-event handler) */
+  scope?: 'mini'
 }
 
 const nums = (n: number): number[] => Array.from({ length: n }, (_, i) => i + 1)
@@ -132,7 +163,26 @@ export const DEFAULT_BINDINGS: Binding[] = [
   { id: 'zoom.reset', command: 'zoom.reset', accelerator: 'Cmd+0' },
   { id: 'settings.open', command: 'settings.open', accelerator: 'Cmd+,' },
   { id: 'app.quit', command: 'app.quit', accelerator: 'Cmd+Q' },
-  { id: 'library.open', command: 'library.open', accelerator: 'Cmd+Shift+L', raw: true }
+  { id: 'library.open', command: 'library.open', accelerator: 'Cmd+Shift+L', raw: true },
+  // round 2a: Split View, Mini Window
+  { id: 'split.add', command: 'split.add', accelerator: 'Ctrl+Shift+=', raw: true },
+  { id: 'split.remove', command: 'split.remove', accelerator: 'Ctrl+Shift+-', raw: true },
+  ...nums(4).map((n) => ({
+    id: `split.focus:${n}`,
+    command: 'split.focus',
+    payload: { pane: n },
+    accelerator: `Ctrl+Shift+${n}`,
+    raw: true
+  })),
+  { id: 'split.focusNext', command: 'split.focusNext', accelerator: 'Ctrl+Shift+]', raw: true },
+  { id: 'split.focusPrev', command: 'split.focusPrev', accelerator: 'Ctrl+Shift+[', raw: true },
+  { id: 'mini.new', command: 'mini.new', accelerator: 'Cmd+Alt+N', raw: true },
+  { id: 'mini.openInMain', command: 'mini.openInMain', accelerator: 'Cmd+O', scope: 'mini' },
+  { id: 'mini.close', command: 'mini.close', accelerator: 'Cmd+W', scope: 'mini' },
+  { id: 'mini.focusUrl', command: 'mini.focusUrl', accelerator: 'Cmd+L', scope: 'mini' },
+  { id: 'mini.back', command: 'mini.back', accelerator: 'Cmd+[', scope: 'mini' },
+  { id: 'mini.forward', command: 'mini.forward', accelerator: 'Cmd+]', scope: 'mini' },
+  { id: 'mini.reload', command: 'mini.reload', accelerator: 'Cmd+R', scope: 'mini' }
 ]
 
 export function resolveBindings(overrides: Record<string, string> | undefined): Binding[] {

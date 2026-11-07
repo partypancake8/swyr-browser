@@ -7,6 +7,7 @@ import { Core } from './windows/WindowManager'
 import { registerIpc } from './ipc'
 import { startAutoArchive, runAutoArchive } from './archive/AutoArchive'
 import { installTestHook } from './test/TestHook'
+import { openInMiniWindow } from './commands/mini'
 
 const TEST = process.env.SWYR_TEST === '1'
 
@@ -26,6 +27,8 @@ function openUrl(url: string): void {
     pendingUrls.push(url)
     return
   }
+  // round 2a: external links can open in a Mini Window (the link-rules router may take this over)
+  if (core.store.state.settings.openExternalLinksInMiniWindow && openInMiniWindow(url) !== null) return
   const w = core.current() ?? core.createWindow()
   void core.commands.run('tab.new', { url }, w)
 }

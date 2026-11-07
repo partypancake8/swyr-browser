@@ -178,6 +178,30 @@ try {
   const n = (await t.state()).items.length
   await t.dispatch('library.open')
   assert.equal((await t.state()).items.length, n, 'library tab reused')
+  step('drag a Today tab out of the sidebar onto the page edge splits the view')
+  await t.dispatch('tab.new', { url: page('Echo') })
+  await t.dispatch('tab.new', { url: page('Foxtrot') })
+  s = await t.waitFor((s) => ['Echo', 'Foxtrot'].every((n) => s.items.some((i) => i.title === n)), 'two more tabs')
+  const E = s.items.find((i) => i.title === 'Echo').id
+  const F = s.items.find((i) => i.title === 'Foxtrot').id
+  await t.dispatch('tab.activate', { id: E })
+  await t.waitIdle()
+  await sleep(300)
+  const wb = s.windows[0].bounds
+  const edgePoint = async () => [Math.round(wb.width - 40), Math.round(wb.height / 2)]
+  let zones = null
+  await drag(`[data-item="${F}"]`, edgePoint, async () => {
+    zones = await t.waitFor((s) => s.windows[0].overlay?.kind === 'splitDrop' && s.windows[0].overlay.edge === 'right', 'drop zones with the right edge highlighted')
+    await t.capture(frame('s07-drag-to-split'))
+  })
+  assert.ok(zones)
+  s = await t.waitFor((s) => s.items.some((i) => i.kind === 'split' && i.panes?.itemIds.join() === [E, F].join()), 'split made by the sidebar drag')
+  assert.equal(s.windows[0].overlay, null, 'drop zones closed after the drop')
+  const splitItem = s.items.find((i) => i.kind === 'split')
+  assert.equal(await shellJs(`document.querySelector('[data-item="${splitItem.id}"]')?.dataset.split`), '2', 'one sidebar row for the split')
+  await sleep(500)
+  await t.capture(frame('s08-split-from-drag'))
+
   console.log(`sidebar e2e: passed, frames in ${out}`)
 } finally {
   await t.close()

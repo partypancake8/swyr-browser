@@ -8,6 +8,7 @@ import { Favicon } from '../../common/Favicon'
 import { SEP, showMenu } from '../../common/menu'
 import { invoke } from '../../common/store'
 import { ITEM_MIME, itemDndId, useDndUi, type DragData, type Indicator } from './dnd'
+import { SplitIcons, splitTitle, splitTooltip } from '../SplitRow'
 
 export const ROW_INDENT = 16
 
@@ -121,7 +122,9 @@ export function TabRow({ item, depth, vs, space }: { item: Item; depth: number; 
   const loading = Boolean(win.tabs[item.id]?.loading) && loaded
   const away = awayFromPinned(item)
   const dnd = useItemDnd(item)
-  const showClose = item.section === 'today' || loaded
+  const split = item.kind === 'split'
+  const showClose = item.section === 'today' || loaded || split
+  const title = split ? splitTitle(item, vs) : itemTitle(item)
   return (
     <div
       ref={dnd.ref}
@@ -143,16 +146,21 @@ export function TabRow({ item, depth, vs, space }: { item: Item; depth: number; 
       data-item={item.id}
       data-section={item.section}
       data-depth={depth}
-      title={renaming ? undefined : itemTitle(item)}
+      data-split={split ? (item.panes?.itemIds.length ?? 0) : undefined}
+      title={renaming ? undefined : split ? splitTooltip(item, vs) : title}
     >
-      <span className="relative flex shrink-0" style={{ opacity: loaded || active ? 1 : 0.8 }}>
-        <Favicon item={item} size={16} />
-      </span>
+      {split ? (
+        <SplitIcons item={item} vs={vs} />
+      ) : (
+        <span className="relative flex shrink-0" style={{ opacity: loaded || active ? 1 : 0.8 }}>
+          <Favicon item={item} size={16} />
+        </span>
+      )}
       {renaming ? (
         <RenameInput item={item} />
       ) : (
         <span className="min-w-0 flex-1 truncate text-[13px] leading-none" style={{ fontWeight: active ? 600 : 500 }}>
-          {itemTitle(item)}
+          {title}
         </span>
       )}
       {!renaming && away && (
@@ -174,7 +182,7 @@ export function TabRow({ item, depth, vs, space }: { item: Item; depth: number; 
         <button
           data-no-dnd
           className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-[var(--row-hover)] group-hover:flex"
-          title={item.section === 'today' ? 'Archive tab (⌘W)' : 'Unload tab'}
+          title={split ? (item.section === 'today' ? 'Close split (⌘W closes the focused pane)' : 'Unload split') : item.section === 'today' ? 'Archive tab (⌘W)' : 'Unload tab'}
           aria-label={item.section === 'today' ? 'Archive tab' : 'Unload tab'}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
