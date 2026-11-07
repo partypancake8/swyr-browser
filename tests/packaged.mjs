@@ -1,6 +1,8 @@
 // Headless smoke test of the packaged app (run `npm run dist` first): launches dist/mac-arm64/swyr.app's binary
 // with SWYR_TEST=1, waits for state, opens example.com, captures one frame and quits.
 // Usage: node tests/packaged.mjs [output-dir]
+// SWYR_PACKAGED_APP=<path to swyr.app> tests another copy, such as the app inside the mounted DMG (read-only volume:
+// user data and captures stay in temporary folders).
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -10,8 +12,9 @@ import { repo, sleep } from './harness.mjs'
 
 const require = createRequire(path.join(repo, 'package.json'))
 const { _electron } = require('playwright')
-const binary = path.join(repo, 'dist/mac-arm64/swyr.app/Contents/MacOS/swyr')
-assert.ok(fs.existsSync(binary), 'build the app first: npm run dist')
+const appPath = path.resolve(process.env.SWYR_PACKAGED_APP || path.join(repo, 'dist/mac-arm64/swyr.app'))
+const binary = path.join(appPath, 'Contents/MacOS/swyr')
+assert.ok(fs.existsSync(binary), `no app at ${appPath}: build it first with npm run dist`)
 const out = process.argv[2] || fs.mkdtempSync(path.join(os.tmpdir(), 'swyr-packaged-'))
 fs.mkdirSync(out, { recursive: true })
 const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'swyr-packaged-data-'))
@@ -49,7 +52,7 @@ try {
   assert.ok(fs.statSync(file).size > 10000, 'capture too small')
   const table = await ev(() => globalThis.__swyr.dispatch('shortcuts.list'))
   assert.ok(table.length > 50)
-  console.log('PACKAGED SMOKE PASS', JSON.stringify(info), file)
+  console.log('PACKAGED SMOKE PASS', appPath, JSON.stringify(info), file)
 } finally {
   await app.close().catch(() => app.process().kill('SIGKILL'))
 }

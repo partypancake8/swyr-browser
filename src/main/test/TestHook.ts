@@ -9,6 +9,7 @@ import { MINI_RADIUS } from '../windows/MiniWindow'
 import type { Core } from '../windows/WindowManager'
 import { activePartition, platformRuntime } from '../commands/platform'
 import { partitionOf } from '../profiles/Profiles'
+import { probe as probeFrontmost, setSourceAppOverride } from '../linkrules/SourceApp'
 
 export interface SwyrTestHook {
   getState(): TestState | null
@@ -27,6 +28,13 @@ export interface SwyrTestHook {
   partitionOf?(windowId: number): string
   /** run JavaScript in the first window's active tab or focused pane and return its result */
   evalInActiveTab?(js: string): Promise<unknown>
+  // round 5
+  /** run JavaScript in a main window's shell (the sidebar renderer) and return its result */
+  shellEvalIn?(windowId: number, js: string): Promise<unknown>
+  /** pretend this app is frontmost when links arrive (Link Rules by source app); null for none, undefined for the real probe */
+  setSourceApp?(app: { name: string; bundleId?: string } | null | undefined): void
+  /** run the real frontmost-app probe once and report what it saw and how long it took */
+  probeSourceApp?(): Promise<{ app: { name: string; bundleId: string } | null; ms: number }>
 }
 
 declare global {
@@ -194,6 +202,18 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
   hook.partitionOf = (windowId: number): string => {
     const w = current()?.windows.find((x) => x.id === windowId && !x.closed)
     return partitionOf(w?.activeContents()?.session)
+  }
+  hook.setSourceApp = (app) => setSourceAppOverride(app ? { name: app.name ?? '', bundleId: app.bundleId ?? '' } : app)
+  hook.probeSourceApp = async () => {
+    const t0 = Date.now()
+    const app = await probeFrontmost().catch(() => null)
+    return { app, ms: Date.now() - t0 }
+  }
+  hook.shellEvalIn = async (windowId: number, js: string): Promise<unknown> => {
+    const core = await ready
+    const w = core.windows.find((x) => x.id === windowId && !x.closed)
+    if (!w || w.shell.webContents.isDestroyed()) throw new Error(`no window ${windowId}`)
+    return json(await w.shell.webContents.executeJavaScript(js, true))
   }
   if (!hook.evalInActiveTab) {
     hook.evalInActiveTab = async (js: string): Promise<unknown> => {

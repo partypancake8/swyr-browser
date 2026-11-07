@@ -117,7 +117,14 @@ export class AppMenu {
           this.cmd('Print…', 'page.print'),
           sep,
           this.cmd(IMPORT_FROM_LABEL + '…', 'import.arc'),
-          this.cmd('Import Bookmarks from Chrome…', 'import.chrome'),
+          {
+            label: 'Import Bookmarks',
+            submenu: [
+              this.cmd('From Chrome…', 'import.chrome'),
+              this.cmd('From Safari…', 'import.safari'),
+              this.cmd('From Firefox…', 'import.firefox')
+            ]
+          },
           {
             label: 'Import History',
             submenu: [

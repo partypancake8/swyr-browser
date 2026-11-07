@@ -20,7 +20,7 @@ import { SITE_PERMISSIONS, attachPermissions, decisions, originOf, setDecision }
 import { onProfileSession } from '../profiles/Profiles'
 import { platformRuntime } from './platform'
 import { hostAllowed } from '../adblock/Adblock'
-import { matchRule, normalizePattern } from '../linkrules/LinkRules'
+import { matchRule, normalizePattern, sourceFromPayload } from '../linkrules/LinkRules'
 import { openInMiniWindow } from './mini'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
@@ -295,7 +295,7 @@ export function registerPageCommands(c: Commands): void {
   c.register('link.openExternal', (ctx, p) => {
     const url = str(p.url)
     if (url && /^https?:\/\//i.test(url)) {
-      const rule = matchRule(ctx.core.store.state.settings.linkRules, url)
+      const rule = matchRule(ctx.core.store.state.settings.linkRules, url, sourceFromPayload(p))
       if (rule?.mini && openInMiniWindow(url, ctx.core) !== null) return 'mini'
     }
     return openExternal ? openExternal(ctx, p) : false

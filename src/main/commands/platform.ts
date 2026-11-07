@@ -14,7 +14,7 @@ import { newId } from '../util/id'
 import { Adblock, hostAllowed } from '../adblock/Adblock'
 import { Downloads } from '../downloads/Downloads'
 import { Extensions, WEB_STORE_URL, setExtensions } from '../extensions/Extensions'
-import { matchRule, normalizePattern } from '../linkrules/LinkRules'
+import { matchRule, normalizePattern, sourceFromPayload } from '../linkrules/LinkRules'
 import { openInMiniWindow } from './mini'
 import { ARC_SIDEBAR_PATH, readSidebarFile, summarize, type ImportedNode, type ImportedSidebar } from '../import/ArcImport'
 import {
@@ -49,6 +49,7 @@ export const PLATFORM_PAGE_COMMANDS = [
   'downloads.clear',
   'adblock.toggle',
   'linkRules.add',
+  'linkRules.update',
   'linkRules.remove',
   'import.arc',
   'data.export',
@@ -167,7 +168,8 @@ function normalizeSettings(core: Core): void {
     if (!Array.isArray(st.extensions)) st.extensions = []
     if (!Array.isArray(st.adblockAllow)) st.adblockAllow = []
     if (!Array.isArray(st.linkRules)) st.linkRules = []
-    st.linkRules = st.linkRules.filter((r) => r && typeof r.pattern === 'string').map((r) => ({ ...r, id: r.id || newId('rule') }))
+    st.linkRules = st.linkRules.filter((r) => r && (typeof r.pattern === 'string' || typeof r.sourceApp === 'string')).map((r) => ({ ...r, pattern: r.pattern ?? '' }))
+    st.linkRules = st.linkRules.map((r) => ({ ...r, id: r.id || newId('rule') }))
   })
 }
 
@@ -571,14 +573,34 @@ export function registerPlatformCommands(c: Commands): void {
   })
 
   // ----- link rules
+  // a rule names a site pattern, a source app (round 5), or both
   c.register('linkRules.add', ({ core }, p) => {
     const pattern = normalizePattern(str(p.pattern) ?? '')
+    const sourceApp = str(p.sourceApp)?.slice(0, 120)
     const space = spaceById(core.store.state, str(p.spaceId))
-    if (!pattern || !space || space.incognito) return false
+    if ((!pattern && !sourceApp) || !space || space.incognito) return false
     const profileId = profileById(core, str(p.profileId))?.id ?? space.profileId
     const rule: LinkRule = { id: newId('rule'), pattern, spaceId: space.id, profileId }
-    core.store.update((s) => (s.settings.linkRules = [...s.settings.linkRules.filter((r) => r.pattern !== pattern), rule]))
+    if (sourceApp) rule.sourceApp = sourceApp
+    const same = (r: LinkRule): boolean => !r.mini && r.pattern === pattern && (r.sourceApp ?? '').toLowerCase() === (sourceApp ?? '').toLowerCase()
+    core.store.update((s) => (s.settings.linkRules = [...s.settings.linkRules.filter((r) => !same(r)), rule]))
     return rule.id
+  })
+  c.register('linkRules.update', ({ core }, p) => {
+    const rule = core.store.state.settings.linkRules.find((r) => r.id === str(p.id))
+    if (!rule) return false
+    const pattern = typeof p.pattern === 'string' ? normalizePattern(p.pattern) : rule.pattern
+    const sourceApp = typeof p.sourceApp === 'string' ? p.sourceApp.trim().slice(0, 120) : (rule.sourceApp ?? '')
+    const space = p.spaceId === undefined ? spaceById(core.store.state, rule.spaceId) : spaceById(core.store.state, str(p.spaceId))
+    if ((!pattern && !sourceApp) || !space || space.incognito) return false
+    core.store.update(() => {
+      rule.pattern = pattern
+      if (sourceApp) rule.sourceApp = sourceApp
+      else delete rule.sourceApp
+      rule.spaceId = space.id
+      rule.profileId = space.profileId
+    })
+    return true
   })
   c.register('linkRules.remove', ({ core }, p) => {
     const id = str(p.id)
@@ -592,11 +614,11 @@ export function registerPlatformCommands(c: Commands): void {
     if (!url || !/^https?:\/\//i.test(url)) return false
     const s = core.store.state
     const pick = (): SwyrWindow => {
-      const regular = core.windows.filter((x) => !x.closed && !x.space().incognito)
+      const regular = core.windows.filter((x) => !x.closed && !x.blank && !x.space().incognito)
       if (w && regular.includes(w)) return w
       return regular[0] ?? core.createWindow()
     }
-    const rule = matchRule(s.settings.linkRules, url)
+    const rule = matchRule(s.settings.linkRules, url, sourceFromPayload(p))
     const space = rule ? spaceById(s, rule.spaceId) : undefined
     let result: unknown
     if (space) {

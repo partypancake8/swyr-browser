@@ -19,7 +19,8 @@ export function migrate(raw: Record<string, unknown>): PersistedState {
     schemaVersion: SCHEMA_VERSION,
     profiles: Array.isArray(s.profiles) && s.profiles.length ? s.profiles : base.profiles,
     spaces: Array.isArray(s.spaces) ? s.spaces : [],
-    items: Array.isArray(s.items) ? s.items : [],
+    // round 5: tabs of blank windows never outlive their window
+    items: Array.isArray(s.items) ? s.items.filter((i) => i && i.blankWindow === undefined) : [],
     archive: Array.isArray(s.archive) ? s.archive : [],
     settings: { ...defaultSettings(), ...(s.settings ?? {}) },
     styles: Array.isArray(s.styles) ? s.styles : []

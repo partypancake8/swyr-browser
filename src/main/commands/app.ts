@@ -15,6 +15,8 @@ export const APP_PAGE_COMMANDS = [
   'onboarding.open',
   'onboarding.complete',
   'import.chrome',
+  'import.safari',
+  'import.firefox',
   'shortcuts.list',
   'shortcuts.set',
   'shortcuts.record',
@@ -47,8 +49,9 @@ export function registerAppCommands(c: Commands): void {
     const b = w.win.getBounds()
     return { x: b.x, y: b.y, width: b.width, height: b.height }
   })
+  // round 5: a blank window has no spaces: no switcher, no Favorites or Pinned, a neutral theme, one Today list and a New Tab
   c.register('window.newBlank', async ({ core, w }) => {
-    const win = core.createWindow({ spaceId: w?.space().incognito ? undefined : w?.activeSpaceId })
+    const win = core.createWindow({ spaceId: w?.space().incognito ? undefined : w?.activeSpaceId, blank: true })
     await core.commands.run('tab.new', {}, win)
     return win.id
   })

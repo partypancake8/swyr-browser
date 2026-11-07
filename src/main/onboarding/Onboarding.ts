@@ -10,6 +10,7 @@ import type { Commands } from '../commands/Commands'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { CHROME_BOOKMARKS_PATH, readChromeBookmarks, type BookmarkNode } from './ChromeBookmarks'
+import { SAFARI_BOOKMARKS_PATH, firefoxPlacesPath, readFirefoxBookmarks, readSafariBookmarks, type ParsedBookmarks } from '../import/OtherBookmarks'
 
 export const ONBOARDING_URL = 'swyr://onboarding'
 const NEWTAB_URL = 'swyr://newtab'
@@ -157,4 +158,49 @@ export function registerOnboardingCommands(c: Commands): void {
       return { error: code === 'ENOENT' ? 'No Chrome bookmarks file was found. Is Chrome installed with a Default profile?' : 'That file is not a Chrome bookmarks file.' }
     }
   })
+
+  // round 5: Safari and Firefox bookmarks, through the same flow as Chrome's (one folder in Pinned of the current space)
+  const otherBrowser = (
+    name: 'Safari' | 'Firefox',
+    defaultPath: () => string | null,
+    read: (file: string) => ParsedBookmarks,
+    dialogOpts: { title: string; filters?: Electron.FileFilter[] },
+    missing: string
+  ) =>
+    (async ({ core, w }, p) => {
+      let file = str(p.path)
+      if (!file) {
+        const guess = defaultPath()
+        // headless tests only ever read fixture files they pass in
+        if (core.test) return { error: `Pass a ${name} bookmarks file path in test mode.` }
+        if (guess && fs.existsSync(guess)) file = guess
+        else {
+          const res = await dialog.showOpenDialog({ ...dialogOpts, buttonLabel: 'Import', defaultPath: guess ?? undefined, properties: ['openFile', 'showHiddenFiles'] })
+          if (res.canceled || !res.filePaths[0]) return null
+          file = res.filePaths[0]
+        }
+      }
+      try {
+        const parsed = read(file)
+        if (!parsed.links) return { error: 'That file has no bookmarks to import.' }
+        const space = targetSpace(core, w, str(p.spaceId))
+        if (!space) return { error: 'There is no space to import into.' }
+        const folderId = addBookmarks(core, space.id, space.profileId, parsed.nodes, str(p.title) ?? `${name} Bookmarks`)
+        if (!core.test) w?.toast(`Imported ${parsed.links} bookmarks`)
+        return { bookmarks: parsed.links, folders: parsed.folders, truncated: parsed.truncated, folderId, spaceId: space.id }
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code
+        if (code === 'ENOENT') return { error: missing }
+        if (code === 'EPERM' || code === 'EACCES') return { error: `macOS blocked reading the ${name} bookmarks. Give swyr Full Disk Access in System Settings, Privacy & Security, then try again.` }
+        return { error: `That file is not a ${name} bookmarks file.` }
+      }
+    }) satisfies Parameters<Commands['register']>[1]
+  c.register(
+    'import.safari',
+    otherBrowser('Safari', () => SAFARI_BOOKMARKS_PATH, readSafariBookmarks, { title: 'Choose Safari\'s Bookmarks.plist', filters: [{ name: 'Safari bookmarks', extensions: ['plist'] }] }, 'No Safari bookmarks file was found.')
+  )
+  c.register(
+    'import.firefox',
+    otherBrowser('Firefox', firefoxPlacesPath, readFirefoxBookmarks, { title: 'Choose Firefox\'s places.sqlite', filters: [{ name: 'Firefox places', extensions: ['sqlite'] }] }, 'No Firefox profile with bookmarks was found.')
+  )
 }

@@ -137,12 +137,22 @@ function ImportStep(): ReactNode {
         <div className="rounded-xl bg-[var(--select)] p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-[15px] font-bold">Chrome bookmarks</div>
-              <div className="text-[13px]">Arrive as one folder in your Pinned tabs.</div>
+              <div className="text-[15px] font-bold">Bookmarks</div>
+              <div className="text-[13px]">From Chrome, Safari or Firefox, as one folder in your Pinned tabs. Passwords stay in the other browser.</div>
             </div>
-            <Primary disabled={busy !== null} onClick={() => void run('import.chrome', setChrome)}>
-              <Bookmark size={16} /> {busy === 'import.chrome' ? 'Importing…' : 'Import bookmarks from Chrome'}
-            </Primary>
+            <div className="flex shrink-0 flex-col gap-1.5">
+              {(
+                [
+                  ['import.chrome', 'Chrome'],
+                  ['import.safari', 'Safari'],
+                  ['import.firefox', 'Firefox']
+                ] as const
+              ).map(([command, name]) => (
+                <Primary key={command} disabled={busy !== null} onClick={() => void run(command, setChrome)}>
+                  <Bookmark size={16} /> {busy === command ? 'Importing…' : `From ${name}`}
+                </Primary>
+              ))}
+            </div>
           </div>
           {status(chrome, (r) => `Imported ${r.bookmarks ?? 0} bookmarks.`)}
         </div>

@@ -31,7 +31,12 @@ export function favoritesFor(s: PersistedState, profileId: string): Item[] {
 }
 
 export function sectionItems(s: PersistedState, spaceId: string, section: Exclude<Section, 'favorites'>): Item[] {
-  return s.items.filter((i) => i.spaceId === spaceId && i.section === section && !i.parentId).sort(byOrder)
+  return s.items.filter((i) => i.spaceId === spaceId && i.section === section && !i.parentId && i.blankWindow === undefined).sort(byOrder)
+}
+
+/** round 5: the Today tabs a blank window owns */
+export function blankItems(s: PersistedState, windowId: number): Item[] {
+  return s.items.filter((i) => i.blankWindow === windowId && !i.parentId).sort(byOrder)
 }
 
 export function childrenOf(s: PersistedState, parentId: string): Item[] {
@@ -68,7 +73,7 @@ export function sidebarOrder(s: PersistedState, space: Space, visibleOnly = true
 /** items that belong to a space for the purpose of switching (favorites of its profile included) */
 export function itemVisibleInSpace(item: Item, space: Space): boolean {
   if (item.section === 'favorites') return item.profileId === space.profileId
-  return item.spaceId === space.id
+  return item.spaceId === space.id && item.blankWindow === undefined
 }
 
 export function nextOrder(items: Item[]): number {

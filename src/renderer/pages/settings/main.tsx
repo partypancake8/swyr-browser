@@ -1,6 +1,6 @@
 // swyr://settings: General, Profiles, Link Rules, Shortcuts, Extensions and Advanced panes.
 import { createRoot } from 'react-dom/client'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Blocks, Keyboard, Route, Settings2, Users, Wrench } from 'lucide-react'
 import '../../common/base.css'
 import '../page.css'
@@ -8,7 +8,7 @@ import './settings.css'
 import { invoke, startViewSync, useView } from '../../common/store'
 import { activeSpace, useSpaceTheme } from '../../common/theme'
 import { sortedSpaces } from '@shared/ops'
-import type { Appearance, ArchiveAfter, PlatformRuntime, ViewState } from '@shared/types'
+import type { Appearance, ArchiveAfter, PlatformRuntime, Space, ViewState } from '@shared/types'
 import { usePlatformPage } from './usePlatformPage'
 import { Button, Row, Section, Toggle, inputClass, selectClass } from './ui'
 import { AdvancedPane } from './ImportPane'
@@ -279,43 +279,84 @@ function ProfilesPane({ vs }: { vs: ViewState }): ReactNode {
 function LinkRulesPane({ vs }: { vs: ViewState }): ReactNode {
   const spaces = sortedSpaces(vs.state).filter((x) => !x.incognito)
   const rules = vs.state.settings.linkRules
-  const [pattern, setPattern] = useState('')
-  const [spaceId, setSpaceId] = useState(spaces[0]?.id ?? '')
-  const add = (): void => {
-    if (!pattern.trim() || !spaceId) return
-    void invoke('linkRules.add', { pattern: pattern.trim(), spaceId })
-    setPattern('')
-  }
+  const [editing, setEditing] = useState<string | null>(null)
   const spaceName = (id: string): string => {
     const sp = spaces.find((x) => x.id === id)
     return sp ? `${sp.emoji ? sp.emoji + ' ' : ''}${sp.name}` : 'a deleted space'
   }
+  const label = (r: { pattern: string; sourceApp?: string }): string =>
+    r.pattern && r.sourceApp ? `${r.pattern} from ${r.sourceApp}` : r.pattern || `Any link from ${r.sourceApp}`
   return (
     <Section
       title="Rules"
-      note="Links you open from other apps go to the space that matches. Use a site like github.com (subdomains included), or a pattern like *.google.com or github.com/my-org/*."
+      note="Links you open from other apps go to the space that matches. Use a site like github.com (subdomains included), or a pattern like *.google.com or github.com/my-org/*. A rule can also name the app the link came from, like Slack or Mail; swyr takes the app that was in front when the link arrived as its source."
     >
       {rules.length === 0 && <Row label="No rules yet" detail="Without a rule, links open in the space you are in." />}
-      {rules.map((r) => (
-        <Row key={r.id ?? r.pattern} label={r.pattern} detail={`Opens in ${spaceName(r.spaceId)}`}>
-          <Button onClick={() => invoke('linkRules.remove', { id: r.id, pattern: r.pattern })}>Remove</Button>
-        </Row>
-      ))}
-      <Row label="New rule">
-        <input className={`${inputClass} w-44`} placeholder="github.com" value={pattern} onChange={(e) => setPattern(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
-        <select className={selectClass} value={spaceId} onChange={(e) => setSpaceId(e.target.value)}>
-          {spaces.map((sp) => (
-            <option key={sp.id} value={sp.id}>
-              {sp.emoji ? sp.emoji + ' ' : ''}
-              {sp.name}
-            </option>
-          ))}
-        </select>
-        <Button kind="primary" onClick={add}>
-          Add
-        </Button>
-      </Row>
+      {rules.map((r) =>
+        editing === r.id ? (
+          <RuleEditor
+            key={r.id}
+            spaces={spaces}
+            initial={{ pattern: r.pattern, sourceApp: r.sourceApp ?? '', spaceId: r.spaceId }}
+            submitLabel="Save"
+            onSubmit={(v) => {
+              void invoke('linkRules.update', { id: r.id, ...v })
+              setEditing(null)
+            }}
+            onCancel={() => setEditing(null)}
+          />
+        ) : (
+          <Row key={r.id ?? r.pattern} label={label(r)} detail={`Opens in ${spaceName(r.spaceId)}`}>
+            {!r.mini && <Button onClick={() => setEditing(r.id)}>Edit</Button>}
+            <Button onClick={() => invoke('linkRules.remove', { id: r.id, pattern: r.pattern })}>Remove</Button>
+          </Row>
+        )
+      )}
+      <RuleEditor spaces={spaces} initial={{ pattern: '', sourceApp: '', spaceId: spaces[0]?.id ?? '' }} submitLabel="Add" onSubmit={(v) => void invoke('linkRules.add', v)} />
     </Section>
+  )
+}
+
+interface RuleFields {
+  pattern: string
+  sourceApp: string
+  spaceId: string
+}
+
+function RuleEditor(props: { spaces: Space[]; initial: RuleFields; submitLabel: string; onSubmit: (v: RuleFields) => void; onCancel?: () => void }): ReactNode {
+  const { spaces, initial } = props
+  const [pattern, setPattern] = useState(initial.pattern)
+  const [sourceApp, setSourceApp] = useState(initial.sourceApp)
+  const [spaceId, setSpaceId] = useState(initial.spaceId)
+  const submit = (): void => {
+    if ((!pattern.trim() && !sourceApp.trim()) || !spaceId) return
+    props.onSubmit({ pattern: pattern.trim(), sourceApp: sourceApp.trim(), spaceId })
+    if (!props.onCancel) {
+      setPattern('')
+      setSourceApp('')
+    }
+  }
+  const key = (e: KeyboardEvent): void => {
+    if (e.key === 'Enter') submit()
+    if (e.key === 'Escape') props.onCancel?.()
+  }
+  return (
+    <Row label={props.onCancel ? 'Edit rule' : 'New rule'}>
+      <input className={`${inputClass} w-36`} placeholder="github.com" aria-label="Site" value={pattern} onChange={(e) => setPattern(e.target.value)} onKeyDown={key} />
+      <input className={`${inputClass} w-28`} placeholder="From app" aria-label="Source app" data-testid="rule-source-app" value={sourceApp} onChange={(e) => setSourceApp(e.target.value)} onKeyDown={key} />
+      <select className={selectClass} value={spaceId} onChange={(e) => setSpaceId(e.target.value)}>
+        {spaces.map((sp) => (
+          <option key={sp.id} value={sp.id}>
+            {sp.emoji ? sp.emoji + ' ' : ''}
+            {sp.name}
+          </option>
+        ))}
+      </select>
+      <Button kind="primary" onClick={submit}>
+        {props.submitLabel}
+      </Button>
+      {props.onCancel && <Button onClick={props.onCancel}>Cancel</Button>}
+    </Row>
   )
 }
 

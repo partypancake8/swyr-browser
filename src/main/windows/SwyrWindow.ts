@@ -2,7 +2,7 @@
 import { BaseWindow, type WebContents, type WebContentsView } from 'electron'
 import type { Item, OverlayInput, OverlayState, Rect, Space, ViewState, WindowRuntime } from '@shared/types'
 import { baseColor, isDark } from '@shared/theme'
-import { itemVisibleInSpace, sidebarOrder, sortedSpaces, spaceById, regularSpaces } from '@shared/ops'
+import { blankItems, itemVisibleInSpace, sidebarOrder, sortedSpaces, spaceById, regularSpaces } from '@shared/ops'
 import { computeLayout, type OverlayLayout } from '../layout/Layout'
 import { createShellView } from '../views/ShellView'
 import { createOverlayView } from '../views/OverlayView'
@@ -16,6 +16,8 @@ export const TRAFFIC_LIGHTS = { x: 14, y: 14 }
 
 export interface WindowOptions {
   spaceId?: string
+  /** round 5: a blank window (no spaces, neutral theme, its own Today list) */
+  blank?: boolean
   bounds?: { x?: number; y?: number; width: number; height: number }
 }
 
@@ -46,6 +48,8 @@ export class SwyrWindow {
   // round 3c
   /** a private window (its space belongs to an in-memory incognito profile) */
   readonly incognito: boolean
+  // round 5
+  readonly blank: boolean
   private boundsTimer: NodeJS.Timeout | null = null
 
   constructor(
@@ -56,7 +60,9 @@ export class SwyrWindow {
     const space = spaceById(s, opts.spaceId) ?? regularSpaces(s)[0] ?? sortedSpaces(s)[0]
     this.activeSpaceId = space.id
     this.incognito = space.incognito === true
-    const dark = isDark(space.theme, core.systemDark())
+    this.blank = opts.blank === true && !this.incognito
+    const dark = this.blank ? core.systemDark() : isDark(space.theme, core.systemDark())
+    const bg = this.blank ? baseColor(undefined, dark) : baseColor(space, dark)
     this.win = new BaseWindow({
       width: opts.bounds?.width ?? 1280,
       height: opts.bounds?.height ?? 820,
@@ -68,10 +74,10 @@ export class SwyrWindow {
       title: 'swyr',
       titleBarStyle: 'hiddenInset',
       trafficLightPosition: TRAFFIC_LIGHTS,
-      backgroundColor: baseColor(space, dark)
+      backgroundColor: bg
     })
     this.id = this.win.id
-    this.shell = createShellView(baseColor(space, dark))
+    this.shell = createShellView(bg)
     this.overlay = createOverlayView()
     this.media = new MediaTracker(this)
     this.preview = new PreviewController(this)
@@ -115,17 +121,21 @@ export class SwyrWindow {
       } catch (err) {
         console.error('[swyr] window cleanup failed', err)
       }
+      // round 5: a blank window's Today tabs go with it; spaces and other windows stay as they were
+      if (this.blank && core.store.state.items.some((i) => i.blankWindow === this.id)) {
+        core.store.update((st) => (st.items = st.items.filter((i) => i.blankWindow !== this.id)))
+      }
       core.onWindowClosed(this)
     })
 
-    const initial = this.pickItemForSpace(space)
+    const initial = this.blank ? undefined : this.pickItemForSpace(space)
     if (initial) this.activate(initial.id, { focus: false })
     this.layout()
   }
 
   /** round 3c: persist bounds shortly after the last move or resize */
   private queueSaveBounds(): void {
-    if (this.incognito) return
+    if (this.incognito || this.blank) return
     if (this.boundsTimer) clearTimeout(this.boundsTimer)
     this.boundsTimer = setTimeout(() => {
       this.boundsTimer = null
@@ -159,6 +169,7 @@ export class SwyrWindow {
   /** the most recently active item of a space, or its first sidebar item */
   pickItemForSpace(space: Space): Item | undefined {
     const s = this.core.store.state
+    if (this.blank) return blankItems(s, this.id).sort((a, b) => b.lastActiveAt - a.lastActiveAt)[0]
     const remembered = s.items.find((i) => i.id === this.lastActiveBySpace.get(space.id))
     if (remembered && itemVisibleInSpace(remembered, space)) return remembered
     const own = s.items
@@ -200,7 +211,14 @@ export class SwyrWindow {
     this.core.scheduleBroadcast()
   }
 
+  /** round 5: the activatable items of this window in sidebar order (a blank window has only its own Today tabs) */
+  order(): Item[] {
+    const s = this.core.store.state
+    return this.blank ? blankItems(s, this.id) : sidebarOrder(s, this.space())
+  }
+
   switchSpace(spaceId: string): void {
+    if (this.blank) return // a blank window has no spaces to switch between
     const space = spaceById(this.core.store.state, spaceId)
     if (!space) return
     this.activeSpaceId = space.id
@@ -337,7 +355,9 @@ export class SwyrWindow {
       previewBounds: this.preview.isOpen() ? this.previewBounds : null,
       media: this.media.runtime(),
       // round 3c
-      incognito: this.incognito
+      incognito: this.incognito,
+      // round 5
+      blank: this.blank
     }
   }
 

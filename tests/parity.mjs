@@ -611,6 +611,55 @@ try {
     assert.equal(win(s).activeSpaceId, side)
     await t.dispatch('linkRules.remove', { id: s.settings.linkRules[0].id })
     await t.dispatch('space.switch', { id: home })
+    // round 5: rules by source app. macOS does not say who sent a link, so swyr records the frontmost app when it
+    // arrives; the test hook stands in for that app. The same site goes to Side from Slack and to Home from Mail.
+    const probe = await ev(() => globalThis.__swyr.probeSourceApp())
+    assert.ok(probe.ms < 1500, 'frontmost-app probe is fast: ' + probe.ms + ' ms')
+    assert.ok(probe.app === null || typeof probe.app.name === 'string', 'probe result ' + JSON.stringify(probe))
+    const slackRule = await t.dispatch('linkRules.add', { pattern: 'localhost', sourceApp: 'Slack', spaceId: side })
+    const mailRule = await t.dispatch('linkRules.add', { pattern: 'localhost', sourceApp: 'com.apple.mail', spaceId: home })
+    assert.ok(slackRule && mailRule, 'two source-app rules')
+    const arrive = async (source, url) => {
+      await ev((_e, a) => globalThis.__swyr.setSourceApp(a), source)
+      await ev(({ app }, u) => app.emit('open-url', { preventDefault() {} }, u), url)
+    }
+    await t.dispatch('space.switch', { id: home })
+    await arrive({ name: 'Slack', bundleId: 'com.tinyspeck.slackmacgap' }, B('/p/FromSlack'))
+    s = await t.waitFor((s) => byUrl(s, '/p/FromSlack'), 'link from Slack opened')
+    assert.equal(byUrl(s, '/p/FromSlack').spaceId, side, 'from Slack: the Side space')
+    assert.equal(win(s).activeSpaceId, side)
+    await arrive({ name: 'Mail', bundleId: 'com.apple.mail' }, B('/p/FromMail'))
+    s = await t.waitFor((s) => byUrl(s, '/p/FromMail'), 'link from Mail opened')
+    assert.equal(byUrl(s, '/p/FromMail').spaceId, home, 'from Mail (matched by bundle id): the Home space')
+    assert.equal(win(s).activeSpaceId, home)
+    // an app no rule names falls back to the space the window is in
+    await t.dispatch('space.switch', { id: side })
+    await arrive({ name: 'Notes', bundleId: 'com.apple.Notes' }, B('/p/FromNotes'))
+    s = await t.waitFor((s) => byUrl(s, '/p/FromNotes'), 'link from Notes opened')
+    assert.equal(byUrl(s, '/p/FromNotes').spaceId, side, 'no rule for Notes: current space')
+    // a rule by source app alone (no site), edited through linkRules.update
+    assert.equal(await t.dispatch('linkRules.update', { id: mailRule, pattern: '', sourceApp: 'Mail' }), true)
+    await t.dispatch('space.switch', { id: side })
+    await arrive({ name: 'Mail', bundleId: 'com.apple.mail' }, A('/p/AnyFromMail'))
+    s = await t.waitFor((s) => byUrl(s, '/p/AnyFromMail'), 'any link from Mail')
+    assert.equal(byUrl(s, '/p/AnyFromMail').spaceId, home, 'source-only rule routes every site')
+    // the Link Rules pane lists the source app and the editor has its field
+    const pane = await t.dispatch('tab.new', { url: 'swyr://settings#linkrules' })
+    await t.waitFor((s) => active(s)?.id === pane, 'settings tab')
+    await t.waitIdle()
+    let txt = ''
+    for (let i = 0; i < 20 && !/from Slack/.test(txt); i++) {
+      await sleep(300)
+      txt = String(await tabEval(`document.body.innerText + (document.querySelector('[data-testid="rule-source-app"]') ? ' [field]' : '')`))
+    }
+    assert.match(txt, /localhost from Slack/, 'pane lists the Slack rule')
+    assert.match(txt, /Any link from Mail/, 'pane lists the Mail rule')
+    assert.match(txt, /\[field\]/, 'rule editor has a source app field')
+    assert.ok(await t.capture(frame('r33-link-rules-source-app')))
+    await ev(() => globalThis.__swyr.setSourceApp(undefined))
+    await t.dispatch('tab.close', { id: pane, remove: true })
+    for (const id of [slackRule, mailRule]) await t.dispatch('linkRules.remove', { id })
+    await t.dispatch('space.switch', { id: home })
   })
 
   await row(81, async () => {
@@ -1009,6 +1058,58 @@ try {
     await t.waitFor((s) => s.windows.filter((w) => w.kind === 'main').length === 1, 'closed')
   })
 
+  await row(72, async () => {
+    // Ctrl+Cmd+N: a window with no spaces (no switcher, no Favorites or Pinned), a neutral theme, a Today list and a New Tab
+    s = await t.state()
+    const spacesBefore = JSON.stringify(s.spaces.map((x) => x.id))
+    const main = win(s)
+    const mainBefore = { activeSpaceId: main.activeSpaceId, activeItemId: main.activeItemId }
+    const mainItems = s.items.filter((i) => i.blankWindow === undefined).length
+    const shortcut = (await t.dispatch('shortcuts.list')).find((b) => b.command === 'window.newBlank')
+    assert.equal(shortcut?.accelerator, 'Ctrl+Cmd+N')
+    const id = await t.dispatch('window.newBlank')
+    s = await t.waitFor((s) => s.windows.some((w) => w.id === id && w.kind === 'main'), 'blank window')
+    const bw = s.windows.find((w) => w.id === id)
+    assert.equal(bw.blank, true, 'runtime flags the window blank')
+    assert.equal(JSON.stringify(s.spaces.map((x) => x.id)), spacesBefore, 'no space created')
+    const own = s.items.filter((i) => i.blankWindow === id)
+    assert.equal(own.length, 1, 'one New Tab')
+    assert.equal(own[0].section, 'today')
+    assert.ok(own[0].url.startsWith('swyr://newtab'), own[0].url)
+    const shell = (js) => ev((_e, a) => globalThis.__swyr.shellEvalIn(a.id, a.js), { id, js })
+    let dom = null
+    for (let i = 0; i < 40; i++) {
+      dom = await shell(`(() => { const r = document.querySelector('[data-sidebar-root]'); return r ? { blank: r.hasAttribute('data-blank-window'), spaces: document.querySelectorAll('[data-space]').length, pinned: document.querySelectorAll('[data-section="pinned"]').length, favorites: document.querySelectorAll('[data-section="favorites"]').length, today: document.querySelectorAll('[data-section="today"]').length, text: r.innerText, bg: getComputedStyle(document.querySelector('.space-bg')).backgroundImage } : null })()`).catch(() => null)
+      if (dom && dom.today) break
+      await sleep(250)
+    }
+    assert.ok(dom, 'blank shell rendered')
+    assert.equal(dom.blank, true)
+    assert.equal(dom.spaces, 0, 'no [data-space] switcher buttons')
+    assert.equal(dom.pinned, 0, 'no Pinned section')
+    assert.equal(dom.favorites, 0, 'no Favorites section')
+    assert.ok(dom.today >= 1, 'a Today list')
+    assert.match(dom.text, /New Tab/)
+    assert.ok(!/gradient/.test(dom.bg), 'neutral theme, no space gradient: ' + dom.bg)
+    // the main window still has its switcher
+    const mainSwitcher = await ev((_e, a) => globalThis.__swyr.shellEvalIn(a.id, a.js), { id: main.id, js: `document.querySelectorAll('[data-space]').length` })
+    assert.ok(Number(mainSwitcher) >= 2, 'main window keeps the switcher: ' + mainSwitcher)
+    // tabs opened here stay in this window; space switching does nothing
+    await dispatchIn(id, 'tab.new', { url: A('/p/BlankTab') })
+    s = await t.waitFor((s) => s.items.some((i) => i.url.includes('/p/BlankTab') && i.blankWindow === id), 'blank window tab')
+    assert.equal(await dispatchIn(id, 'space.next'), true)
+    s = await t.state()
+    assert.equal(s.windows.find((w) => w.id === id).activeSpaceId, bw.activeSpaceId, 'no space switch in a blank window')
+    assert.ok(!(await t.dispatch('debug.titles')).includes('BlankTab'), 'the other window does not list blank tabs')
+    // closing it leaves spaces and the other window untouched
+    await ev(({ BaseWindow }, id) => BaseWindow.fromId(id)?.close(), id)
+    s = await t.waitFor((s) => !s.windows.some((w) => w.id === id), 'blank window closed')
+    assert.equal(JSON.stringify(s.spaces.map((x) => x.id)), spacesBefore, 'no space deleted')
+    assert.equal(s.items.filter((i) => i.blankWindow !== undefined).length, 0, 'blank tabs went with the window')
+    assert.equal(s.items.length, mainItems, 'other items untouched')
+    assert.deepEqual({ activeSpaceId: win(s).activeSpaceId, activeItemId: win(s).activeItemId }, mainBefore, 'main window untouched')
+  })
+
   await row(73, async () => {
     await t.dispatch('window.newIncognito')
     s = await t.waitFor((s) => s.windows.some((w) => w.incognito === true), 'private window')
@@ -1094,6 +1195,54 @@ try {
       const hist = await t.dispatch('history.query', { query: title })
       assert.ok(hist.some((h) => h.title === title), browser + ' history searchable')
     }
+    // round 5: Safari and Firefox bookmarks (fixtures only; tests never read ~/Library), as folders in Pinned
+    s = await t.state()
+    const tree = (st, folderId) => {
+      const kids = st.items.filter((i) => i.parentId === folderId).sort((a, b) => a.order - b.order)
+      return kids.map((k) => (k.kind === 'folder' ? { folder: k.title, children: tree(st, k.id) } : k.title))
+    }
+    const saf = await t.dispatch('import.safari', { path: path.join(fixtures, 'safari/Bookmarks.plist') })
+    assert.equal(saf.bookmarks, 4, 'safari ' + JSON.stringify(saf))
+    assert.equal(saf.folders, 3)
+    s = await t.state()
+    const sf = s.items.find((i) => i.id === saf.folderId)
+    assert.equal(sf.title, 'Safari Bookmarks')
+    assert.equal(sf.section, 'pinned')
+    assert.equal(sf.spaceId, win(s).activeSpaceId, 'into the current space')
+    assert.deepEqual(tree(s, sf.id), [
+      'Safari Bar Page',
+      { folder: 'Safari Work', children: ['Safari Work Page & Notes'] },
+      { folder: 'Bookmarks Menu', children: ['Safari Menu Page'] },
+      { folder: 'Reading List', children: ['Safari Reading Item'] }
+    ])
+    // the same tree from a plist plutil can turn into JSON (the first path the importer tries)
+    const plainDir = fs.mkdtempSync(path.join(os.tmpdir(), 'swyr-safari-'))
+    const plainJson = path.join(plainDir, 'b.json')
+    fs.writeFileSync(plainJson, JSON.stringify({ WebBookmarkType: 'WebBookmarkTypeList', Children: [{ WebBookmarkType: 'WebBookmarkTypeList', Title: 'BookmarksBar', Children: [{ WebBookmarkType: 'WebBookmarkTypeLeaf', URLString: 'https://safari-fixture.example/json', URIDictionary: { title: 'Safari Json Page' } }] }] }))
+    const { execFileSync } = await import('node:child_process')
+    execFileSync('/usr/bin/plutil', ['-convert', 'binary1', '-o', path.join(plainDir, 'Bookmarks.plist'), plainJson])
+    const saf2 = await t.dispatch('import.safari', { path: path.join(plainDir, 'Bookmarks.plist'), title: 'Safari Json' })
+    assert.equal(saf2.bookmarks, 1, JSON.stringify(saf2))
+    const ff = await t.dispatch('import.firefox', { path: path.join(fixtures, 'firefox/places.sqlite') })
+    assert.equal(ff.bookmarks, 4, 'firefox ' + JSON.stringify(ff))
+    assert.equal(ff.folders, 3)
+    s = await t.state()
+    const ffFolder = s.items.find((i) => i.id === ff.folderId)
+    assert.equal(ffFolder.title, 'Firefox Bookmarks')
+    assert.equal(ffFolder.section, 'pinned')
+    assert.deepEqual(tree(s, ffFolder.id), [
+      'Firefox Toolbar Page',
+      { folder: 'Firefox Dev', children: ['Firefox Dev Page'] },
+      { folder: 'Bookmarks Menu', children: ['Firefox Menu Page'] },
+      { folder: 'Other Bookmarks', children: ['Firefox Unfiled Page'] }
+    ])
+    assert.ok(s.items.some((i) => i.parentId && i.url === 'https://firefox-fixture.example/dev' && i.pinnedUrl === i.url), 'bookmarks are pinned tabs')
+    // without a path, test mode never falls back to the real ~/Library files
+    assert.ok((await t.dispatch('import.safari')).error)
+    assert.ok((await t.dispatch('import.firefox')).error)
+    // the File menu and the onboarding Import step offer all three
+    const fileMenu = await ev(({ Menu }) => Menu.getApplicationMenu().items.find((m) => m.label === 'File').submenu.items.find((x) => x.label === 'Import Bookmarks')?.submenu.items.map((x) => x.label))
+    assert.deepEqual(fileMenu, ['From Chrome…', 'From Safari…', 'From Firefox…'])
   })
 
   await row(86, async () => {
@@ -1103,6 +1252,13 @@ try {
     await sleep(900)
     const txt = await tabEval('document.body.innerText')
     for (const k of ['Welcome', 'Import', 'Make it yours', 'Defaults']) assert.ok(txt.includes(k), 'step ' + k)
+    await t.dispatch('tab.navigate', { url: 'swyr://onboarding?step=1' })
+    await t.waitIdle()
+    await sleep(800)
+    assert.match(await tabEval('document.body.innerText'), /From Chrome[\s\S]*From Safari[\s\S]*From Firefox/, 'Import step offers Chrome, Safari and Firefox bookmarks')
+    await t.dispatch('tab.navigate', { url: 'swyr://onboarding' })
+    await t.waitIdle()
+    await sleep(600)
     assert.ok(await t.capture(frame('r86-onboarding')))
     await t.dispatch('tab.navigate', { url: 'swyr://onboarding?step=3' })
     await t.waitIdle()

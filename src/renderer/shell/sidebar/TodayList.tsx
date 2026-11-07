@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { Plus } from 'lucide-react'
 import type { Space, ViewState } from '@shared/types'
-import { sectionItems } from '@shared/ops'
+import { blankItems, sectionItems } from '@shared/ops'
 import { invoke } from '../../common/store'
 import { useDndUi, zoneDndId, type DragData } from './dnd'
 import { TabRow } from './TabRow'
@@ -12,7 +12,8 @@ export function TodayList({ vs, space }: { vs: ViewState; space: Space }): React
   const data: DragData = { kind: 'zone', zone: 'today' }
   const zone = useDroppable({ id: zoneDndId('today'), data })
   const zoneOn = useDndUi((s) => s.indicator?.overId === zoneDndId('today'))
-  const today = sectionItems(vs.state, space.id, 'today')
+  // round 5: a blank window lists only the tabs it owns
+  const today = vs.window.blank ? blankItems(vs.state, vs.window.id) : sectionItems(vs.state, space.id, 'today')
   return (
     <div ref={zone.setNodeRef} className={`flex min-h-16 flex-1 flex-col rounded-lg ${zoneOn ? 'bg-[var(--row-hover)]' : ''}`} data-section="today">
       {today.map((it) => (

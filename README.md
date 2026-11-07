@@ -6,7 +6,7 @@ swyr is an open-source macOS browser built around a vertical sidebar. Spaces hol
 
 1. Download `swyr-0.1.0-arm64.dmg` (Apple silicon) from the releases page, or build it yourself with `npm run dist` (it lands in `dist/`).
 2. Open the DMG and drag swyr into Applications.
-3. Start swyr. The first run opens a short guide: import your sidebar or Chrome bookmarks, pick colours and web apps, and choose the defaults.
+3. Start swyr. The first run opens a short guide: import your sidebar or your Chrome, Safari or Firefox bookmarks (passwords stay behind: Electron has no password store), pick colours and web apps, and choose the defaults.
 
 ## Build and run
 
@@ -71,7 +71,7 @@ Status of every row of the feature inventory swyr set out to match. done = prove
 | 30 | Mini Window open-in-space | done | mini.openInMain with a spaceId moves the page into that space and switches to it |
 | 31 | Open Link in Mini Window | done | page context-menu event lists Open Link in Mini Window; clicking it opens a Mini Window on the link; openExternalLinksInMiniWindow sends external links to a Mini Window |
 | 32 | Preview | done | a cross-site link in a pinned tab opens the Preview card while the pinned tab stays (capture r32-preview); preview.expand keeps it as a Today tab |
-| 33 | Link Rules | partial | domain rules route open-url links to a space (proven in parity via app open-url); rules by source app are missing because the macOS open-url event does not say which app sent the link |
+| 33 | Link Rules | done | rules route open-url links by site, by source app, or both (parity: the same localhost link goes to Side from Slack and to Home from Mail, matched by name or bundle id; a source-only rule; Settings pane and rule editor have a From app field); macOS open-url carries no sender, so the source app is detected with the frontmost-app heuristic (lsappinfo front, osascript fallback, 300 ms cap) at the moment the link arrives |
 | 34 | Styles | done | two style.save styles apply on one site, style.toggle turns one off, Library Styles section lists them (added this round) |
 | 35 | Styles colour / font editor | done | style.save colours bg/fg, font Georgia, fontScale: computed body colours and font change; Styles panel capture r35-style-panel |
 | 36 | Hide element picker | done | style.pickElement plus a real synthetic click on the page element hides it and persists the selector per site |
@@ -110,7 +110,7 @@ Status of every row of the feature inventory swyr set out to match. done = prove
 | 69 | Cmd+W behavior | done | Cmd+W menu item archives the Today tab (reason closed); Cmd+W in a window with no tab left closes that window (added this round) |
 | 70 | Reopen closed tab | done | Cmd+Shift+T menu item restores the last archived tab |
 | 71 | New window | done | window.new opens a second main window; closing it leaves one |
-| 72 | New blank window | partial | window.newBlank (Ctrl+Cmd+N) opens a window on a fresh New Tab page, but it still shows the spaces switcher rather than a window with no spaces |
+| 72 | New blank window | done | window.newBlank (Ctrl+Cmd+N) opens a blank window with no spaces: no [data-space] switcher, no Favorites or Pinned, a neutral theme, its own Today list and a New Tab; runtime flags it blank, space switching is a no-op there, spaces in state are unchanged, and closing it removes only its own tabs (parity checks the second window's shell DOM via shellEvalIn) |
 | 73 | Private window | done | window.newIncognito: own incognito partition, its visits are not in history |
 | 74 | Full-screen | done | window.fullscreen stops in test mode (real full screen takes the display); emitted enter-full-screen hides the sidebar and hover reveal works; the OS full screen itself is unverified headless |
 | 75 | Window chrome | done | no title bar (content size equals window size), traffic lights at 14,14 inside the sidebar top row with 72 px inset; the drawn traffic lights are unverified headless |
@@ -118,7 +118,7 @@ Status of every row of the feature inventory swyr set out to match. done = prove
 | 77 | Settings panes | done | swyr://settings has General, Profiles, Link Rules, Shortcuts, Extensions, Advanced and ad blocking; Cmd+, binding; capture r77-settings (no AI pane by design) |
 | 78 | Ad blocking | done | built-in blocker on by default; the adtest fixture page counts blocked tracker requests per tab |
 | 79 | Password manager / autofill | out-of-scope | Electron exposes no Chromium password manager or autofill; the recommended path is a password manager extension (Bitwarden, 1Password) from the Chrome Web Store |
-| 80 | Import from other browsers | partial | proven: Chrome bookmarks, the old sidebar file, history from Chrome/Edge/Brave, Firefox and Safari (added this round); missing: Safari and Firefox bookmarks; passwords cannot be imported because Electron has no password store |
+| 80 | Import from other browsers | done | proven: Chrome, Safari (Bookmarks.plist via plutil) and Firefox (places.sqlite) bookmarks as folders in Pinned of the current space from the File menu and the onboarding Import step, the old sidebar file, and history from Chrome/Edge/Brave, Firefox and Safari; gap: passwords are not imported because Electron has no password store (use a password manager extension) |
 | 81 | Default browser | done | browser.makeDefault, http/https URL types in Info.plist; an app open-url event opens a tab through Link Rules |
 | 82 | Chromium engine | done | Chromium 156 (process.versions.chrome), Chrome user agent without Electron tokens, Chrome extensions load (row 39) |
 | 83 | Find in page | done | find.update counts matches, find.next / find.prev move; Find and Replace (Cmd+Opt+F, added this round) replaces one or all matches in editable fields; capture r83-find-replace |

@@ -547,3 +547,23 @@ export interface OnboardingCompletePayload {
   adblock?: boolean
   archiveAfter?: ArchiveAfter
 }
+
+// round 5: blank windows (no spaces) and Link Rules by source app
+
+export interface Item {
+  /** a Today tab owned by a blank window (Ctrl+Cmd+N); only that window lists it, and it goes when the window closes */
+  blankWindow?: number
+}
+
+export interface WindowRuntime {
+  /** a blank window: no space switcher, no Favorites or Pinned, a neutral theme and its own Today list */
+  blank?: boolean
+}
+
+export interface LinkRule {
+  /**
+   * match links by the app they came from (name or bundle id, case-insensitive substring); macOS does not say who sent
+   * a link, so swyr records the frontmost app at the moment the link arrives
+   */
+  sourceApp?: string
+}

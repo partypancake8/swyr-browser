@@ -1,7 +1,7 @@
 // Built-in commands. Menus, shortcuts, the command bar, IPC and the test hook all call these.
 import { app, clipboard, shell } from 'electron'
 import type { ArchiveReason, Item, PersistedState, Section, Settings } from '@shared/types'
-import { nextOrder, sectionItems, sidebarOrder, spaceById, favoritesFor, itemTitle, windowSpaces } from '@shared/ops'
+import { nextOrder, sectionItems, spaceById, favoritesFor, itemTitle, windowSpaces } from '@shared/ops'
 import { resolveWithSettings } from '@shared/url'
 import { clampSidebar } from '../layout/Layout'
 import { newId } from '../util/id'
@@ -48,8 +48,8 @@ export function makeItem(s: PersistedState, p: Partial<Item> & { url: string; se
 }
 
 /** the item to show after `item` leaves the sidebar: the next one below, else the one above */
-function neighbor(core: Core, w: SwyrWindow, item: Item, exclude: Set<string>): Item | undefined {
-  const order = sidebarOrder(core.store.state, w.space()).filter((i) => i.section !== 'favorites')
+function neighbor(_core: Core, w: SwyrWindow, item: Item, exclude: Set<string>): Item | undefined {
+  const order = w.order().filter((i) => i.section !== 'favorites')
   const idx = order.findIndex((i) => i.id === item.id)
   const rest = order.filter((i) => !exclude.has(i.id))
   if (idx < 0) return rest[0]
@@ -133,10 +133,11 @@ export function registerBuiltins(c: Commands): void {
   c.register('tab.new', ({ core, w }, p) => {
     if (!w) return undefined
     const s = core.store.state
-    const space = spaceById(s, str(p.spaceId)) ?? w.space()
+    const space = (w.blank ? undefined : spaceById(s, str(p.spaceId))) ?? w.space()
     const input = str(p.url) ?? str(p.input)
     const url = input ? resolveWithSettings(input, s.settings).url : 'swyr://newtab'
-    const section = (str(p.section) as Section | undefined) ?? 'today'
+    // round 5: a blank window only has Today tabs, owned by that window
+    const section = w.blank ? 'today' : ((str(p.section) as Section | undefined) ?? 'today')
     const item = makeItem(s, {
       url,
       section,
@@ -144,6 +145,7 @@ export function registerBuiltins(c: Commands): void {
       spaceId: section === 'favorites' ? null : space.id,
       title: str(p.title) ?? ''
     })
+    if (w.blank) item.blankWindow = w.id
     if (section !== 'today') item.pinnedUrl = url
     core.store.update((st) => st.items.push(item))
     if (p.background === true) {
@@ -163,9 +165,9 @@ export function registerBuiltins(c: Commands): void {
     return true
   })
 
-  c.register('tab.goTo', ({ core, w }, p) => {
+  c.register('tab.goTo', ({ w }, p) => {
     if (!w) return false
-    const list = sidebarOrder(core.store.state, w.space())
+    const list = w.order()
     const index = num(p.index) ?? 0
     const item = list[index]
     if (item) w.activate(item.id)
@@ -231,9 +233,9 @@ export function registerBuiltins(c: Commands): void {
   c.register('tab.hardReload', ({ core, w }) => core.commands.run('tab.reload', { hard: true }, w))
   c.register('tab.stop', withContents((wc) => wc.stop()))
 
-  const step = (dir: 1 | -1) => ({ core, w }: CommandContext) => {
+  const step = (dir: 1 | -1) => ({ w }: CommandContext) => {
     if (!w) return false
-    const list = sidebarOrder(core.store.state, w.space())
+    const list = w.order()
     if (!list.length) return false
     const idx = list.findIndex((i) => i.id === w.activeItemId)
     const next = list[(idx + dir + list.length) % list.length] ?? list[0]
@@ -244,12 +246,12 @@ export function registerBuiltins(c: Commands): void {
   c.register('tab.prev', step(-1))
 
   let cycle: { at: number; list: string[]; pos: number; win: number } | null = null
-  c.register('tab.cycleRecent', ({ core, w }) => {
+  c.register('tab.cycleRecent', ({ w }) => {
     if (!w) return false
     const now = Date.now()
     if (!cycle || cycle.win !== w.id || now - cycle.at > 1500) {
-      const space = w.space()
-      const list = sidebarOrder(core.store.state, space)
+      const list = w
+        .order()
         .sort((a, b) => b.lastActiveAt - a.lastActiveAt)
         .slice(0, 5)
         .map((i) => i.id)
@@ -469,5 +471,5 @@ export function registerBuiltins(c: Commands): void {
   c.register('contextMenu.last', ({ core }) => core.contextMenus.lastLabels())
   c.register('contextMenu.click', ({ core }, p) => core.contextMenus.clickLast(str(p.label) ?? ''))
 
-  c.register('debug.titles', ({ core, w }) => (w ? sidebarOrder(core.store.state, w.space()).map(itemTitle) : []))
+  c.register('debug.titles', ({ w }) => (w ? w.order().map(itemTitle) : []))
 }

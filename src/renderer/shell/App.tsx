@@ -11,7 +11,8 @@ const INSET = 8
 
 export function App(): ReactNode {
   const vs = useView((s) => s.vs)
-  const space = vs ? activeSpace(vs) : undefined
+  // round 5: a blank window has no space, so it draws on the neutral theme
+  const space = vs && !vs.window.blank ? activeSpace(vs) : undefined
   const { dark } = useSpaceTheme(space, vs?.systemDark ?? false)
   const drag = useRef<{ raf: number; width: number } | null>(null)
   useTabDragWatcher()

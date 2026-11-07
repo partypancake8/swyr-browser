@@ -56,7 +56,8 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
   const space = activeSpace(vs)
   const active = focusedItem(vs)
   const rt = active ? win.tabs[active.id] : undefined
-  const dark = space ? isDark(space.theme, vs.systemDark) : vs.systemDark
+  const blank = win.blank === true
+  const dark = space && !blank ? isDark(space.theme, vs.systemDark) : vs.systemDark
   const spaces = windowSpaces(state, win.activeSpaceId)
   const spaceIndex = spaces.findIndex((s) => s.id === space?.id)
 
@@ -210,7 +211,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
       onDragEnd={onDragEnd}
       onDragCancel={resetDrag}
     >
-      <div ref={rootRef} data-sidebar-root className="flex h-full flex-col px-2 pb-2" onWheel={onWheel}>
+      <div ref={rootRef} data-sidebar-root data-blank-window={blank ? '' : undefined} className="flex h-full flex-col px-2 pb-2" onWheel={onWheel}>
         <div className="drag flex h-10 shrink-0 items-center gap-0.5" style={{ paddingLeft: win.fullscreen ? 2 : 72 }}>
           <button className="icon-btn" title="Hide sidebar (⌘S)" onClick={() => invoke('sidebar.toggle')}>
             <PanelLeft size={16} strokeWidth={1.9} />
@@ -253,7 +254,9 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
           className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"
           onContextMenu={(e) =>
             showMenu(
-              [
+              blank
+                ? [{ label: 'New Tab', command: 'commandbar.open', payload: { mode: 'new' } }]
+                : [
                 { label: 'New Tab', command: 'commandbar.open', payload: { mode: 'new' } },
                 { label: 'New Folder', command: 'folder.new', payload: { name: 'New Folder', rename: true } },
                 // round 3b
@@ -277,9 +280,13 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
               className={`flex min-h-full flex-col ${anim.dir > 0 ? 'space-in-next' : anim.dir < 0 ? 'space-in-prev' : ''}`}
               style={{ transform: offset ? `translateX(${offset}px)` : undefined, transition: offset ? 'none' : 'transform 0.2s ease-out' }}
             >
-              <FavoritesGrid vs={vs} space={space} />
-              <PinnedList vs={vs} space={space} />
-              <Divider hasToday={vs.state.items.some((i) => i.spaceId === space.id && i.section === 'today')} />
+              {!blank && (
+                <>
+                  <FavoritesGrid vs={vs} space={space} />
+                  <PinnedList vs={vs} space={space} />
+                  <Divider hasToday={vs.state.items.some((i) => i.spaceId === space.id && i.section === 'today' && i.blankWindow === undefined)} />
+                </>
+              )}
               <TodayList vs={vs} space={space} />
             </div>
           )}
@@ -290,7 +297,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
           <button className="icon-btn" title="Archive" onClick={() => invoke('archive.open')} onContextMenu={(e) => showMenu([{ label: 'Open Library', command: 'library.open' }], e)}>
             <History size={16} strokeWidth={1.9} />
           </button>
-          <SpaceSwitcher vs={vs} dark={dark} />
+          {blank ? <div className="flex-1" /> : <SpaceSwitcher vs={vs} dark={dark} />}
           <button className="icon-btn" title="Downloads" onClick={() => invoke('downloads.open')}>
             <Download size={16} strokeWidth={1.9} />
           </button>
