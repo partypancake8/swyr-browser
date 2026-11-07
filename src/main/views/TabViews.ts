@@ -7,6 +7,7 @@ import { isInternalUrl } from '../protocol/Protocol'
 import { extensionsService } from '../extensions/Extensions'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { leavesSite, previewSource } from '../commands/preview'
+import { isErrorPageUrl, showErrorPage } from '../errorpage/ErrorPage'
 
 export const WARM_CACHE = 8
 export const TAB_RADIUS = 10
@@ -123,6 +124,8 @@ export class TabViews {
       core.scheduleBroadcast()
     }
     const setUrl = (url: string): void => {
+      // round 3c: the error page keeps the URL that failed as the tab's URL
+      if (isErrorPageUrl(url)) return syncNav()
       const it = item()
       if (it && it.url !== url) {
         it.url = url
@@ -189,11 +192,9 @@ export class TabViews {
       // a tab on screen reloads at once; a hidden one reloads when it is shown again (see show)
       if (details.reason !== 'clean-exit' && this.attached.includes(id)) setTimeout(() => this.reviveIfCrashed(id), 50)
     })
+    // round 3c: a failed main-frame load shows swyr://error in the tab
     wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
-      if (!isMainFrame || code === -3) return
-      void wc.executeJavaScript(
-        `document.documentElement.innerHTML = ${JSON.stringify(failPage(url, desc))}`
-      ).catch(() => undefined)
+      showErrorPage(wc, code, desc, url, isMainFrame)
     })
   }
 
@@ -278,9 +279,4 @@ export class TabViews {
   destroyAll(): void {
     for (const id of [...this.views.keys()]) this.destroy(id)
   }
-}
-
-function failPage(url: string, desc: string): string {
-  const esc = (s: string): string => s.replace(/[<>&"]/g, (c) => `&#${c.charCodeAt(0)};`)
-  return `<head><meta charset="utf-8"><title>${esc(url)}</title><style>body{font:15px/1.5 -apple-system,system-ui;margin:0;display:grid;place-items:center;height:100vh;color:#15171c;background:#fff}@media (prefers-color-scheme:dark){body{color:#f2f3f5;background:#18191d}}h1{font-size:20px;margin:0 0 6px}</style></head><body><div><h1>This page could not be loaded</h1><div>${esc(url)}</div><div>${esc(desc)}</div></div></body>`
 }

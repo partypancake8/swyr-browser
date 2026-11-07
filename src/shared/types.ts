@@ -513,3 +513,35 @@ export interface MediaEntry {
   favicon: string | null
   playing: boolean
 }
+
+// round 3c: onboarding, window bounds, private windows, the shortcut table
+export interface Settings {
+  /** first-run onboarding finished (swyr://onboarding opens until it is) */
+  onboarded?: boolean
+  /** bounds of the last moved or resized main window, restored on launch */
+  windowBounds?: Rect
+}
+
+export interface WindowRuntime {
+  /** a private window: in-memory partition, its own space, no history */
+  incognito?: boolean
+}
+
+/** one row of shortcuts.list */
+export interface ShortcutEntry {
+  id: string
+  command: string
+  accelerator: string
+  /** the built-in accelerator (accelerator differs when the user changed it) */
+  default: string
+  scope?: 'mini'
+  payload?: unknown
+  title: string
+  overridden: boolean
+}
+
+export interface OnboardingCompletePayload {
+  themeColors?: string[]
+  adblock?: boolean
+  archiveAfter?: ArchiveAfter
+}

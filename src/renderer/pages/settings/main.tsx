@@ -7,12 +7,12 @@ import '../page.css'
 import './settings.css'
 import { invoke, startViewSync, useView } from '../../common/store'
 import { activeSpace, useSpaceTheme } from '../../common/theme'
-import { COMMAND_TITLES, acceleratorLabel, DEFAULT_BINDINGS, resolveBindings } from '@shared/commands'
 import { sortedSpaces } from '@shared/ops'
 import type { Appearance, ArchiveAfter, PlatformRuntime, ViewState } from '@shared/types'
 import { usePlatformPage } from './usePlatformPage'
 import { Button, Row, Section, Toggle, inputClass, selectClass } from './ui'
 import { AdvancedPane } from './ImportPane'
+import { ShortcutsPane } from './ShortcutsPane'
 
 const ENGINES = [
   { name: 'Google', url: 'https://www.google.com/search?q=%s' },
@@ -316,58 +316,6 @@ function LinkRulesPane({ vs }: { vs: ViewState }): ReactNode {
         </Button>
       </Row>
     </Section>
-  )
-}
-
-// ----- Shortcuts
-
-function describe(payload: unknown): string {
-  const p = payload as { index?: number; mode?: string }
-  if (typeof p.index === 'number') return String(p.index + 1)
-  if (p.mode) return `(${p.mode === 'new' ? 'new tab' : 'current tab'})`
-  return ''
-}
-
-function ShortcutsPane({ vs }: { vs: ViewState }): ReactNode {
-  const overrides = vs.state.settings.shortcuts
-  const [recording, setRecording] = useState<string | null>(null)
-  const defaults = new Map(DEFAULT_BINDINGS.map((b) => [b.id, b.accelerator]))
-  const record = async (id: string): Promise<void> => {
-    setRecording(id)
-    try {
-      await invoke('shortcuts.record', { id })
-    } finally {
-      setRecording(null)
-    }
-  }
-  return (
-    <>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-[13px]">Click Change, then press the new keys. Escape cancels.</p>
-        <Button className={Object.keys(overrides).length ? '' : 'invisible'} onClick={() => invoke('shortcuts.reset')}>
-          Reset All
-        </Button>
-      </div>
-      <Section title="All shortcuts">
-        {resolveBindings(overrides).map((b) => (
-          <Row key={b.id} label={`${COMMAND_TITLES[b.command] ?? b.command}${b.payload ? ' ' + describe(b.payload) : ''}`}>
-            <kbd className={`min-w-14 rounded-md px-2 py-0.5 text-center text-[13px] font-semibold ${recording === b.id ? 'bg-[var(--accent)] text-[var(--content)]' : 'bg-[var(--select)]'}`}>
-              {recording === b.id ? 'Press keys…' : acceleratorLabel(b.accelerator)}
-            </kbd>
-            <Button disabled={recording !== null} onClick={() => void record(b.id)}>
-              Change
-            </Button>
-            <Button
-              className={overrides[b.id] ? '' : 'invisible'}
-              title={overrides[b.id] ? `Back to ${acceleratorLabel(defaults.get(b.id) ?? '')}` : 'Already the default'}
-              onClick={() => invoke('shortcuts.reset', { id: b.id })}
-            >
-              Reset
-            </Button>
-          </Row>
-        ))}
-      </Section>
-    </>
   )
 }
 

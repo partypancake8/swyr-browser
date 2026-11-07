@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { computeLayout, normalizeRatios, splitRect, clampSidebar } from '../src/main/layout/Layout.ts'
 import { resolveInput, resolveWithSettings, looksLikeUrl, displayUrl } from '../src/shared/url.ts'
-import { acceleratorLabel, resolveBindings, DEFAULT_BINDINGS } from '../src/shared/commands.ts'
+import { acceleratorLabel, resolveBindings, DEFAULT_BINDINGS, bindingAction, normalizeAccelerator } from '../src/shared/commands.ts'
 import { sidebarOrder, sameUrl, awayFromPinned, isWithin, depthOf, descendantsOf, windowSpaces } from '../src/shared/ops.ts'
 
 let n = 0
@@ -78,7 +78,19 @@ test('shortcuts: defaults, overrides, labels', () => {
   const ids = new Set(DEFAULT_BINDINGS.map((b) => b.id))
   assert.equal(ids.size, DEFAULT_BINDINGS.length)
   const accel = (id) => DEFAULT_BINDINGS.find((b) => b.id === id).accelerator
-  assert.equal(accel('commandbar.new'), 'Cmd+T')
+  assert.equal(accel('tab.new'), 'Cmd+T')
+  // round 3c: Cmd+T is listed as tab.new and opens the command bar in new tab mode
+  assert.deepEqual(bindingAction(DEFAULT_BINDINGS.find((b) => b.id === 'tab.new')), { command: 'commandbar.open', payload: { mode: 'new' } })
+  // no two bindings of one scope share a key unless they run the same action
+  const seen = new Map()
+  for (const b of DEFAULT_BINDINGS) {
+    const key = (b.scope ?? 'main') + ' ' + normalizeAccelerator(b.accelerator)
+    const action = JSON.stringify(bindingAction(b))
+    if (seen.has(key)) assert.equal(seen.get(key), action, 'shortcut conflict on ' + key)
+    seen.set(key, action)
+  }
+  assert.equal(normalizeAccelerator('Shift+Command+t'), 'shift+cmd+t')
+  assert.equal(normalizeAccelerator('Cmd+Plus'), normalizeAccelerator('Cmd+='))
   assert.equal(accel('commandbar.current'), 'Cmd+L')
   assert.equal(accel('tab.togglePin'), 'Cmd+D')
   assert.equal(accel('sidebar.toggle'), 'Cmd+S')

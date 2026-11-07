@@ -14,6 +14,7 @@ import { registerDocumentCommands } from './documents' // round 3b
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { routeSplitClose } from './split'
+import { registerAppCommands } from './app'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
@@ -410,6 +411,7 @@ export function registerBuiltins(c: Commands): void {
   registerPlatformCommands(c) // round 2c: extensions, ad blocker, downloads, link rules, importer, profiles
   registerPageCommands(c) // round 3a: styles, site settings, reader, history, capture
   registerDocumentCommands(c) // round 3b: notes, canvases, live folders, library
+  registerAppCommands(c) // round 3c: onboarding, window bounds, shortcut table, About, page commands
 
   c.register('debug.titles', ({ core, w }) => (w ? sidebarOrder(core.store.state, w.space()).map(itemTitle) : []))
 }

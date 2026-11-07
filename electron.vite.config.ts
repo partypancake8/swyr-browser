@@ -69,7 +69,10 @@ export default defineConfig({
           styles: r('src/renderer/pages/styles/index.html'),
           // round 3b
           note: r('src/renderer/pages/note/index.html'),
-          canvas: r('src/renderer/pages/canvas/index.html')
+          canvas: r('src/renderer/pages/canvas/index.html'),
+          // round 3c
+          onboarding: r('src/renderer/pages/onboarding/index.html'),
+          error: r('src/renderer/pages/error/index.html')
         }
       }
     }

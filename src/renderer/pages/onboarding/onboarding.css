@@ -1,0 +1,8 @@
+/* swyr://onboarding: the page scrolls on small windows; the card keeps readable text in both themes */
+body {
+  overflow: auto;
+}
+
+.onboarding-card {
+  color: var(--fg);
+}

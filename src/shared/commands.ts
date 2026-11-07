@@ -181,11 +181,36 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'liveFolder.delete', title: 'Delete Live Folder' }
 ]
 
+// round 3c: commands behind the full shortcut table, menus, onboarding and packaging
+COMMANDS.push(
+  { name: 'onboarding.open', title: 'Welcome to swyr', palette: true },
+  { name: 'onboarding.complete', title: 'Finish Setup' },
+  { name: 'import.chrome', title: 'Import Bookmarks from Chrome…', palette: true },
+  { name: 'window.setBounds', title: 'Set Window Bounds' },
+  { name: 'window.newBlank', title: 'New Blank Window', palette: true },
+  { name: 'window.fullscreen', title: 'Enter or Exit Full Screen', palette: true },
+  { name: 'window.minimize', title: 'Minimize Window', palette: true },
+  { name: 'app.hide', title: 'Hide swyr' },
+  { name: 'app.hideOthers', title: 'Hide Other Apps' },
+  { name: 'app.about', title: 'About swyr', palette: true },
+  { name: 'shortcuts.list', title: 'List Shortcuts' },
+  { name: 'shortcuts.set', title: 'Change Shortcut' },
+  { name: 'shortcuts.open', title: 'Keyboard Shortcuts', palette: true },
+  { name: 'page.console', title: 'JavaScript Console', palette: true },
+  { name: 'page.viewSource', title: 'View Page Source', palette: true },
+  { name: 'page.copyUrlMarkdown', title: 'Copy URL as Markdown', palette: true },
+  { name: 'page.saveAs', title: 'Save Page As…', palette: true },
+  { name: 'page.print', title: 'Print…', palette: true },
+  { name: 'page.jumpToSelection', title: 'Jump to Selection', palette: true },
+  { name: 'help.reportIssue', title: 'Report an Issue', palette: true }
+)
+
 export const COMMAND_TITLES: Record<string, string> = Object.fromEntries(COMMANDS.map((c) => [c.name, c.title]))
 
 export interface Binding {
   /** stable id used as the key of settings.shortcuts overrides */
   id: string
+  /** the command the shortcut stands for (what shortcuts.list reports) */
   command: string
   payload?: unknown
   accelerator: string
@@ -194,25 +219,42 @@ export interface Binding {
   // round 2a
   /** 'mini': only active inside a Mini Window (its own before-input-event handler) */
   scope?: 'mini'
+  // round 3c
+  /** label for commands whose metadata lives in another module */
+  title?: string
+  /** what the key actually runs when that differs from `command` (Cmd+T opens the command bar in new tab mode) */
+  run?: { command: string; payload?: unknown }
 }
 
 const nums = (n: number): number[] => Array.from({ length: n }, (_, i) => i + 1)
 
-/** Default shortcuts (macOS). Accelerator strings use Electron syntax. */
+/**
+ * Default shortcuts (macOS), round 3c: the complete table, one row per default key of the reference
+ * browser's shortcut list. Accelerator strings use Electron syntax. Bindings the menu bar does not
+ * carry are handled by before-input-event (see src/main/shortcuts/Shortcuts.ts), so `raw` only forces that.
+ */
 export const DEFAULT_BINDINGS: Binding[] = [
-  { id: 'commandbar.new', command: 'commandbar.open', payload: { mode: 'new' }, accelerator: 'Cmd+T' },
-  { id: 'commandbar.current', command: 'commandbar.open', payload: { mode: 'current' }, accelerator: 'Cmd+L' },
+  // tabs and the command bar
+  { id: 'tab.new', command: 'tab.new', accelerator: 'Cmd+T', title: 'New Tab', run: { command: 'commandbar.open', payload: { mode: 'new' } } },
+  { id: 'commandbar.current', command: 'commandbar.open', payload: { mode: 'current' }, accelerator: 'Cmd+L', title: 'Open Location' },
   { id: 'tab.close', command: 'tab.close', accelerator: 'Cmd+W' },
   { id: 'tab.reopen', command: 'tab.reopen', accelerator: 'Cmd+Shift+T' },
   { id: 'tab.archiveAllToday', command: 'tab.archiveAllToday', accelerator: 'Cmd+Shift+K' },
   { id: 'tab.togglePin', command: 'tab.togglePin', accelerator: 'Cmd+D' },
   { id: 'sidebar.toggle', command: 'sidebar.toggle', accelerator: 'Cmd+S' },
+  // windows
   { id: 'window.new', command: 'window.new', accelerator: 'Cmd+N' },
+  { id: 'window.newIncognito', command: 'window.newIncognito', accelerator: 'Cmd+Shift+N' },
+  { id: 'window.newBlank', command: 'window.newBlank', accelerator: 'Ctrl+Cmd+N' },
   { id: 'window.close', command: 'window.close', accelerator: 'Cmd+Shift+W' },
+  { id: 'mini.new', command: 'mini.new', accelerator: 'Cmd+Alt+N', raw: true },
+  // moving around
   { id: 'tab.prev', command: 'tab.prev', accelerator: 'Cmd+Alt+Up' },
   { id: 'tab.next', command: 'tab.next', accelerator: 'Cmd+Alt+Down' },
   { id: 'tab.back', command: 'tab.back', accelerator: 'Cmd+[' },
   { id: 'tab.forward', command: 'tab.forward', accelerator: 'Cmd+]' },
+  { id: 'tab.backBrace', command: 'tab.back', accelerator: 'Cmd+Shift+[', raw: true },
+  { id: 'tab.forwardBrace', command: 'tab.forward', accelerator: 'Cmd+Shift+]', raw: true },
   ...nums(9).map((n) => ({ id: `tab.goTo:${n}`, command: 'tab.goTo', payload: { index: n - 1 }, accelerator: `Cmd+${n}` })),
   ...nums(9).map((n) => ({
     id: `space.switch:${n}`,
@@ -224,22 +266,7 @@ export const DEFAULT_BINDINGS: Binding[] = [
   { id: 'space.prev', command: 'space.prev', accelerator: 'Cmd+Alt+Left', raw: true },
   { id: 'space.next', command: 'space.next', accelerator: 'Cmd+Alt+Right', raw: true },
   { id: 'tab.cycleRecent', command: 'tab.cycleRecent', accelerator: 'Ctrl+Tab', raw: true },
-  { id: 'tab.reload', command: 'tab.reload', accelerator: 'Cmd+R' },
-  { id: 'tab.hardReload', command: 'tab.hardReload', accelerator: 'Cmd+Shift+R' },
-  { id: 'tab.stop', command: 'tab.stop', accelerator: 'Cmd+.' },
-  { id: 'find.open', command: 'find.open', accelerator: 'Cmd+F' },
-  { id: 'find.next', command: 'find.next', accelerator: 'Cmd+G' },
-  { id: 'find.prev', command: 'find.prev', accelerator: 'Cmd+Shift+G' },
-  { id: 'page.devtools', command: 'page.devtools', accelerator: 'Cmd+Alt+I' },
-  { id: 'page.copyUrl', command: 'page.copyUrl', accelerator: 'Cmd+Shift+C' },
-  { id: 'zoom.in', command: 'zoom.in', accelerator: 'Cmd+Plus' },
-  { id: 'zoom.inEquals', command: 'zoom.in', accelerator: 'Cmd+=', raw: true },
-  { id: 'zoom.out', command: 'zoom.out', accelerator: 'Cmd+-' },
-  { id: 'zoom.reset', command: 'zoom.reset', accelerator: 'Cmd+0' },
-  { id: 'settings.open', command: 'settings.open', accelerator: 'Cmd+,' },
-  { id: 'app.quit', command: 'app.quit', accelerator: 'Cmd+Q' },
-  { id: 'library.open', command: 'library.open', accelerator: 'Cmd+Shift+L', raw: true },
-  // round 2a: Split View, Mini Window
+  // Split View
   { id: 'split.add', command: 'split.add', accelerator: 'Ctrl+Shift+=', raw: true },
   { id: 'split.remove', command: 'split.remove', accelerator: 'Ctrl+Shift+-', raw: true },
   ...nums(4).map((n) => ({
@@ -251,21 +278,101 @@ export const DEFAULT_BINDINGS: Binding[] = [
   })),
   { id: 'split.focusNext', command: 'split.focusNext', accelerator: 'Ctrl+Shift+]', raw: true },
   { id: 'split.focusPrev', command: 'split.focusPrev', accelerator: 'Ctrl+Shift+[', raw: true },
-  { id: 'mini.new', command: 'mini.new', accelerator: 'Cmd+Alt+N', raw: true },
+  // Notes and Canvases (handlers live in the library module)
+  { id: 'note.new', command: 'note.new', accelerator: 'Ctrl+N', title: 'New Note' },
+  { id: 'note.newInSplit', command: 'note.new', payload: { split: true }, accelerator: 'Ctrl+Alt+N', title: 'New Note in Split View' },
+  { id: 'canvas.new', command: 'canvas.new', accelerator: 'Ctrl+Shift+E', title: 'New Canvas' },
+  { id: 'canvas.newAlt', command: 'canvas.new', accelerator: 'Ctrl+Shift+L', title: 'New Canvas', raw: true },
+  // find and zoom
+  { id: 'find.open', command: 'find.open', accelerator: 'Cmd+F' },
+  { id: 'find.next', command: 'find.next', accelerator: 'Cmd+G' },
+  { id: 'find.prev', command: 'find.prev', accelerator: 'Cmd+Shift+G' },
+  { id: 'page.jumpToSelection', command: 'page.jumpToSelection', accelerator: 'Cmd+J' },
+  { id: 'zoom.in', command: 'zoom.in', accelerator: 'Cmd+Plus' },
+  { id: 'zoom.inEquals', command: 'zoom.in', accelerator: 'Cmd+=', raw: true },
+  { id: 'zoom.out', command: 'zoom.out', accelerator: 'Cmd+-' },
+  { id: 'zoom.reset', command: 'zoom.reset', accelerator: 'Cmd+0' },
+  // loading
+  { id: 'tab.reload', command: 'tab.reload', accelerator: 'Cmd+R' },
+  { id: 'tab.hardReload', command: 'tab.hardReload', accelerator: 'Cmd+Shift+R' },
+  { id: 'tab.stop', command: 'tab.stop', accelerator: 'Cmd+.' },
+  { id: 'window.fullscreen', command: 'window.fullscreen', accelerator: 'Ctrl+Cmd+F' },
+  // the page
+  { id: 'page.devtools', command: 'page.devtools', accelerator: 'Cmd+Alt+I' },
+  { id: 'page.console', command: 'page.console', accelerator: 'Cmd+Alt+J' },
+  { id: 'page.viewSource', command: 'page.viewSource', accelerator: 'Cmd+Alt+U' },
+  { id: 'page.copyUrl', command: 'page.copyUrl', accelerator: 'Cmd+Shift+C' },
+  { id: 'page.copyUrlMarkdown', command: 'page.copyUrlMarkdown', accelerator: 'Cmd+Shift+Alt+C' },
+  { id: 'page.saveAs', command: 'page.saveAs', accelerator: 'Cmd+Shift+S' },
+  { id: 'page.print', command: 'page.print', accelerator: 'Cmd+P' },
+  { id: 'page.capture', command: 'page.capture', accelerator: 'Cmd+Shift+2', title: 'Capture' },
+  // Cmd+Shift+R is Force Reload, so reader mode takes Cmd+Alt+R
+  { id: 'page.readerMode', command: 'page.readerMode', accelerator: 'Cmd+Alt+R', title: 'Reader Mode' },
+  // places
+  { id: 'library.open', command: 'library.open', accelerator: 'Cmd+Shift+L', raw: true },
+  { id: 'downloads.open', command: 'downloads.open', accelerator: 'Cmd+Shift+J' },
+  { id: 'history.open', command: 'history.open', accelerator: 'Cmd+Y', title: 'History' },
+  { id: 'extensions.open', command: 'extensions.open', accelerator: 'Cmd+E' },
+  { id: 'settings.open', command: 'settings.open', accelerator: 'Cmd+,' },
+  // the app
+  { id: 'app.hide', command: 'app.hide', accelerator: 'Cmd+H' },
+  { id: 'app.hideOthers', command: 'app.hideOthers', accelerator: 'Cmd+Shift+H' },
+  { id: 'window.minimize', command: 'window.minimize', accelerator: 'Cmd+M' },
+  { id: 'app.quit', command: 'app.quit', accelerator: 'Cmd+Q' },
+  // Mini Window
   { id: 'mini.openInMain', command: 'mini.openInMain', accelerator: 'Cmd+O', scope: 'mini' },
+  { id: 'mini.spaceMenu', command: 'mini.spaceMenu', accelerator: 'Cmd+Shift+O', scope: 'mini' },
   { id: 'mini.close', command: 'mini.close', accelerator: 'Cmd+W', scope: 'mini' },
   { id: 'mini.focusUrl', command: 'mini.focusUrl', accelerator: 'Cmd+L', scope: 'mini' },
   { id: 'mini.back', command: 'mini.back', accelerator: 'Cmd+[', scope: 'mini' },
   { id: 'mini.forward', command: 'mini.forward', accelerator: 'Cmd+]', scope: 'mini' },
-  { id: 'mini.reload', command: 'mini.reload', accelerator: 'Cmd+R', scope: 'mini' },
-  // round 2c: platform
-  { id: 'extensions.open', command: 'extensions.open', accelerator: 'Cmd+E' },
-  { id: 'downloads.open', command: 'downloads.open', accelerator: 'Cmd+Shift+J' },
-  { id: 'window.newIncognito', command: 'window.newIncognito', accelerator: 'Cmd+Shift+N' }
+  { id: 'mini.reload', command: 'mini.reload', accelerator: 'Cmd+R', scope: 'mini' }
 ]
 
 export function resolveBindings(overrides: Record<string, string> | undefined): Binding[] {
   return DEFAULT_BINDINGS.map((b) => (overrides && overrides[b.id] ? { ...b, accelerator: overrides[b.id] } : b))
+}
+
+/** the command and payload a key press runs */
+export function bindingAction(b: Binding): { command: string; payload?: unknown } {
+  return b.run ?? { command: b.command, payload: b.payload }
+}
+
+/** a readable name for a binding row */
+export function bindingTitle(b: Binding): string {
+  const base = COMMAND_TITLES[b.command] ?? b.title ?? b.command
+  if (b.title) return b.title
+  const p = b.payload as { index?: number; pane?: number } | undefined
+  if (p && typeof p.index === 'number') return `${base} ${p.index + 1}`
+  if (p && typeof p.pane === 'number') return `${base} ${p.pane}`
+  return base
+}
+
+const MODIFIER_ORDER = ['ctrl', 'alt', 'shift', 'cmd']
+const KEY_ALIASES: Record<string, string> = { plus: '=', '+': '=', return: 'enter', esc: 'escape' }
+
+/**
+ * a canonical form of an accelerator for conflict checks: "Cmd+Shift+t" and "Shift+Command+T" are the same key,
+ * and Cmd+Plus is Cmd+= on a US keyboard
+ */
+export function normalizeAccelerator(accel: string): string | null {
+  const parts = accel.split('+')
+  // "Cmd++" names the plus key
+  if (accel.endsWith('++')) parts.splice(parts.length - 2, 2, 'plus')
+  const mods = new Set<string>()
+  let key = ''
+  for (const raw of parts) {
+    const p = raw.trim().toLowerCase()
+    if (!p) continue
+    if (p === 'cmd' || p === 'command' || p === 'cmdorctrl' || p === 'commandorcontrol' || p === 'meta' || p === 'super') mods.add('cmd')
+    else if (p === 'ctrl' || p === 'control') mods.add('ctrl')
+    else if (p === 'alt' || p === 'option') mods.add('alt')
+    else if (p === 'shift') mods.add('shift')
+    else if (key) return null
+    else key = KEY_ALIASES[p] ?? p
+  }
+  if (!key) return null
+  return [...MODIFIER_ORDER.filter((m) => mods.has(m)), key].join('+')
 }
 
 const SYMBOLS: Record<string, string> = {

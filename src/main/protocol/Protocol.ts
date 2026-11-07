@@ -20,11 +20,14 @@ export const PAGES: Record<string, string> = {
   styles: 'pages/styles/index.html',
   // round 3b: swyr://note/<docId> and swyr://canvas/<docId>
   note: 'pages/note/index.html',
-  canvas: 'pages/canvas/index.html'
+  canvas: 'pages/canvas/index.html',
+  // round 3c
+  onboarding: 'pages/onboarding/index.html',
+  error: 'pages/error/index.html'
 }
 
 /** pages that may be opened in a tab */
-export const TAB_PAGES = new Set(['newtab', 'settings', 'archive', 'library', 'extensions', 'history', 'styles', 'note', 'canvas'])
+export const TAB_PAGES = new Set(['newtab', 'settings', 'archive', 'library', 'extensions', 'history', 'styles', 'note', 'canvas', 'onboarding', 'error'])
 
 /** round 3b: hosts whose page path is a document id (swyr://note/<id>) rather than an asset */
 const DOC_PAGE_HOSTS = new Set(['note', 'canvas'])
