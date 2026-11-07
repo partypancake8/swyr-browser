@@ -14,11 +14,14 @@ export const PAGES: Record<string, string> = {
   settings: 'pages/settings/index.html',
   archive: 'pages/archive/index.html',
   library: 'pages/library/index.html',
-  extensions: 'pages/extensions/index.html'
+  extensions: 'pages/extensions/index.html',
+  // round 3c
+  onboarding: 'pages/onboarding/index.html',
+  error: 'pages/error/index.html'
 }
 
 /** pages that may be opened in a tab */
-export const TAB_PAGES = new Set(['newtab', 'settings', 'archive', 'library', 'extensions'])
+export const TAB_PAGES = new Set(['newtab', 'settings', 'archive', 'library', 'extensions', 'onboarding', 'error'])
 
 export function registerSchemePrivileges(): void {
   protocol.registerSchemesAsPrivileged([

@@ -1,0 +1,30 @@
+{
+  "checksum": "00000000000000000000000000000000",
+  "roots": {
+    "bookmark_bar": {
+      "children": [
+        { "id": "5", "name": "Example", "type": "url", "url": "https://example.com/" },
+        {
+          "id": "6",
+          "name": "Reading",
+          "type": "folder",
+          "children": [
+            { "id": "7", "name": "Example Org", "type": "url", "url": "https://example.org/" },
+            { "id": "8", "name": "Local file is skipped", "type": "url", "url": "chrome://settings" }
+          ]
+        }
+      ],
+      "id": "1",
+      "name": "Bookmarks bar",
+      "type": "folder"
+    },
+    "other": {
+      "children": [{ "id": "9", "name": "Example Net", "type": "url", "url": "https://example.net/" }],
+      "id": "2",
+      "name": "Other bookmarks",
+      "type": "folder"
+    },
+    "synced": { "children": [], "id": "3", "name": "Mobile bookmarks", "type": "folder" }
+  },
+  "version": 1
+}

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- swyr app icon (original artwork, MIT). Flat two-tone: a deep ink teal window with a lighter sidebar
+       and a bold lowercase "s" drawn as a stroked path (no font), on the macOS 824 px icon grid. -->
+  <defs>
+    <clipPath id="tile">
+      <rect x="100" y="100" width="824" height="824" rx="186" ry="186"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect x="100" y="100" width="824" height="824" fill="#123A40"/>
+    <rect x="100" y="100" width="236" height="824" fill="#1F6168"/>
+    <rect x="148" y="262" width="140" height="34" rx="17" fill="#F2B84B"/>
+    <rect x="148" y="326" width="140" height="34" rx="17" fill="#3E8A8F"/>
+    <rect x="148" y="390" width="104" height="34" rx="17" fill="#3E8A8F"/>
+    <rect x="148" y="454" width="124" height="34" rx="17" fill="#3E8A8F"/>
+  </g>
+  <path d="M727 364 A118 104 0 1 0 625 520 A128 106 0 1 1 514 679"
+        fill="none" stroke="#F7EBD3" stroke-width="104" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

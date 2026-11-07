@@ -8,6 +8,7 @@ import { PREVIEW_RADIUS } from '../layout/Layout'
 import { MINI_RADIUS } from '../windows/MiniWindow'
 import type { Core } from '../windows/WindowManager'
 import { activePartition, platformRuntime } from '../commands/platform'
+import { partitionOf } from '../profiles/Profiles'
 
 export interface SwyrTestHook {
   getState(): TestState | null
@@ -19,6 +20,13 @@ export interface SwyrTestHook {
   captureMini(filePath: string, id?: number): Promise<boolean>
   /** round 2c: partition of the active tab's session in the first window */
   activePartition(): string
+  // round 3c
+  /** run a command in a given window (main windows by id) */
+  dispatchIn?(windowId: number, command: string, payload?: unknown): Promise<unknown>
+  /** the session partition of a window's active tab */
+  partitionOf?(windowId: number): string
+  /** evaluate JavaScript in the first window's active tab */
+  evalInActiveTab?(js: string): Promise<unknown>
 }
 
 declare global {
@@ -165,6 +173,34 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
       fs.mkdirSync(path.dirname(filePath), { recursive: true })
       fs.writeFileSync(filePath, composite(width, height, scale, layers).toPNG())
       return true
+    }
+  }
+  // round 3c: per-window dispatch and partitions (private windows), page evaluation
+  const hook = globalThis.__swyr
+  if (!hook) return
+  const json = (v: unknown): unknown => {
+    try {
+      return JSON.parse(JSON.stringify(v ?? null))
+    } catch {
+      return null
+    }
+  }
+  hook.dispatchIn = async (windowId: number, command: string, payload?: unknown): Promise<unknown> => {
+    const core = await ready
+    const w = core.windows.find((x) => x.id === windowId && !x.closed)
+    if (!w) throw new Error(`no window ${windowId}`)
+    return json(await core.commands.run(command, payload, w))
+  }
+  hook.partitionOf = (windowId: number): string => {
+    const w = current()?.windows.find((x) => x.id === windowId && !x.closed)
+    return partitionOf(w?.activeContents()?.session)
+  }
+  if (!hook.evalInActiveTab) {
+    hook.evalInActiveTab = async (js: string): Promise<unknown> => {
+      const core = await ready
+      const wc = core.first()?.activeContents()
+      if (!wc) return null
+      return json(await wc.executeJavaScript(js, true))
     }
   }
 }

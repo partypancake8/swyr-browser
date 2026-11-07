@@ -1,5 +1,6 @@
 // The app core: owns the store, the windows and the shared services.
-import { nativeTheme, type WebContents } from 'electron'
+import { nativeTheme, screen, type WebContents } from 'electron'
+import type { Rect } from '@shared/types'
 import { Store } from '../state/Store'
 import { Commands } from '../commands/Commands'
 import { registerBuiltins } from '../commands/builtins'
@@ -52,11 +53,26 @@ export class Core {
   }
 
   createWindow(opts: WindowOptions = {}): SwyrWindow {
+    // round 3c: the first window reopens where the last one was
+    if (!opts.bounds && !this.windows.length) {
+      const saved = validBounds(this.store.state.settings.windowBounds)
+      if (saved) opts = { ...opts, bounds: saved }
+    }
     const w = new SwyrWindow(this, opts)
     this.windows.push(w)
     this.focused = w
     this.scheduleBroadcast()
     return w
+  }
+
+  /** round 3c: remember a main window's bounds (debounced by the window; `now` writes at once) */
+  saveWindowBounds(w: SwyrWindow, now = false): void {
+    if (w.closed || w.incognito || w.win.isFullScreen() || w.win.isMinimized()) return
+    const b = w.win.getBounds()
+    const prev = this.store.state.settings.windowBounds
+    if (prev && prev.x === b.x && prev.y === b.y && prev.width === b.width && prev.height === b.height) return
+    this.store.update((s) => (s.settings.windowBounds = { x: b.x, y: b.y, width: b.width, height: b.height }))
+    if (now) this.store.flush()
   }
 
   first(): SwyrWindow | undefined {
@@ -138,4 +154,30 @@ export class Core {
       })
     }
   }
+}
+
+/** saved bounds that still fit on a connected display (shrunk to it), or null when they would be off screen */
+export function validBounds(b: Rect | undefined): Rect | null {
+  if (!b || ![b.x, b.y, b.width, b.height].every((v) => typeof v === 'number' && Number.isFinite(v))) return null
+  if (b.width < 200 || b.height < 150) return null
+  let displays: Electron.Display[]
+  try {
+    displays = screen.getAllDisplays()
+  } catch {
+    return null
+  }
+  for (const d of displays) {
+    const a = d.workArea
+    const overlapW = Math.min(b.x + b.width, a.x + a.width) - Math.max(b.x, a.x)
+    const overlapH = Math.min(b.y + b.height, a.y + a.height) - Math.max(b.y, a.y)
+    // enough of the window (including its top edge) must be on this display to grab and move it
+    if (overlapW >= 120 && overlapH >= 80 && b.y >= a.y - 10 && b.y < a.y + a.height - 40) {
+      const width = Math.max(600, Math.min(b.width, a.width))
+      const height = Math.max(400, Math.min(b.height, a.height))
+      const x = Math.min(Math.max(b.x, a.x), a.x + a.width - width)
+      const y = Math.min(Math.max(b.y, a.y), a.y + a.height - height)
+      return { x, y, width, height }
+    }
+  }
+  return null
 }

@@ -19,7 +19,9 @@ export function defaultSettings(): Settings {
     adblock: true,
     openExternalLinksInMiniWindow: false,
     appearance: 'auto',
-    pipAuto: false
+    pipAuto: false,
+    // round 3c
+    onboarded: false
   }
 }
 

@@ -10,8 +10,51 @@
   "build": {
     "appId": "com.swyr.browser",
     "productName": "swyr",
+    "copyright": "Copyright © 2026 Sawyer Smith",
+    "directories": {
+      "output": "dist",
+      "buildResources": "resources"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/@ghostery/adblocker-electron-preload/**",
+      "node_modules/electron-chrome-extensions/dist/chrome-extension-api.preload.js"
+    ],
+    "electronDist": "node_modules/electron/dist",
+    "npmRebuild": false,
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
     "mac": {
       "category": "public.app-category.productivity",
+      "icon": "resources/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "identity": "Apple Development: SAWYER ISAIAH SMITH (53APR7FR2F)",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist",
+      "notarize": false,
       "extendInfo": {
         "CFBundleURLTypes": [
           {
@@ -37,9 +80,19 @@
         ],
         "NSUserActivityTypes": [
           "NSUserActivityTypeBrowsingWeb"
-        ]
+        ],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false
+        },
+        "NSCameraUsageDescription": "A website you are visiting in swyr wants to use your camera.",
+        "NSMicrophoneUsageDescription": "A website you are visiting in swyr wants to use your microphone."
       }
-    }
+    },
+    "dmg": {
+      "title": "swyr ${version}",
+      "icon": "resources/icon.icns"
+    },
+    "afterPack": "scripts/after-pack.mjs"
   },
   "scripts": {
     "dev": "electron-vite dev",
@@ -49,7 +102,9 @@
     "test": "npm run build && node tests/run.mjs",
     "postinstall": "install-electron",
     "licenses": "node scripts/licenses.mjs",
-    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/unit.mjs"
+    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/unit.mjs",
+    "dist": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=true electron-builder --mac --arm64",
+    "icon": "node scripts/make-icon.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
@@ -72,11 +127,13 @@
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.2.1",
     "electron": "45.2.3",
+    "electron-builder": "26.18.0",
     "electron-vite": "6.0.0",
     "eslint": "10.14.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.14.0",
     "playwright": "1.65.0",
+    "sharp": "0.35.5",
     "tailwindcss": "4.3.5",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1",

@@ -8,6 +8,8 @@ import { registerIpc } from './ipc'
 import { startAutoArchive, runAutoArchive } from './archive/AutoArchive'
 import { installTestHook } from './test/TestHook'
 import { initPlatform } from './commands/platform'
+import { setupAppIdentity } from './menu/About'
+import { startOnboarding } from './onboarding/Onboarding'
 
 const TEST = process.env.SWYR_TEST === '1'
 
@@ -53,6 +55,8 @@ if (!gotLock) {
 
   app.whenReady().then(() => {
     if (TEST) app.dock?.hide()
+    // round 3c: About panel and the dock icon in development (swyr never adds itself as a login item)
+    setupAppIdentity(TEST)
     setupDefaultSession()
     core = new Core()
     initPlatform(core)
@@ -60,6 +64,8 @@ if (!gotLock) {
     registerIpc(core)
     core.menu.refresh()
     core.createWindow()
+    app.dock?.setMenu(core.menu.dockMenu()) // round 3c
+    startOnboarding(core) // round 3c: first run opens swyr://onboarding
     startAutoArchive(core)
     markReady(core)
     for (const url of pendingUrls.splice(0)) openUrl(url)

@@ -11,11 +11,12 @@ const { _electron } = require('playwright')
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-export async function launch({ userData, log } = {}) {
+export async function launch({ userData, log, onboarding = false } = {}) {
   const dir = userData ?? fs.mkdtempSync(path.join(os.tmpdir(), 'swyr-test-'))
   const app = await _electron.launch({
     args: [path.join(repo, 'out/main/index.js')],
-    env: { ...process.env, SWYR_TEST: '1', SWYR_USER_DATA: dir },
+    // round 3c: suites written before onboarding start past it unless they ask for it
+    env: { ...process.env, SWYR_TEST: '1', SWYR_USER_DATA: dir, ...(onboarding ? {} : { SWYR_SKIP_ONBOARDING: '1' }) },
     timeout: 60000
   })
   if (log) {

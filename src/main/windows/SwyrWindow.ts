@@ -43,6 +43,10 @@ export class SwyrWindow {
   private shown = false
   private toastTimer: NodeJS.Timeout | null = null
   closed = false
+  // round 3c
+  /** a private window (its space belongs to an in-memory incognito profile) */
+  readonly incognito: boolean
+  private boundsTimer: NodeJS.Timeout | null = null
 
   constructor(
     readonly core: Core,
@@ -51,6 +55,7 @@ export class SwyrWindow {
     const s = core.store.state
     const space = spaceById(s, opts.spaceId) ?? regularSpaces(s)[0] ?? sortedSpaces(s)[0]
     this.activeSpaceId = space.id
+    this.incognito = space.incognito === true
     const dark = isDark(space.theme, core.systemDark())
     this.win = new BaseWindow({
       width: opts.bounds?.width ?? 1280,
@@ -84,7 +89,11 @@ export class SwyrWindow {
       }
     })
     this.overlay.webContents.on('did-finish-load', () => this.sendState())
-    this.win.on('resize', () => this.layout())
+    this.win.on('resize', () => {
+      this.layout()
+      this.queueSaveBounds()
+    })
+    this.win.on('move', () => this.queueSaveBounds())
     this.win.on('enter-full-screen', () => {
       this.fullscreen = true
       this.layout()
@@ -98,6 +107,7 @@ export class SwyrWindow {
     this.win.on('focus', () => core.onWindowFocus(this))
     this.win.on('closed', () => {
       this.closed = true
+      if (this.boundsTimer) clearTimeout(this.boundsTimer)
       try {
         this.preview.dispose()
         this.tabs.releaseAll()
@@ -111,6 +121,16 @@ export class SwyrWindow {
     const initial = this.pickItemForSpace(space)
     if (initial) this.activate(initial.id, { focus: false })
     this.layout()
+  }
+
+  /** round 3c: persist bounds shortly after the last move or resize */
+  private queueSaveBounds(): void {
+    if (this.incognito) return
+    if (this.boundsTimer) clearTimeout(this.boundsTimer)
+    this.boundsTimer = setTimeout(() => {
+      this.boundsTimer = null
+      this.core.saveWindowBounds(this)
+    }, 400)
   }
 
   space(): Space {
@@ -315,7 +335,9 @@ export class SwyrWindow {
       dividers: this.dividers,
       preview: this.preview.isOpen() && this.preview.state ? { ...this.preview.state } : null,
       previewBounds: this.preview.isOpen() ? this.previewBounds : null,
-      media: this.media.runtime()
+      media: this.media.runtime(),
+      // round 3c
+      incognito: this.incognito
     }
   }
 

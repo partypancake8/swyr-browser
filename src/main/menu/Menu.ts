@@ -1,23 +1,40 @@
 // The macOS menu bar, wired to commands with accelerators from Shortcuts.
+// Round 3c: every main-scope binding of the shortcut table appears here (or is handled by before-input-event),
+// the Help menu carries Keyboard Shortcuts, Report an Issue and About swyr, and the dock menu lives here too.
 import { Menu, type MenuItemConstructorOptions } from 'electron'
 import { windowSpaces } from '@shared/ops'
+import { bindingAction } from '@shared/commands'
 import type { Core } from '../windows/WindowManager'
 import { IMPORT_FROM_LABEL } from '@shared/importer'
 
+/** where "Report an issue" goes (placeholder until the public repository is final) */
+export const ISSUES_URL = 'https://github.com/partypancake8/swyr-browser/issues'
+export const REPO_URL = 'https://github.com/partypancake8/swyr-browser'
+
 export class AppMenu {
   private signature = ''
+  /** binding ids registered as menu accelerators in the menu being built */
+  private bound = new Set<string>()
 
   constructor(private readonly core: Core) {}
 
+  private run(command: string, payload?: unknown): void {
+    void this.core.commands.run(command, payload, this.core.current()).catch((err) => console.error('[swyr]', err))
+  }
+
+  /** a menu item for a command; its accelerator comes from the binding of that command (and payload) */
   private cmd(label: string, command: string, payload?: unknown): MenuItemConstructorOptions {
     const b = this.core.shortcuts.accelerator(command, payload)
+    const action = b ? bindingAction(b) : { command, payload }
+    const enabled = this.core.commands.has(action.command)
+    const register = Boolean(b && !b.raw && enabled)
+    if (b && register) this.bound.add(b.id)
     return {
       label,
       accelerator: b?.accelerator,
-      registerAccelerator: b ? !b.raw : undefined,
-      click: () => {
-        void this.core.commands.run(command, payload, this.core.current()).catch((err) => console.error('[swyr]', err))
-      }
+      registerAccelerator: b ? register : undefined,
+      enabled,
+      click: () => this.run(action.command, action.payload)
     }
   }
 
@@ -30,11 +47,23 @@ export class AppMenu {
       w?.activeSpaceId,
       item?.section,
       s.settings.shortcuts,
-      s.settings.sidebarVisible
+      s.settings.sidebarVisible,
+      w?.fullscreen
     ])
     if (sig === this.signature) return
     this.signature = sig
+    this.bound = new Set()
     Menu.setApplicationMenu(Menu.buildFromTemplate(this.template()))
+    this.core.shortcuts.setMenuBound(this.bound)
+  }
+
+  /** the dock icon's menu */
+  dockMenu(): Menu {
+    return Menu.buildFromTemplate([
+      { label: 'New Window', click: () => this.run('window.new') },
+      { label: 'New Mini Window', click: () => this.run('mini.new') },
+      { label: 'New Private Window', click: () => this.run('window.newIncognito') }
+    ])
   }
 
   template(): MenuItemConstructorOptions[] {
@@ -48,15 +77,17 @@ export class AppMenu {
       {
         label: 'swyr',
         submenu: [
-          { role: 'about', label: 'About swyr' },
+          this.cmd('About swyr', 'app.about'),
+          this.cmd('Welcome Guide', 'onboarding.open'),
           sep,
           this.cmd('Settings…', 'settings.open'),
           this.cmd('Extensions', 'extensions.open'),
+          this.cmd('Make swyr the Default Browser', 'browser.makeDefault'),
           sep,
           { role: 'services' },
           sep,
-          { role: 'hide', label: 'Hide swyr' },
-          { role: 'hideOthers' },
+          this.cmd('Hide swyr', 'app.hide'),
+          this.cmd('Hide Others', 'app.hideOthers'),
           { role: 'unhide' },
           sep,
           this.cmd('Quit swyr', 'app.quit')
@@ -65,19 +96,27 @@ export class AppMenu {
       {
         label: 'File',
         submenu: [
-          this.cmd('New Tab', 'commandbar.open', { mode: 'new' }),
+          this.cmd('New Tab', 'tab.new'),
           this.cmd('New Window', 'window.new'),
+          this.cmd('New Mini Window', 'mini.new'),
           this.cmd('New Private Window', 'window.newIncognito'),
+          this.cmd('New Blank Window', 'window.newBlank'),
+          sep,
+          this.cmd('New Note', 'note.new'),
+          this.cmd('New Note in Split View', 'note.new', { split: true }),
+          this.cmd('New Canvas', 'canvas.new'),
           sep,
           this.cmd('Open Location…', 'commandbar.open', { mode: 'current' }),
           sep,
           this.cmd('Close Tab', 'tab.close'),
           this.cmd('Close Window', 'window.close'),
           sep,
-          this.cmd(IMPORT_FROM_LABEL + '…', 'import.arc'),
-          this.cmd('Export swyr Data…', 'data.export'),
+          this.cmd('Save Page As…', 'page.saveAs'),
+          this.cmd('Print…', 'page.print'),
           sep,
-          this.cmd('Downloads', 'downloads.open')
+          this.cmd(IMPORT_FROM_LABEL + '…', 'import.arc'),
+          this.cmd('Import Bookmarks from Chrome…', 'import.chrome'),
+          this.cmd('Export swyr Data…', 'data.export')
         ]
       },
       {
@@ -96,21 +135,27 @@ export class AppMenu {
           this.cmd('Find…', 'find.open'),
           this.cmd('Find Next', 'find.next'),
           this.cmd('Find Previous', 'find.prev'),
+          this.cmd('Jump to Selection', 'page.jumpToSelection'),
           sep,
-          this.cmd('Copy URL', 'page.copyUrl')
+          this.cmd('Copy URL', 'page.copyUrl'),
+          this.cmd('Copy URL as Markdown', 'page.copyUrlMarkdown')
         ]
       },
       {
         label: 'View',
         submenu: [
           this.cmd(s.settings.sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar', 'sidebar.toggle'),
+          this.cmd('Reader Mode', 'page.readerMode'),
           sep,
-          // round 2a: Split View
           this.cmd('Add Split View', 'split.add'),
           this.cmd('Close Split Pane', 'split.remove'),
           this.cmd('Next Split Pane', 'split.focusNext'),
           this.cmd('Previous Split Pane', 'split.focusPrev'),
           this.cmd('Toggle Split Layout', 'split.setLayout'),
+          {
+            label: 'Focus Split Pane',
+            submenu: [1, 2, 3, 4].map((n) => this.cmd(`Pane ${n}`, 'split.focus', { pane: n }))
+          },
           sep,
           this.cmd('Reload Page', 'tab.reload'),
           this.cmd('Force Reload Page', 'tab.hardReload'),
@@ -120,8 +165,16 @@ export class AppMenu {
           this.cmd('Zoom Out', 'zoom.out'),
           this.cmd('Actual Size', 'zoom.reset'),
           sep,
-          this.cmd('Developer Tools', 'page.devtools'),
-          { role: 'togglefullscreen' }
+          this.cmd(w?.fullscreen ? 'Exit Full Screen' : 'Enter Full Screen', 'window.fullscreen'),
+          sep,
+          {
+            label: 'Developer',
+            submenu: [
+              this.cmd('Developer Tools', 'page.devtools'),
+              this.cmd('JavaScript Console', 'page.console'),
+              this.cmd('View Page Source', 'page.viewSource')
+            ]
+          }
         ]
       },
       {
@@ -136,7 +189,9 @@ export class AppMenu {
           ...spaces.map((sp, i): MenuItemConstructorOptions => {
             const base = this.cmd(`${sp.emoji ? sp.emoji + '  ' : ''}${sp.name}`, 'space.switch', i < 9 ? { index: i } : { id: sp.id })
             return { ...base, type: 'checkbox', checked: sp.id === w?.activeSpaceId }
-          })
+          }),
+          sep,
+          this.cmd('Library', 'library.open')
         ]
       },
       {
@@ -145,7 +200,10 @@ export class AppMenu {
           this.cmd('Open Archive', 'archive.open'),
           this.cmd('Reopen Closed Tab', 'tab.reopen'),
           sep,
-          this.cmd('Archive All Today Tabs', 'tab.archiveAllToday')
+          this.cmd('Archive All Today Tabs', 'tab.archiveAllToday'),
+          sep,
+          this.cmd('History', 'history.open'),
+          this.cmd('Downloads', 'downloads.open')
         ]
       },
       {
@@ -155,6 +213,7 @@ export class AppMenu {
           this.cmd('Add to Favorites', 'tab.favorite'),
           this.cmd('Rename Tab…', 'tab.rename'),
           this.cmd('Duplicate Tab', 'tab.duplicate'),
+          this.cmd('Capture', 'page.capture'),
           sep,
           this.cmd('Next Tab', 'tab.next'),
           this.cmd('Previous Tab', 'tab.prev'),
@@ -169,10 +228,29 @@ export class AppMenu {
           }
         ]
       },
-      { role: 'windowMenu' },
+      {
+        label: 'Window',
+        role: 'window',
+        submenu: [
+          this.cmd('Minimize', 'window.minimize'),
+          { role: 'zoom' },
+          sep,
+          this.cmd('New Window', 'window.new'),
+          this.cmd('New Mini Window', 'mini.new'),
+          this.cmd('New Private Window', 'window.newIncognito'),
+          sep,
+          { role: 'front' }
+        ]
+      },
       {
         role: 'help',
-        submenu: [this.cmd('swyr on GitHub', 'tab.new', { url: 'https://github.com/partypancake8/swyr-browser' })]
+        submenu: [
+          this.cmd('Keyboard Shortcuts', 'shortcuts.open'),
+          this.cmd('Report an Issue', 'help.reportIssue'),
+          { label: 'swyr on GitHub', click: () => this.run('tab.new', { url: REPO_URL }) },
+          sep,
+          this.cmd('About swyr', 'app.about')
+        ]
       }
     ]
   }
