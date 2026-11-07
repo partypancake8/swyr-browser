@@ -34,6 +34,9 @@ export interface SplitPanes {
   itemIds: string[]
   layout: 'horizontal' | 'vertical'
   ratios: number[]
+  // round 2a
+  /** 0-based index of the focused pane */
+  focused?: number
 }
 
 export interface Item {
@@ -133,6 +136,9 @@ export type OverlayState =
   | { kind: 'spaceEdit'; spaceId: string; seq: number }
   | { kind: 'sidebar'; seq: number }
   | { kind: 'toast'; message: string; seq: number }
+  // round 2a
+  | { kind: 'preview'; seq: number }
+  | { kind: 'splitDrop'; seq: number }
 
 export interface WindowRuntime {
   id: number
@@ -146,6 +152,57 @@ export interface WindowRuntime {
   overlay: OverlayState | null
   renamingItemId: string | null
   fullscreen: boolean
+  // round 2a
+  kind?: 'main'
+  /** 0-based index of the focused pane of the active split (0 when no split is active) */
+  focusedPane: number
+  /** bounds of every visible pane, in window coordinates */
+  paneRects: Rect[]
+  /** the gaps between panes (where the shell draws draggable dividers) */
+  dividers: SplitDivider[]
+  preview: PreviewRuntime | null
+  /** preview card frame (header + page) and the page bounds, window coordinates */
+  previewBounds: { card: Rect; page: Rect } | null
+  media: MediaRuntime | null
+}
+
+// round 2a
+export interface SplitDivider {
+  /** divider i sits between pane i and pane i + 1 */
+  index: number
+  rect: Rect
+  layout: 'horizontal' | 'vertical'
+}
+
+// round 2a
+export interface PreviewRuntime {
+  url: string
+  title: string
+  fromItemId: string | null
+}
+
+// round 2a
+export interface MediaRuntime {
+  itemId: string
+  title: string
+  playing: boolean
+}
+
+// round 2a
+export interface MiniWindowRuntime {
+  id: number
+  kind: 'mini'
+  activeItemId: string
+  url: string
+  bounds: Rect
+}
+
+// round 2a: what the main process sends to a mini window's chrome
+export interface MiniViewState {
+  mini: MiniWindowRuntime & { title: string; favicon: string | null; loading: boolean; canGoBack: boolean; canGoForward: boolean }
+  spaces: Space[]
+  activeSpaceId: string | null
+  systemDark: boolean
 }
 
 /** what the main process sends to a shell or overlay renderer */
@@ -157,7 +214,8 @@ export interface ViewState {
 
 /** what the test hook returns */
 export interface TestState extends PersistedState {
-  windows: WindowRuntime[]
+  // round 2a: mini windows are listed after the main windows
+  windows: Array<(WindowRuntime & { kind: 'main' }) | MiniWindowRuntime>
 }
 
 export interface ShellEvent {

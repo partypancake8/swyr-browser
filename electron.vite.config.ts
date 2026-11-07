@@ -17,7 +17,7 @@ export default defineConfig({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        input: { index: r('src/preload/index.ts'), page: r('src/preload/page.ts') },
+        input: { index: r('src/preload/index.ts'), page: r('src/preload/page.ts'), mini: r('src/preload/mini.ts') },
         output: { format: 'cjs', entryFileNames: '[name].js' }
       }
     },
@@ -33,6 +33,7 @@ export default defineConfig({
         input: {
           shell: r('src/renderer/shell/index.html'),
           overlay: r('src/renderer/overlay/index.html'),
+          mini: r('src/renderer/mini/index.html'),
           newtab: r('src/renderer/pages/newtab/index.html'),
           settings: r('src/renderer/pages/settings/index.html'),
           archive: r('src/renderer/pages/archive/index.html')

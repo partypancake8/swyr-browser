@@ -5,6 +5,7 @@ import { preloadPath } from './ShellView'
 import { profileSession } from '../profiles/Profiles'
 import { isInternalUrl } from '../protocol/Protocol'
 import type { SwyrWindow } from '../windows/SwyrWindow'
+import { leavesSite, previewSource } from '../commands/preview'
 
 export const WARM_CACHE = 8
 export const TAB_RADIUS = 10
@@ -60,10 +61,43 @@ export class TabViews {
     return view
   }
 
+  /**
+   * take over a live view (from Preview or a Mini Window) as the view of `item`;
+   * the previous owner must have removed its listeners already
+   */
+  adopt(item: Item, view: WebContentsView): WebContentsView {
+    const existing = this.views.get(item.id)
+    if (existing) return existing
+    view.setBorderRadius(TAB_RADIUS)
+    this.views.set(item.id, view)
+    const wc = view.webContents
+    this.runtime.set(item.id, {
+      loading: wc.isLoading(),
+      canGoBack: wc.navigationHistory.canGoBack(),
+      canGoForward: wc.navigationHistory.canGoForward(),
+      zoom: wc.getZoomLevel()
+    })
+    this.wire(item.id, view)
+    this.touch(item.id)
+    return view
+  }
+
+  /** ids that must stay loaded besides the attached ones (panes being shown, playing media) */
+  private protectedIds(): Set<string> {
+    const out = new Set<string>()
+    const s = this.w.core.store.state
+    const active = s.items.find((i) => i.id === this.w.activeItemId)
+    if (active?.panes) for (const id of active.panes.itemIds) out.add(id)
+    for (const id of this.views.keys()) if (this.w.media.protects(id)) out.add(id)
+    return out
+  }
+
   private touch(id: string): void {
     this.mru = [id, ...this.mru.filter((x) => x !== id)]
+    const keep = this.protectedIds()
+    keep.add(id)
     while (this.mru.length > WARM_CACHE) {
-      const victim = [...this.mru].reverse().find((x) => !this.attached.includes(x))
+      const victim = [...this.mru].reverse().find((x) => !this.attached.includes(x) && !keep.has(x))
       if (!victim) break
       this.destroy(victim)
     }
@@ -117,12 +151,24 @@ export class TabViews {
     wc.on('will-navigate', (e) => {
       // web pages may not navigate a tab into the privileged swyr:// pages
       if (isInternalUrl(e.url) && !isInternalUrl(wc.getURL())) e.preventDefault()
+      // pinned tabs and favorites keep their site: links that leave it open in Preview
+      else if (e.isMainFrame && previewSource(item()) && leavesSite(wc.getURL(), e.url)) {
+        e.preventDefault()
+        void core.commands.run('preview.open', { url: e.url, fromItemId: id }, this.w)
+      }
     })
     wc.setWindowOpenHandler(({ url, disposition }) => {
       if (isInternalUrl(url) && !isInternalUrl(wc.getURL())) return { action: 'deny' }
+      if (disposition !== 'background-tab' && /^https?:/i.test(url) && previewSource(item())) {
+        void core.commands.run('preview.open', { url, fromItemId: id }, this.w)
+        return { action: 'deny' }
+      }
       void core.commands.run('tab.new', { url, background: disposition === 'background-tab' }, this.w)
       return { action: 'deny' }
     })
+    this.w.media.wire(id, wc)
+    // clicking into a pane of the active split focuses that pane
+    wc.on('focus', () => this.w.onTabFocus(id))
     wc.on('before-input-event', (e, input) => core.shortcuts.handleInput(e, input, this.w))
     wc.on('context-menu', (_e, params) => core.contextMenus.page(this.w, id, params))
     wc.on('found-in-page', (_e, result) => this.w.onFindResult(id, result.activeMatchOrdinal, result.matches))
@@ -146,12 +192,15 @@ export class TabViews {
   /** attach the given ids at the given rects, detach every other tab view */
   show(ids: string[], rects: Rect[]): void {
     const content = this.w.win.contentView
+    const hidden: string[] = []
     for (const id of this.attached) {
       if (!ids.includes(id)) {
         const v = this.views.get(id)
         if (v) content.removeChildView(v)
+        hidden.push(id)
       }
     }
+    const shown = ids.filter((id) => !this.attached.includes(id) && this.views.has(id))
     const next: string[] = []
     ids.forEach((id, i) => {
       const v = this.views.get(id)
@@ -161,6 +210,7 @@ export class TabViews {
       next.push(id)
     })
     this.attached = next
+    if (hidden.length || shown.length) this.w.media.onVisibility(hidden, shown)
   }
 
   destroy(id: string): void {
@@ -173,6 +223,7 @@ export class TabViews {
     this.views.delete(id)
     this.runtime.delete(id)
     this.mru = this.mru.filter((x) => x !== id)
+    this.w.media.forget(id)
     if (!v.webContents.isDestroyed()) v.webContents.close()
     this.w.core.scheduleBroadcast()
   }

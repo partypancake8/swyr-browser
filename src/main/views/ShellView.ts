@@ -2,11 +2,11 @@
 import { WebContentsView } from 'electron'
 import path from 'node:path'
 
-export function preloadPath(name: 'index' | 'page'): string {
+export function preloadPath(name: 'index' | 'page' | 'mini'): string {
   return path.join(__dirname, `../preload/${name}.js`)
 }
 
-export function rendererUrl(host: 'shell' | 'overlay'): string {
+export function rendererUrl(host: 'shell' | 'overlay' | 'mini'): string {
   const dev = process.env.ELECTRON_RENDERER_URL
   return dev ? `${dev}/${host}/index.html` : `swyr://${host}/`
 }

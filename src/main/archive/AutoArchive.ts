@@ -26,7 +26,7 @@ export function runAutoArchive(core: Core, now = Date.now()): number {
   if (limit === null) return 0
   const active = new Set(core.windows.map((w) => w.activeItemId).filter(Boolean))
   const stale = core.store.state.items.filter(
-    (i) => i.section === 'today' && i.kind === 'tab' && !active.has(i.id) && now - i.lastActiveAt > limit
+    (i) => i.section === 'today' && (i.kind === 'tab' || i.kind === 'split') && !i.parentId && !active.has(i.id) && now - i.lastActiveAt > limit
   )
   archiveItems(core, stale, 'auto')
   return stale.length

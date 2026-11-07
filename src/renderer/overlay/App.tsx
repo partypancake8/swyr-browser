@@ -6,6 +6,8 @@ import { Sidebar } from '../shell/Sidebar'
 import { CommandBar } from './CommandBar'
 import { FindBar } from './FindBar'
 import { SpaceEditor } from './SpaceEditor'
+import { Preview } from './Preview'
+import { SplitDropZones } from '../shell/SplitDropZones'
 
 export function App(): ReactNode {
   const vs = useView((s) => s.vs)
@@ -62,6 +64,11 @@ export function App(): ReactNode {
           </div>
         </div>
       )
+    // round 2a
+    case 'preview':
+      return <Preview key={overlay.seq} vs={vs} />
+    case 'splitDrop':
+      return <SplitDropZones key={overlay.seq} />
     default:
       return null
   }

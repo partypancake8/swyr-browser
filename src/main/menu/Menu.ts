@@ -97,6 +97,13 @@ export class AppMenu {
         submenu: [
           this.cmd(s.settings.sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar', 'sidebar.toggle'),
           sep,
+          // round 2a: Split View
+          this.cmd('Add Split View', 'split.add'),
+          this.cmd('Close Split Pane', 'split.remove'),
+          this.cmd('Next Split Pane', 'split.focusNext'),
+          this.cmd('Previous Split Pane', 'split.focusPrev'),
+          this.cmd('Toggle Split Layout', 'split.setLayout'),
+          sep,
           this.cmd('Reload Page', 'tab.reload'),
           this.cmd('Force Reload Page', 'tab.hardReload'),
           this.cmd('Stop Loading', 'tab.stop'),

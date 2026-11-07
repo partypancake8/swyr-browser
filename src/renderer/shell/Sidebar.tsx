@@ -7,11 +7,14 @@ import { displayUrl } from '@shared/url'
 import { Favicon } from '../common/Favicon'
 import { invoke } from '../common/store'
 import { activeSpace } from '../common/theme'
+import { SplitRow, focusedItem } from './SplitRow'
+import { splitDragSource } from './SplitDropZones'
+import { MediaBar } from './MediaBar'
 
 export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean }): ReactNode {
   const { state, window: win } = vs
   const space = activeSpace(vs)
-  const active = state.items.find((i) => i.id === win.activeItemId)
+  const active = focusedItem(vs)
   const rt = active ? win.tabs[active.id] : undefined
   const favorites = space ? favoritesFor(state, space.profileId) : []
   const pinned = space ? flatten(state, sectionItems(state, space.id, 'pinned'), true) : []
@@ -63,15 +66,11 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
           </div>
         )}
 
-        {pinned.map((it) => (
-          <TabRow key={it.id} item={it} vs={vs} />
-        ))}
+        {pinned.map((it) => (it.kind === 'split' ? <SplitRow key={it.id} item={it} vs={vs} /> : <TabRow key={it.id} item={it} vs={vs} />))}
 
         <Divider hasToday={today.length > 0} />
 
-        {today.map((it) => (
-          <TabRow key={it.id} item={it} vs={vs} />
-        ))}
+        {today.map((it) => (it.kind === 'split' ? <SplitRow key={it.id} item={it} vs={vs} /> : <TabRow key={it.id} item={it} vs={vs} />))}
         <button
           className="flex h-8 shrink-0 items-center gap-2 rounded-lg px-2 text-left hover:bg-[var(--row-hover)]"
           onClick={() => invoke('commandbar.open', { mode: 'new' })}
@@ -82,6 +81,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
         <div className="flex-1" />
       </div>
 
+      <MediaBar vs={vs} />
       <div className="flex h-9 shrink-0 items-center gap-1 pt-1">
         <button className="icon-btn" title="Archive" onClick={() => invoke('archive.open')}>
           <History size={16} strokeWidth={1.9} />
@@ -198,6 +198,7 @@ function TabRow({ item, vs }: { item: Item; vs: ViewState }): ReactNode {
       }}
       onDoubleClick={() => item.section !== 'today' && invoke('tab.rename', { id: item.id })}
       data-item={item.id}
+      {...splitDragSource(item.id)}
     >
       <Favicon item={item} />
       {renaming ? (

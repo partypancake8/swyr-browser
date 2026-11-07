@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { useView, invoke } from '../common/store'
 import { SpaceBackground, activeSpace, useSpaceTheme } from '../common/theme'
 import { Sidebar } from './Sidebar'
+import { SplitDividers, useTabDragWatcher } from './SplitDropZones'
 
 const INSET = 8
 
@@ -12,6 +13,7 @@ export function App(): ReactNode {
   const space = vs ? activeSpace(vs) : undefined
   const { dark } = useSpaceTheme(space, vs?.systemDark ?? false)
   const drag = useRef<{ raf: number; width: number } | null>(null)
+  useTabDragWatcher()
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -39,7 +41,8 @@ export function App(): ReactNode {
   const width = vs.state.settings.sidebarWidth
   const left = visible ? width : INSET
   const active = vs.state.items.find((i) => i.id === vs.window.activeItemId)
-  const showsTab = Boolean(active && vs.window.loaded.includes(active.id))
+  const split = (vs.window.paneRects?.length ?? 0) > 1
+  const showsTab = split || Boolean(active && vs.window.loaded.includes(active.id))
 
   return (
     <SpaceBackground space={space} dark={dark} className="h-full w-full overflow-hidden">
@@ -61,8 +64,8 @@ export function App(): ReactNode {
         </>
       )}
       <div
-        className="absolute overflow-hidden rounded-[10px] bg-[var(--content)]"
-        style={{ left, top: INSET, right: INSET, bottom: INSET, boxShadow: 'var(--shadow)' }}
+        className={`absolute overflow-hidden rounded-[10px] ${split ? '' : 'bg-[var(--content)]'}`}
+        style={{ left, top: INSET, right: INSET, bottom: INSET, boxShadow: split ? 'none' : 'var(--shadow)' }}
       >
         {!showsTab && (
           <div className="flex h-full flex-col items-center justify-center gap-3">
@@ -76,6 +79,7 @@ export function App(): ReactNode {
           </div>
         )}
       </div>
+      <SplitDividers vs={vs} />
     </SpaceBackground>
   )
 }
