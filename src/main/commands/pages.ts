@@ -23,6 +23,7 @@ import { platformRuntime } from './platform'
 import { hostAllowed } from '../adblock/Adblock'
 import { matchRule, normalizePattern, sourceFromPayload } from '../linkrules/LinkRules'
 import { openInMiniWindow } from './mini'
+import { isFile } from '../security/urlPolicy'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
 
@@ -38,7 +39,8 @@ export const PAGE_3A_COMMANDS = [
   'history.query',
   'history.clear',
   'history.remove',
-  'history.open'
+  'history.open',
+  'history.visit'
 ]
 
 interface Services {
@@ -97,6 +99,11 @@ function pageUrl(w: SwyrWindow | undefined): string {
 }
 
 /** open an internal page in this space: reuse a tab already on it, else a new Today tab */
+/** whether a URL is in history (the IPC guard asks before it lets swyr://history reopen a local file) */
+export function historyHas(core: Core, url: string): boolean {
+  return start(core).history.has(url)
+}
+
 function openPage(ctx: CommandContext, base: string, url = base): unknown {
   const { core, w } = ctx
   if (!w) return undefined
@@ -442,6 +449,13 @@ export function registerPageCommands(c: Commands): void {
     return url ? start(core).history.remove(url, str(p.profileId)) : 0
   })
   c.register('history.open', (ctx) => openPage(ctx, 'swyr://history'))
+  // the history page reopens a visit; a local file only opens when it really is in history
+  c.register('history.visit', ({ core, w }, p) => {
+    const url = str(p.url)
+    if (!url || !w) return false
+    if (isFile(url) && !start(core).history.has(url)) return false
+    return core.commands.run('tab.new', { url }, w)
+  })
   c.register('import.history', async ({ core, w }, p) => {
     const browsers: HistoryBrowser[] = ['chrome', 'edge', 'brave', 'firefox', 'safari']
     const browser = browsers.find((b) => b === str(p.browser)) ?? 'chrome'

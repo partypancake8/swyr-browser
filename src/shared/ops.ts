@@ -92,7 +92,8 @@ export function descendantsOf(s: PersistedState, id: string): Item[] {
     if (depth > 32) return
     for (const c of childrenOf(s, pid)) {
       out.push(c)
-      if (c.kind === 'folder') walk(c.id, depth + 1)
+      // folders, Live Folders and splits all hold child items
+      if (c.kind !== 'tab') walk(c.id, depth + 1)
     }
   }
   walk(id, 0)

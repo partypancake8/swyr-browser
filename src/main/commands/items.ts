@@ -85,7 +85,7 @@ export function moveItem(core: Core, w: SwyrWindow | undefined, item: Item, targ
   const s = core.store.state
   const section = target.section
   if (!SECTIONS.includes(section)) return false
-  if (item.kind === 'folder' && section !== 'pinned') return false
+  if ((item.kind === 'folder' || item.kind === 'liveFolder') && section !== 'pinned') return false
   const space = spaceById(s, target.spaceId ?? undefined) ?? spaceById(s, item.spaceId) ?? w?.space() ?? sortedSpaces(s)[0]
   let parentId: string | null = null
   if (section === 'pinned' && target.parentId) {
@@ -120,7 +120,8 @@ export function moveItem(core: Core, w: SwyrWindow | undefined, item: Item, targ
         if (pane.kind === 'tab') pane.pinnedUrl = section === 'today' ? null : (pane.pinnedUrl ?? pane.url)
       }
     }
-    if (item.kind === 'folder') {
+    if (item.kind === 'folder' || item.kind === 'liveFolder') {
+      // every child (and grandchild, split panes included) goes with its folder; order and parent links are kept
       for (const d of descendantsOf(st, item.id)) {
         moved.add(d.id)
         if (d.profileId !== space.profileId && d.kind === 'tab') reload.add(d.id)
@@ -375,7 +376,7 @@ export function registerItemCommands(c: Commands): void {
   c.register('archive.restore', ({ core, w }, p) => {
     if (!w) return false
     const s = core.store.state
-    const id = str(p.id) ?? str(p.itemId)
+    const id = str(p.entryId) ?? str(p.id) ?? str(p.itemId)
     const entry = id
       ? (s.archive.find((a) => a.id === id) ?? s.archive.find((a) => a.item.id === id))
       : [...s.archive].sort((a, b) => b.archivedAt - a.archivedAt)[0]
@@ -386,9 +387,10 @@ export function registerItemCommands(c: Commands): void {
     const section: Section = isFolder ? 'pinned' : 'today'
     const siblings = siblingsOf(s, { section, spaceId: space.id, profileId: space.profileId, parentId: null })
     const now = Date.now()
+    const taken = (x: string): boolean => s.items.some((i) => i.id === x)
     const item: Item = {
       ...snap,
-      id: s.items.some((i) => i.id === snap.id) ? newId(isFolder ? 'folder' : 'tab') : snap.id,
+      id: taken(snap.id) ? newId(isFolder ? 'folder' : snap.kind === 'split' ? 'split' : 'tab') : snap.id,
       section,
       parentId: null,
       spaceId: space.id,
@@ -398,9 +400,43 @@ export function registerItemCommands(c: Commands): void {
       lastActiveAt: now
     }
     if (item.kind === 'tab' && !item.url) item.url = 'swyr://newtab'
+    // an archived split brings its panes back, same order, layout and ratios
+    const panes: Item[] = []
+    if (snap.kind === 'split' && snap.panes) {
+      const kids = entry.children ?? []
+      const ids: string[] = []
+      kids.forEach((k, i) => {
+        const pane: Item = {
+          ...k,
+          id: taken(k.id) ? newId('tab') : k.id,
+          parentId: item.id,
+          section,
+          spaceId: space.id,
+          profileId: space.profileId,
+          pinnedUrl: null,
+          order: i,
+          lastActiveAt: now
+        }
+        if (!pane.url) pane.url = 'swyr://newtab'
+        panes.push(pane)
+        ids.push(pane.id)
+      })
+      if (ids.length >= 2) {
+        const ratios = snap.panes.ratios.length === ids.length ? [...snap.panes.ratios] : ids.map(() => 1 / ids.length)
+        item.panes = { ...snap.panes, itemIds: ids, ratios, focused: Math.min(snap.panes.focused ?? 0, ids.length - 1) }
+      } else {
+        // fewer than two panes survived: restore the one page as a plain tab
+        const only = panes[0]
+        item.kind = 'tab'
+        delete item.panes
+        item.url = only?.url || item.url || 'swyr://newtab'
+        item.title = only?.title ?? item.title
+        panes.length = 0
+      }
+    }
     core.store.update((st) => {
       st.archive = st.archive.filter((a) => a.id !== entry.id)
-      st.items.push(item)
+      st.items.push(item, ...panes)
     })
     if (space.id !== w.activeSpaceId) w.switchSpace(space.id)
     if (!isFolder && p.activate !== false) w.activate(item.id)

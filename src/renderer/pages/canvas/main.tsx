@@ -2,7 +2,7 @@
 import './assetPath'
 import { createRoot } from 'react-dom/client'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { CaptureUpdateAction, Excalidraw, MainMenu, convertToExcalidrawElements, getSceneVersion, viewportCoordsToSceneCoords } from '@excalidraw/excalidraw'
+import { CaptureUpdateAction, Excalidraw, MainMenu, convertToExcalidrawElements, exportToBlob, getSceneVersion, viewportCoordsToSceneCoords } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI, BinaryFileData, BinaryFiles, AppState } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElementSkeleton } from '@excalidraw/excalidraw/data/transform'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
@@ -18,6 +18,7 @@ import { debounce, docIdFromLocation, onDocUpdated, readAsDataUrl } from '../not
 const DOC_ID = docIdFromLocation()
 const UNTITLED = 'Untitled canvas'
 const SAVE_MS = 400
+const THUMB_PX = 320
 
 type Raw = Record<string, unknown>
 
@@ -33,6 +34,25 @@ function realize(raw: Raw[]): ExcalidrawElement[] {
   }
   if (skeletons.length) out.push(...convertToExcalidrawElements(skeletons as unknown as ExcalidrawElementSkeleton[], { regenerateIds: false }))
   return out
+}
+
+/** a small PNG of the board for the Library (null when the board is empty or the export fails) */
+async function thumbnailOf(elements: readonly ExcalidrawElement[], appState: AppState, files: BinaryFiles): Promise<string | null> {
+  const live = elements.filter((e) => !e.isDeleted)
+  if (!live.length) return null
+  try {
+    const blob = await exportToBlob({
+      elements: live,
+      appState: { ...appState, exportBackground: true, exportWithDarkMode: false, viewBackgroundColor: appState.viewBackgroundColor || '#ffffff' },
+      files,
+      mimeType: 'image/png',
+      maxWidthOrHeight: THUMB_PX,
+      exportPadding: 16
+    })
+    return await readAsDataUrl(blob)
+  } catch {
+    return null
+  }
 }
 
 /** text is measured when it is converted, so wait (briefly) for the board's handwriting font first */
@@ -129,7 +149,9 @@ function CanvasPage(): ReactNode {
       debounce((elements: readonly ExcalidrawElement[], appState: AppState, files: BinaryFiles) => {
         setStatus('saving')
         const subset = { viewBackgroundColor: appState.viewBackgroundColor, scrollX: appState.scrollX, scrollY: appState.scrollY, zoom: appState.zoom, gridModeEnabled: appState.gridModeEnabled }
-        void invoke('canvas.save', { docId: DOC_ID, elements, appState: subset, files }).then(() => setStatus('saved'))
+        void thumbnailOf(elements, appState, files)
+          .then((thumbnail) => invoke('canvas.save', { docId: DOC_ID, elements, appState: subset, files, ...(thumbnail ? { thumbnail } : {}) }))
+          .then(() => setStatus('saved'))
       }, SAVE_MS),
     []
   )

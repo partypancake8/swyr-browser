@@ -62,7 +62,7 @@ export function LiveFolderRow({ folder, depth, vs, space: _space }: { folder: It
         void invoke('liveFolder.editor', { itemId: folder.id })
       }}
       onContextMenu={(e) => showMenu(liveMenu(folder), e)}
-      data-item={folder.id}
+      data-item={folder.id} data-item-id={folder.id}
       data-kind="liveFolder"
       data-depth={depth}
       title={tip}

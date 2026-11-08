@@ -55,7 +55,7 @@ export function FolderRow({ folder, depth, vs, space }: { folder: Item; depth: n
         if (!renaming) void invoke('folder.rename', { itemId: folder.id })
       }}
       onContextMenu={(e) => showMenu(folderMenu(folder, vs, space), e)}
-      data-item={folder.id}
+      data-item={folder.id} data-item-id={folder.id}
       data-kind="folder"
       data-depth={depth}
       title={renaming ? undefined : itemTitle(folder)}

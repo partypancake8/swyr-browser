@@ -11,6 +11,7 @@ import type { Commands } from './Commands'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { cleanToken, secrets } from '../secrets/Secrets'
+import { recentMedia } from '../media/Media'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
@@ -33,6 +34,7 @@ export const DOCUMENT_PAGE_COMMANDS = [
   'documents.delete',
   'document.open',
   'library.media',
+  'library.mediaRecent',
   'media.toggle',
   'media.activate',
   'media.pip',
@@ -162,7 +164,8 @@ function summarize(core: Core, doc: SwyrDocument): DocumentSummary {
     updatedAt: doc.updatedAt,
     itemIds: items.map((i) => i.id),
     spaceIds: [...new Set(items.map((i) => i.spaceId).filter((x): x is string => Boolean(x)))],
-    preview: doc.kind === 'note' ? firstText(doc.markdown) : `${doc.elements.filter(live).length} ${doc.elements.filter(live).length === 1 ? 'element' : 'elements'}`
+    preview: doc.kind === 'note' ? firstText(doc.markdown) : `${doc.elements.filter(live).length} ${doc.elements.filter(live).length === 1 ? 'element' : 'elements'}`,
+    ...(doc.kind === 'canvas' ? { thumbnail: documents().thumbnail(doc.id) } : {})
   }
 }
 
@@ -355,6 +358,8 @@ export function registerDocumentCommands(c: Commands): void {
       doc.files = files
     }
     documents().put(doc)
+    // the page exports a small PNG of the scene with every save; the Library shows it
+    if (typeof p.thumbnail === 'string') documents().setThumbnail(doc.id, p.thumbnail)
     return { ok: true, kept: kept.length }
   })
 
@@ -415,6 +420,8 @@ export function registerDocumentCommands(c: Commands): void {
   })
 
   c.register('library.media', ({ core }) => mediaEntries(core))
+  // what played earlier this session (kept in memory only, private windows never recorded)
+  c.register('library.mediaRecent', () => recentMedia())
 
   // ----- live folders
   c.register('liveFolder.new', ({ core, w }, p) => {

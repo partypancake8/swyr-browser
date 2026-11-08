@@ -78,9 +78,20 @@ export function DocumentsView({ vs, kind }: { vs: ViewState | null; kind: Docume
             const where = d.spaceIds.map((id) => spaces.get(id)).filter(Boolean)
             return (
               <div key={d.id} className="flex items-center gap-3 border-b border-[var(--card-border)] px-4 py-3 last:border-b-0" data-doc={d.id}>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--select)]">
-                  <Icon size={19} strokeWidth={1.9} />
-                </div>
+                {kind === 'canvas' && d.thumbnail ? (
+                  <img
+                    src={d.thumbnail}
+                    alt=""
+                    data-canvas-thumb={d.id}
+                    draggable={false}
+                    className="h-14 w-20 shrink-0 cursor-pointer rounded-lg border border-[var(--card-border)] bg-white object-contain"
+                    onClick={() => invoke('document.open', { docId: d.id })}
+                  />
+                ) : (
+                  <div className={`flex shrink-0 items-center justify-center rounded-xl bg-[var(--select)] ${kind === 'canvas' ? 'h-14 w-20' : 'h-10 w-10'}`}>
+                    <Icon size={19} strokeWidth={1.9} />
+                  </div>
+                )}
                 <button className="min-w-0 flex-1 text-left" onClick={() => invoke('document.open', { docId: d.id })} title={`Open ${d.title}`}>
                   <div className="truncate text-[15px] font-semibold">{d.title}</div>
                   <div className="truncate text-[12px]">
@@ -125,8 +136,16 @@ export function DocumentsView({ vs, kind }: { vs: ViewState | null; kind: Docume
   )
 }
 
+function ago(t: number): string {
+  const d = Date.now() - t
+  if (d < 60_000) return 'just now'
+  if (d < 3_600_000) return `${Math.round(d / 60_000)} min ago`
+  return `${Math.round(d / 3_600_000)} h ago`
+}
+
 export function MediaView({ vs }: { vs: ViewState | null }): ReactNode {
   const [list, setList] = useState<MediaEntry[] | null>(null)
+  const [recent, setRecent] = useState<Array<MediaEntry & { playedAt: number }>>([])
   const media = vs?.window.media
   const key = media ? `${media.itemId}:${media.playing}` : ''
   useEffect(() => {
@@ -134,6 +153,9 @@ export function MediaView({ vs }: { vs: ViewState | null }): ReactNode {
     const load = (): void => {
       void invoke('library.media').then((r) => {
         if (alive) setList(Array.isArray(r) ? (r as MediaEntry[]) : [])
+      })
+      void invoke('library.mediaRecent').then((r) => {
+        if (alive) setRecent(Array.isArray(r) ? (r as Array<MediaEntry & { playedAt: number }>) : [])
       })
     }
     load()
@@ -147,7 +169,7 @@ export function MediaView({ vs }: { vs: ViewState | null }): ReactNode {
     <div data-library="media">
       <h1 className="mb-1 text-[26px] font-bold">Media</h1>
       <p className="mb-6 text-[14px]">Tabs that play audio or video, with controls that work from any tab or space.</p>
-      {list && list.length === 0 && (
+      {list && list.length === 0 && recent.length === 0 && (
         <div className="flex flex-col items-center rounded-xl border border-[var(--card-border)] px-6 py-16 text-center" data-empty="media">
           <h2 className="mb-2 text-[18px] font-bold">Nothing playing</h2>
           <p className="max-w-[420px] text-[14px] leading-6">Audio and video playing in your tabs show up here with playback controls.</p>
@@ -175,6 +197,35 @@ export function MediaView({ vs }: { vs: ViewState | null }): ReactNode {
           ))}
         </div>
       )}
+      {(() => {
+        const live = new Set((list ?? []).map((m) => m.url))
+        const earlier = recent.filter((r) => !live.has(r.url))
+        if (!earlier.length) return null
+        const items = new Set((vs?.state.items ?? []).map((i) => i.id))
+        return (
+          <section className="mt-8" data-media-recent>
+            <h2 className="mb-1 text-[16px] font-bold">Played earlier</h2>
+            <p className="mb-3 text-[13px]">What played in your tabs this session. It is not saved, and private windows are never listed.</p>
+            <div className="overflow-hidden rounded-xl border border-[var(--card-border)]">
+              {earlier.map((m) => (
+                <button
+                  key={`${m.url}:${m.playedAt}`}
+                  className="flex w-full items-center gap-3 border-b border-[var(--card-border)] px-4 py-3 text-left last:border-b-0 hover:bg-[var(--select)]"
+                  data-media-recent-entry={m.url}
+                  onClick={() => (items.has(m.itemId) ? invoke('media.activate', { itemId: m.itemId }) : invoke('tab.new', { url: m.url }))}
+                  title={m.url}
+                >
+                  <Favicon item={m} size={18} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[15px] font-semibold">{m.title}</div>
+                    <div className="truncate text-[12px]">Played {ago(m.playedAt)}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )
+      })()}
     </div>
   )
 }

@@ -86,6 +86,17 @@ try {
   assert.equal(s.settings.githubToken, undefined)
   assert.equal(await t.dispatch('liveFolder.hasToken'), true)
 
+  step('moving a Live Folder to another space takes its children along, in order')
+  const before = s.items.filter((i) => i.parentId === lf).sort((x, y) => x.order - y.order).map((k) => k.id)
+  await t.dispatch('space.new', { name: 'Elsewhere' })
+  s = await t.waitFor((s) => s.spaces.some((x) => x.name === 'Elsewhere'), 'second space')
+  const elsewhere = s.spaces.find((x) => x.name === 'Elsewhere').id
+  await t.dispatch('tab.move', { itemId: lf, spaceId: elsewhere, section: 'pinned' })
+  s = await t.waitFor((s) => s.items.find((i) => i.id === lf)?.spaceId === elsewhere, 'live folder moved')
+  const movedKids = s.items.filter((i) => i.parentId === lf).sort((x, y) => x.order - y.order)
+  assert.deepEqual(movedKids.map((k) => k.id), before)
+  assert.ok(movedKids.every((k) => k.spaceId === elsewhere && k.section === 'pinned'))
+
   step('liveFolder.delete removes the folder and its children')
   await t.dispatch('liveFolder.delete', { itemId: lf })
   s = await t.state()

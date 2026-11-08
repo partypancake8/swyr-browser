@@ -8,6 +8,12 @@ import type { DownloadEntry } from '@shared/types'
 import { newId } from '../util/id'
 import { isDangerousDownload } from '../security/urlPolicy'
 
+/** who a session belongs to, for tagging its downloads */
+export interface DownloadOrigin {
+  profileId: string
+  incognito: boolean
+}
+
 export interface DownloadsHost {
   directory(): string | undefined
   changed(): void
@@ -34,13 +40,37 @@ export class Downloads {
     return this.host.directory() || app.getPath('downloads')
   }
 
-  attach(ses: Session): void {
+  attach(ses: Session, origin?: DownloadOrigin): void {
     if (this.sessions.has(ses)) return
     this.sessions.add(ses)
-    ses.on('will-download', (_event, item) => this.track(item))
+    ses.on('will-download', (_event, item) => this.track(item, origin))
   }
 
-  private track(item: DownloadItem): void {
+  /**
+   * the downloads one window may list: a private window sees only its own profile's private downloads, every
+   * other window only the regular ones
+   */
+  visibleTo(viewer: { incognito: boolean; profileId: string } | undefined): DownloadEntry[] {
+    if (!viewer) return this.list
+    return this.list.filter((d) => (viewer.incognito ? d.incognito === true && d.profileId === viewer.profileId : d.incognito !== true))
+  }
+
+  /** a private window closed: its downloads leave the list (finished files stay on disk, unfinished ones stop) */
+  forgetProfile(profileId: string): number {
+    const gone = this.list.filter((d) => d.incognito && d.profileId === profileId)
+    if (!gone.length) return 0
+    for (const d of gone) {
+      const item = this.items.get(d.id)
+      if (item && d.state === 'progressing') item.cancel()
+      this.items.delete(d.id)
+    }
+    const keep = this.list.filter((d) => !gone.includes(d))
+    this.list.splice(0, this.list.length, ...keep)
+    this.host.changed()
+    return gone.length
+  }
+
+  private track(item: DownloadItem, origin?: DownloadOrigin): void {
     const dir = this.directory()
     try {
       fs.mkdirSync(dir, { recursive: true })
@@ -58,7 +88,9 @@ export class Downloads {
       receivedBytes: 0,
       totalBytes: item.getTotalBytes(),
       startedAt: Date.now(),
-      dangerous: isDangerousDownload(path.basename(savePath))
+      dangerous: isDangerousDownload(path.basename(savePath)),
+      ...(origin ? { profileId: origin.profileId } : {}),
+      ...(origin?.incognito ? { incognito: true } : {})
     }
     this.list.unshift(entry)
     this.items.set(entry.id, item)
@@ -93,8 +125,9 @@ export class Downloads {
   }
 
   /** remove finished entries from the list (files stay on disk) */
-  clear(): number {
-    const keep = this.list.filter((d) => d.state === 'progressing')
+  clear(viewer?: { incognito: boolean; profileId: string }): number {
+    const mine = new Set(this.visibleTo(viewer))
+    const keep = this.list.filter((d) => d.state === 'progressing' || !mine.has(d))
     const removed = this.list.length - keep.length
     this.list.splice(0, this.list.length, ...keep)
     this.host.changed()

@@ -1,7 +1,8 @@
-// swyr://history: visits grouped by day, a search box, and Clear History. Clicking a visit opens it in a new Today tab.
+// swyr://history: visits grouped by day, a search box, and Clear History. Clicking a visit opens it in a new Today tab
+// (history.visit: local files reopen too, because the main process checks the URL against history).
 import { createRoot } from 'react-dom/client'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Clock, Globe, Search, Trash2, X } from 'lucide-react'
+import { Clock, FileText, Globe, Search, Trash2, X } from 'lucide-react'
 import '../../common/base.css'
 import '../page.css'
 import '../settings/settings.css'
@@ -121,11 +122,13 @@ function HistoryPage(): ReactNode {
               <div
                 key={`${r.profileId}:${r.url}:${r.visitedAt}`}
                 className="group flex cursor-default items-center gap-3 border-b border-[var(--card-border)] px-4 py-2.5 last:border-b-0 hover:bg-[var(--select)]"
-                onClick={() => void invoke('tab.new', { url: r.url })}
+                onClick={() => void invoke('history.visit', { url: r.url, profileId: r.profileId })}
                 title={r.url}
+                data-history-entry=""
+                data-url={r.url}
               >
                 <span className="w-[64px] shrink-0 text-[12.5px] font-semibold tabular-nums">{timeLabel(r.visitedAt)}</span>
-                <Globe size={16} strokeWidth={1.8} className="shrink-0" />
+                {r.url.startsWith('file:') ? <FileText size={16} strokeWidth={1.8} className="shrink-0" /> : <Globe size={16} strokeWidth={1.8} className="shrink-0" />}
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-semibold">{r.title || displayUrl(r.url)}</div>
                   <div className="truncate text-[12.5px] font-medium">

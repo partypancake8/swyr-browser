@@ -1,6 +1,6 @@
 // Built-in commands. Menus, shortcuts, the command bar, IPC and the test hook all call these.
 import { app, clipboard, shell } from 'electron'
-import type { ArchiveReason, Item, PersistedState, Section, Settings } from '@shared/types'
+import type { ArchiveEntry, ArchiveReason, Item, PersistedState, Section, Settings } from '@shared/types'
 import { nextOrder, sectionItems, spaceById, favoritesFor, itemTitle, windowSpaces } from '@shared/ops'
 import { resolveWithSettings } from '@shared/url'
 import { clampSidebar } from '../layout/Layout'
@@ -74,7 +74,16 @@ function archiveItems(core: Core, items: Item[], reason: ArchiveReason): void {
     }
   }
   core.store.update((s) => {
-    for (const it of items) s.archive.push({ id: newId('arch'), item: { ...it }, archivedAt: now, reason })
+    for (const it of items) {
+      const entry: ArchiveEntry = { id: newId('arch'), item: { ...it }, archivedAt: now, reason }
+      // a split keeps its panes (and their order and layout) so it restores as a split
+      if (it.kind === 'split' && it.panes) {
+        const panes = it.panes.itemIds.map((pid) => s.items.find((i) => i.id === pid)).filter((i): i is Item => Boolean(i))
+        entry.item = { ...it, panes: { ...it.panes, itemIds: [...it.panes.itemIds], ratios: [...it.panes.ratios] } }
+        entry.children = panes.map((pane) => ({ ...pane }))
+      }
+      s.archive.push(entry)
+    }
     s.items = s.items.filter((i) => !ids.has(i.id) && !(i.parentId && ids.has(i.parentId)))
   })
   for (const id of ids) core.destroyItemViews(id)

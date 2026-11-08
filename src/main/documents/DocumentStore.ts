@@ -6,6 +6,9 @@ import type { CanvasDocument, NoteDocument, SwyrDocument } from '@shared/types'
 
 const WRITE_DELAY_MS = 300
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/
+const THUMB_RE = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/
+/** a thumbnail is small (about 320 px on its long side); anything bigger is refused */
+const THUMB_MAX = 1_500_000
 
 export const isDocId = (id: unknown): id is string => typeof id === 'string' && ID_RE.test(id)
 
@@ -65,6 +68,46 @@ export class DocumentStore {
     return path.join(this.dir, `${id}.json`)
   }
 
+  private thumbFile(id: string): string {
+    return path.join(this.dir, `${id}.thumb.png`)
+  }
+
+  /** canvas thumbnails (PNG data URLs) by document id; stored next to the document as <id>.thumb.png */
+  private readonly thumbs = new Map<string, string | null>()
+
+  /** store a canvas thumbnail: a data:image/png;base64 URL the canvas page exported from its scene */
+  setThumbnail(id: string, dataUrl: string): boolean {
+    if (!isDocId(id) || !THUMB_RE.test(dataUrl) || dataUrl.length > THUMB_MAX) return false
+    this.thumbs.set(id, dataUrl)
+    if (this.ephemeral.has(id)) return true
+    try {
+      fs.mkdirSync(this.dir, { recursive: true })
+      const target = this.thumbFile(id)
+      const tmp = `${target}.tmp`
+      fs.writeFileSync(tmp, Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64'))
+      fs.renameSync(tmp, target)
+    } catch (err) {
+      console.error('[swyr] thumbnail write failed', id, err)
+    }
+    return true
+  }
+
+  /** the canvas thumbnail as a data URL, or null when the board has not been saved with one yet */
+  thumbnail(id: string): string | null {
+    if (!isDocId(id)) return null
+    const hit = this.thumbs.get(id)
+    if (hit !== undefined) return hit
+    let url: string | null = null
+    try {
+      const buf = fs.readFileSync(this.thumbFile(id))
+      if (buf.length && buf.length * 1.4 < THUMB_MAX) url = `data:image/png;base64,${buf.toString('base64')}`
+    } catch {
+      /* no thumbnail yet */
+    }
+    this.thumbs.set(id, url)
+    return url
+  }
+
   get(id: string): SwyrDocument | undefined {
     if (!isDocId(id)) return undefined
     const hit = this.cache.get(id)
@@ -117,7 +160,9 @@ export class DocumentStore {
     if (!isDocId(id)) return false
     const had = this.cache.delete(id)
     this.dirty.delete(id)
+    this.thumbs.delete(id)
     try {
+      fs.rmSync(this.thumbFile(id), { force: true })
       fs.rmSync(this.file(id), { force: true })
     } catch {
       /* already gone */

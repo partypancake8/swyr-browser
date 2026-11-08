@@ -1,6 +1,7 @@
 // Styles: per-site colors, fonts, text size, hidden elements and custom CSS / JS, applied live to every
 // web page (tabs, Preview, Mini Windows). CSS goes in with webContents.insertCSS and the returned keys are
-// kept, so turning a style off or editing it updates the page at once without a reload.
+// kept, so turning a style off or editing it updates the page at once without a reload. Style JavaScript cannot be
+// taken back, so when a style whose JS ran is turned off, deleted or edited, the page reloads to reset its state.
 import type { WebContents } from 'electron'
 import type { Style, StyleSavePayload } from '@shared/types'
 import { newId } from '../util/id'
@@ -92,6 +93,17 @@ export class StyleApplier {
       if (!css.trim() || wc.isDestroyed()) continue
       const key = await wc.insertCSS(css, { cssOrigin: 'author' }).catch(() => null)
       if (key) doc.css.set(s.id, { key, css })
+    }
+    // JS that already ran in this document but is no longer wanted (style off, deleted, edited, or no longer
+    // matching): its effect cannot be undone in place, so the page reloads and starts clean
+    if (!doc.suspended && doc.ran.size) {
+      const wantTags = new Set(want.filter((s) => s.enabled && patternNamesSite(s.hostPattern) && (s.js ?? '').trim()).map((s) => `${s.id}:${(s.js ?? '').trim()}`))
+      if ([...doc.ran].some((tag) => !wantTags.has(tag))) {
+        doc.ran.clear()
+        doc.ready = false
+        if (!wc.isDestroyed()) wc.reload()
+        return
+      }
     }
     if (!doc.ready) return
     // style JavaScript runs only for enabled styles of a named site (never for catch-all patterns), in the page

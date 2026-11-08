@@ -1,6 +1,7 @@
 // Round 7: in-app updates from GitHub Releases through electron-updater.
 // The packaged app checks 20 s after launch and every 2 hours, downloads the zip named in latest-mac.yml and
-// installs it on quit (or on "Restart to update"). Under SWYR_TEST only SWYR_UPDATE_FEED (a generic feed) is
+// installs it on quit (or on "Restart to update"). It also checks again whenever swyr comes to the foreground and
+// the last check started more than 30 minutes ago (under SWYR_TEST, on every focus). Under SWYR_TEST only SWYR_UPDATE_FEED (a generic feed) is
 // checked, and only when a test runs update.check; SWYR_UPDATE_NO_DOWNLOAD=1 stops after "available".
 import { app, dialog } from 'electron'
 import electronUpdater, { type AppUpdater } from 'electron-updater'
@@ -11,6 +12,8 @@ import { REPO_URL } from '../menu/Menu'
 const TEST = process.env.SWYR_TEST === '1'
 const FIRST_CHECK_MS = 20_000
 const INTERVAL_MS = 2 * 60 * 60 * 1000
+/** a foreground check runs when the last one started longer ago than this */
+const FOCUS_GAP_MS = TEST ? 0 : 30 * 60 * 1000
 
 /** commands the internal pages (swyr://settings) may run over IPC */
 export const UPDATE_PAGE_COMMANDS = ['update.check', 'update.install', 'update.openReleaseNotes', 'update.state']
@@ -67,13 +70,23 @@ function setup(): AppUpdater | null {
   return u
 }
 
-export async function checkForUpdates(): Promise<UpdateRuntime> {
+let lastStart = 0
+
+/**
+ * check the feed. checkedAt is stamped when a check starts (and again when it finishes), so it moves on every
+ * check, failed ones included. background: a check swyr started by itself; a build that cannot update only
+ * records the attempt instead of showing an error.
+ */
+export async function checkForUpdates(opts: { background?: boolean } = {}): Promise<UpdateRuntime> {
   if (state.status === 'ready' || state.status === 'downloading' || state.status === 'checking') return updateRuntime()
+  lastStart = Date.now()
   const u = setup()
   if (!u) {
-    set({ status: 'error', error: 'This build does not update itself. Install a release build.', checkedAt: Date.now() })
+    if (opts.background) set({ checkedAt: lastStart })
+    else set({ status: 'error', error: 'This build does not update itself. Install a release build.', checkedAt: lastStart })
     return updateRuntime()
   }
+  set({ checkedAt: lastStart })
   try {
     await u.checkForUpdates()
   } catch (err) {
@@ -119,10 +132,20 @@ export function registerUpdateCommands(c: Commands, onChange: () => void): void 
   c.register('update.openReleaseNotes', ({ core, w }) => core.commands.run('tab.new', { url: releaseUrl() }, w))
 }
 
-/** packaged builds: first check 20 s after launch, then every 2 hours */
+/** a check when swyr comes to the foreground, if the last one started more than FOCUS_GAP_MS ago */
+function checkOnForeground(): void {
+  if (Date.now() - lastStart < FOCUS_GAP_MS && lastStart > 0) return
+  void checkForUpdates({ background: true })
+}
+
+/** packaged builds: first check 20 s after launch, then every 2 hours, and on coming to the foreground after a gap */
 export function startUpdateChecks(): void {
+  if (TEST || app.isPackaged) {
+    app.on('browser-window-focus', checkOnForeground)
+    app.on('activate', checkOnForeground)
+  }
   if (TEST || !app.isPackaged) return
-  const run = (): void => void checkForUpdates()
+  const run = (): void => void checkForUpdates({ background: true })
   setTimeout(run, FIRST_CHECK_MS).unref()
   setInterval(run, INTERVAL_MS).unref()
 }
