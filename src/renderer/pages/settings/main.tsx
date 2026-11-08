@@ -1,7 +1,7 @@
 // swyr://settings: General, Profiles, Link Rules, Shortcuts, Extensions and Advanced panes.
 import { createRoot } from 'react-dom/client'
-import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { Blocks, Keyboard, Route, Settings2, Users, Wrench } from 'lucide-react'
+import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Blocks, Keyboard, Route, Search, Settings2, Users, Wrench } from 'lucide-react'
 import '../../common/base.css'
 import '../page.css'
 import './settings.css'
@@ -10,7 +10,8 @@ import { activeSpace, useSpaceTheme } from '../../common/theme'
 import { sortedSpaces } from '@shared/ops'
 import type { Appearance, ArchiveAfter, PlatformRuntime, Space, ViewState } from '@shared/types'
 import { usePlatformPage } from './usePlatformPage'
-import { Button, Row, Section, Toggle, inputClass, selectClass } from './ui'
+import { Button, Card, Row, Section, Toggle, inputClass, selectClass } from './ui'
+import { searchSettings, type PaneId, type SettingEntry } from './search'
 import { AdvancedPane } from './ImportPane'
 import { ShortcutsPane } from './ShortcutsPane'
 
@@ -36,8 +37,8 @@ const PANES = [
   { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
   { id: 'extensions', label: 'Extensions', icon: Blocks },
   { id: 'advanced', label: 'Advanced', icon: Wrench }
-] as const
-type PaneId = (typeof PANES)[number]['id']
+] as const satisfies readonly { id: PaneId; label: string; icon: unknown }[]
+const paneLabel = (id: PaneId): string => PANES.find((x) => x.id === id)?.label ?? id
 
 const set = (patch: Record<string, unknown>): Promise<unknown> => invoke('settings.set', patch)
 
@@ -67,7 +68,7 @@ function GeneralPane({ vs, p }: { vs: ViewState; p: PlatformRuntime | null }): R
   return (
     <>
       <Section title="Browsing">
-        <Row label="Archive Today tabs after" detail="Today tabs you have not opened in this long move to the Archive.">
+        <Row setting="archiveAfter" label="Archive Today tabs after" detail="Today tabs you have not opened in this long move to the Archive.">
           <select className={selectClass} value={s.archiveAfter} onChange={(e) => set({ archiveAfter: e.target.value })}>
             {ARCHIVE.map((a) => (
               <option key={a.value} value={a.value}>
@@ -76,7 +77,7 @@ function GeneralPane({ vs, p }: { vs: ViewState; p: PlatformRuntime | null }): R
             ))}
           </select>
         </Row>
-        <Row label="Search engine">
+        <Row setting="searchEngine" label="Search engine">
           <select className={selectClass} value={s.searchEngine} onChange={(e) => set({ searchEngine: e.target.value })}>
             {ENGINES.map((e) => (
               <option key={e.url} value={e.url}>
@@ -86,23 +87,23 @@ function GeneralPane({ vs, p }: { vs: ViewState; p: PlatformRuntime | null }): R
             {!ENGINES.some((e) => e.url === s.searchEngine) && <option value={s.searchEngine}>Custom</option>}
           </select>
         </Row>
-        <Row label="Picture in Picture" detail="Videos keep playing in a floating window when you switch tabs.">
+        <Row setting="pipAuto" label="Picture in Picture" detail="Videos keep playing in a floating window when you switch tabs.">
           <Toggle label="Picture in Picture automatically" on={s.pipAuto} onChange={(v) => set({ pipAuto: v })} />
         </Row>
-        <Row label="Open links from other apps in a Mini Window" detail="Links without a Link Rule open in a small window instead of the current space.">
+        <Row setting="openExternalLinksInMiniWindow" label="Open links from other apps in a Mini Window" detail="Links without a Link Rule open in a small window instead of the current space.">
           <Toggle label="Open external links in a Mini Window" on={s.openExternalLinksInMiniWindow} onChange={(v) => set({ openExternalLinksInMiniWindow: v })} />
         </Row>
       </Section>
 
       <Section title="Appearance">
-        <Row label="Theme" detail="Each space can also pick its own in the space editor.">
+        <Row setting="appearance" label="Theme" detail="Each space can also pick its own in the space editor.">
           <select className={selectClass} value={s.appearance} onChange={(e) => set({ appearance: e.target.value as Appearance })}>
             <option value="auto">Match system</option>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
         </Row>
-        <Row label="Sidebar width" detail="200 to 400 points. You can also drag the sidebar edge.">
+        <Row setting="sidebarWidth" label="Sidebar width" detail="200 to 400 points. You can also drag the sidebar edge.">
           <input
             className={`${inputClass} w-20 text-right`}
             type="number"
@@ -119,6 +120,7 @@ function GeneralPane({ vs, p }: { vs: ViewState; p: PlatformRuntime | null }): R
 
       <Section title="Ad blocking">
         <Row
+          setting="adblock"
           label="Block ads and trackers"
           detail={
             p
@@ -128,7 +130,7 @@ function GeneralPane({ vs, p }: { vs: ViewState; p: PlatformRuntime | null }): R
         >
           <Toggle label="Block ads and trackers" on={s.adblock !== false} onChange={(v) => set({ adblock: v })} />
         </Row>
-        <Row label="Sites allowed to show ads" detail={allow.length ? undefined : 'None yet. Ads are blocked everywhere.'}>
+        <Row setting="adblockAllow" label="Sites allowed to show ads" detail={allow.length ? undefined : 'None yet. Ads are blocked everywhere.'}>
           <input
             className={`${inputClass} w-44`}
             placeholder="example.com"
@@ -148,13 +150,14 @@ function GeneralPane({ vs, p }: { vs: ViewState; p: PlatformRuntime | null }): R
       </Section>
 
       <Section title="Downloads">
-        <Row label="Save downloads to" detail={p ? tildify(p.downloadDirectory) : ''}>
+        <Row setting="downloadDirectory" label="Save downloads to" detail={p ? tildify(p.downloadDirectory) : ''}>
           <Button onClick={() => invoke('downloads.setDirectory')}>Change…</Button>
         </Row>
       </Section>
 
       <Section title="Default browser">
         <Row
+          setting="defaultBrowser"
           label={p?.defaultBrowser ? 'swyr is your default browser' : 'swyr is not your default browser'}
           detail="Links from other apps open in swyr and follow your Link Rules."
         >
@@ -184,6 +187,7 @@ function ProfilesPane({ vs }: { vs: ViewState }): ReactNode {
   }
   return (
     <Section
+      setting="profiles"
       title="Your profiles"
       note="Each profile has its own cookies, logins, history, extensions and Favorites. Pick a space's profile in the space editor or below."
     >
@@ -246,13 +250,13 @@ function ProfilesPane({ vs }: { vs: ViewState }): ReactNode {
           </Row>
         )
       })}
-      <Row label="New profile">
+      <Row setting="profileNew" label="New profile">
         <input className={`${inputClass} w-44`} placeholder="Work" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()} />
         <Button kind="primary" onClick={create}>
           Add
         </Button>
       </Row>
-      <div className="border-t border-[var(--card-border)] px-4 py-3">
+      <div data-setting="profileSpaces" className="border-t border-[var(--card-border)] px-4 py-3">
         <div className="mb-2 text-[14px] font-semibold">Spaces</div>
         {spaces.map((sp) => (
           <div key={sp.id} className="flex items-center justify-between gap-3 py-1">
@@ -288,6 +292,7 @@ function LinkRulesPane({ vs }: { vs: ViewState }): ReactNode {
     r.pattern && r.sourceApp ? `${r.pattern} from ${r.sourceApp}` : r.pattern || `Any link from ${r.sourceApp}`
   return (
     <Section
+      setting="linkRules"
       title="Rules"
       note="Links you open from other apps go to the space that matches. Use a site like github.com (subdomains included), or a pattern like *.google.com or github.com/my-org/*. A rule can also name the app the link came from, like Slack or Mail; swyr takes the app that was in front when the link arrived as its source."
     >
@@ -341,7 +346,7 @@ function RuleEditor(props: { spaces: Space[]; initial: RuleFields; submitLabel: 
     if (e.key === 'Escape') props.onCancel?.()
   }
   return (
-    <Row label={props.onCancel ? 'Edit rule' : 'New rule'}>
+    <Row setting={props.onCancel ? undefined : 'linkRuleNew'} label={props.onCancel ? 'Edit rule' : 'New rule'}>
       <input className={`${inputClass} w-36`} placeholder="github.com" aria-label="Site" value={pattern} onChange={(e) => setPattern(e.target.value)} onKeyDown={key} />
       <input className={`${inputClass} w-28`} placeholder="From app" aria-label="Source app" data-testid="rule-source-app" value={sourceApp} onChange={(e) => setSourceApp(e.target.value)} onKeyDown={key} />
       <select className={selectClass} value={spaceId} onChange={(e) => setSpaceId(e.target.value)}>
@@ -366,12 +371,12 @@ function ExtensionsPane({ p }: { p: PlatformRuntime | null }): ReactNode {
   const list = p?.extensions ?? []
   return (
     <Section title="Installed" note="swyr runs Chrome extensions. Install them from the Chrome Web Store or load an unpacked folder.">
-      <Row label="Installed extensions" detail={list.length ? `${list.length} installed, ${list.filter((e) => e.enabled).length} on` : 'None yet.'}>
+      <Row setting="extensionsInstalled" label="Installed extensions" detail={list.length ? `${list.length} installed, ${list.filter((e) => e.enabled).length} on` : 'None yet.'}>
         <Button kind="primary" onClick={() => invoke('extensions.open')}>
           Manage Extensions
         </Button>
       </Row>
-      <Row label="Chrome Web Store" detail="Open the store in a tab and click Add to swyr on any extension.">
+      <Row setting="extensionsStore" label="Chrome Web Store" detail="Open the store in a tab and click Add to swyr on any extension.">
         <Button onClick={() => invoke('extensions.openStore')}>Open Store</Button>
       </Row>
     </Section>
@@ -386,26 +391,74 @@ function SettingsPage(): ReactNode {
   useSpaceTheme(space, vs?.systemDark ?? false)
   const [pane, setPane] = useState<PaneId>(currentPane)
   const [p] = usePlatformPage(vs)
+  const [query, setQuery] = useState('')
+  const [target, setTarget] = useState<{ id: string; n: number } | null>(null)
+  const results = useMemo(() => searchSettings(query, paneLabel), [query])
   useEffect(() => {
     const onHash = (): void => setPane(currentPane())
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
+  // after a result is picked: wait for its row (the Shortcuts list loads async), scroll to it and flash it
+  useEffect(() => {
+    if (!target) return
+    let tries = 0
+    let timer = 0
+    const find = (): void => {
+      const el = document.querySelector<HTMLElement>(`[data-setting="${CSS.escape(target.id)}"]`)
+      if (!el) {
+        if (++tries < 40) timer = window.setTimeout(find, 50)
+        return
+      }
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      el.classList.remove('setting-flash')
+      void el.offsetWidth
+      el.classList.add('setting-flash')
+      timer = window.setTimeout(() => el.classList.remove('setting-flash'), 1800)
+    }
+    find()
+    return () => window.clearTimeout(timer)
+  }, [target])
+  const openPane = (id: PaneId): void => {
+    history.replaceState(null, '', `#${id}`)
+    setPane(id)
+  }
+  const pick = (e: SettingEntry): void => {
+    setQuery('')
+    openPane(e.pane)
+    setTarget((t) => ({ id: e.id, n: (t?.n ?? 0) + 1 }))
+  }
   if (!vs) return null
+  const searching = query.trim() !== ''
   return (
     <div className="mx-auto flex max-w-[980px] gap-8 px-6 py-10">
       <nav className="w-[190px] shrink-0">
-        <h1 className="mb-5 px-2 text-[24px] font-bold">Settings</h1>
+        <h1 className="mb-4 px-2 text-[24px] font-bold">Settings</h1>
+        <label className={`mb-4 flex items-center gap-2 ${inputClass}`}>
+          <Search size={14} className="shrink-0" />
+          <input
+            data-settings-search
+            className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-(color:--fg) placeholder:opacity-75"
+            placeholder="Search settings"
+            aria-label="Search settings"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setQuery('')
+              if (e.key === 'Enter' && results[0]) pick(results[0])
+            }}
+          />
+        </label>
         {PANES.map((x) => {
           const Icon = x.icon
-          const on = x.id === pane
+          const on = !searching && x.id === pane
           return (
             <button
               key={x.id}
               className={`mb-0.5 flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[14px] ${on ? 'bg-[var(--nav-active)] font-bold' : 'font-medium hover:bg-[var(--select)]'}`}
               onClick={() => {
-                history.replaceState(null, '', `#${x.id}`)
-                setPane(x.id)
+                setQuery('')
+                openPane(x.id)
               }}
             >
               <Icon size={16} strokeWidth={2} />
@@ -415,15 +468,41 @@ function SettingsPage(): ReactNode {
         })}
         <p className="mt-6 px-2 text-[12px]">swyr is open source under the MIT license.</p>
       </nav>
-      <main className="min-w-0 flex-1 pt-1">
-        <h2 className="mb-5 text-[20px] font-bold">{PANES.find((x) => x.id === pane)?.label}</h2>
-        {pane === 'general' && <GeneralPane vs={vs} p={p} />}
-        {pane === 'profiles' && <ProfilesPane vs={vs} />}
-        {pane === 'linkrules' && <LinkRulesPane vs={vs} />}
-        {pane === 'shortcuts' && <ShortcutsPane vs={vs} />}
-        {pane === 'extensions' && <ExtensionsPane p={p} />}
-        {pane === 'advanced' && <AdvancedPane />}
-      </main>
+      {searching ? (
+        <main className="min-w-0 flex-1 pt-1">
+          <h2 className="mb-5 text-[20px] font-bold">{results.length ? `${results.length} ${results.length === 1 ? 'match' : 'matches'}` : 'No matches'}</h2>
+          {results.length === 0 ? (
+            <p className="text-[13px]">Nothing in settings matches “{query.trim()}”. Try a word like archive, theme or shortcut.</p>
+          ) : (
+            <Card>
+              {results.map((e) => (
+                <button
+                  key={e.id}
+                  data-settings-result={e.id}
+                  className="flex min-h-[52px] w-full items-center justify-between gap-4 border-b border-[var(--card-border)] px-4 py-2.5 text-left last:border-b-0 hover:bg-[var(--select)]"
+                  onClick={() => pick(e)}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[14px] font-semibold">{e.label}</span>
+                    {e.detail && <span className="mt-0.5 block text-[12.5px] leading-snug">{e.detail}</span>}
+                  </span>
+                  <span className="shrink-0 rounded-md bg-[var(--select)] px-2 py-0.5 text-[12px] font-semibold">{paneLabel(e.pane)}</span>
+                </button>
+              ))}
+            </Card>
+          )}
+        </main>
+      ) : (
+        <main className="min-w-0 flex-1 pt-1" data-settings-pane={pane}>
+          <h2 className="mb-5 text-[20px] font-bold">{paneLabel(pane)}</h2>
+          {pane === 'general' && <GeneralPane vs={vs} p={p} />}
+          {pane === 'profiles' && <ProfilesPane vs={vs} />}
+          {pane === 'linkrules' && <LinkRulesPane vs={vs} />}
+          {pane === 'shortcuts' && <ShortcutsPane vs={vs} />}
+          {pane === 'extensions' && <ExtensionsPane p={p} />}
+          {pane === 'advanced' && <AdvancedPane />}
+        </main>
+      )}
     </div>
   )
 }

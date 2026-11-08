@@ -14,11 +14,15 @@ export function FindBar({ query, active, matches, replace }: Props): ReactNode {
   const [value, setValue] = useState(query)
   const [replacement, setReplacement] = useState('')
   const ref = useRef<HTMLInputElement>(null)
+  const opened = useRef(query)
+  // Select the text only when the bar opens (App keys this component on the overlay seq, so it mounts once per open).
+  // Main echoes the query back in every state push while results stream in; reacting to that selected the typed
+  // text after a few characters and the next key replaced it.
   useEffect(() => {
     ref.current?.focus()
     ref.current?.select()
-    if (query) void invoke('find.update', { query })
-  }, [query])
+    if (opened.current) void invoke('find.update', { query: opened.current })
+  }, [])
   const run = (all: boolean): void => void invoke('find.replace', { query: value, replacement, all })
   return (
     <div className="flex h-full w-full items-center p-1">

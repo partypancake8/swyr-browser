@@ -13,6 +13,20 @@
   --ok: #6fdd8b;
 }
 
+/* a setting picked from the search results flashes once */
+.setting-flash {
+  animation: setting-flash 1.6s ease-out;
+}
+@keyframes setting-flash {
+  0%,
+  35% {
+    background-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 kbd {
   font-family: inherit;
 }

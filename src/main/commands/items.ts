@@ -13,6 +13,27 @@ const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v 
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
 const SECTIONS: Section[] = ['favorites', 'pinned', 'today']
 
+/**
+ * Navigating a tab whose first page has not committed yet would replace that page's history entry, so Back
+ * could not return to it. Wait for the first commit (capped at 1.5 s) and then load.
+ */
+function loadAfterFirstCommit(wc: Electron.WebContents, url: string): void {
+  const load = (): void => void wc.loadURL(url).catch(() => undefined)
+  if (wc.getURL() !== '' || !wc.isLoading()) return load()
+  let done = false
+  const go = (): void => {
+    if (done) return
+    done = true
+    clearTimeout(timer)
+    wc.off('did-navigate', go)
+    wc.off('did-fail-load', go)
+    if (!wc.isDestroyed()) load()
+  }
+  const timer = setTimeout(go, 1500)
+  wc.once('did-navigate', go)
+  wc.once('did-fail-load', go)
+}
+
 /** payloads name the item `itemId` (round 2 contract) or `id` (round 1); both work, the active item is the fallback */
 function itemIdOf(p: Record<string, unknown>): string | undefined {
   return str(p.itemId) ?? str(p.id)
@@ -263,7 +284,7 @@ export function registerItemCommands(c: Commands): void {
     if (!item || item.kind === 'folder') return core.commands.run('tab.new', { url }, w)
     core.store.update(() => (item.url = url))
     const view = w.tabs.get(item.id)
-    if (view) void view.webContents.loadURL(url).catch(() => undefined)
+    if (view) loadAfterFirstCommit(view.webContents, url)
     if (w.activeItemId !== item.id) w.activate(item.id)
     else w.focusContent()
     return true

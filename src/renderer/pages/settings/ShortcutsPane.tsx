@@ -5,6 +5,7 @@ import { acceleratorLabel } from '@shared/commands'
 import type { ShortcutEntry, ViewState } from '@shared/types'
 import { invoke } from '../../common/store'
 import { Button, Row, Section, inputClass } from './ui'
+import { shortcutSettingId } from './search'
 
 type SetResult = { ok: true; accelerator: string } | { ok: false; error: string; conflict?: { id: string; title: string } } | null
 
@@ -47,7 +48,7 @@ export function ShortcutsPane({ vs }: { vs: ViewState }): ReactNode {
 
   return (
     <>
-      <div className="mb-3 flex items-center gap-3">
+      <div className="mb-3 flex items-center gap-3" data-setting="shortcutsFilter">
         <label className={`flex flex-1 items-center gap-2 ${inputClass}`}>
           <Search size={14} />
           <input className="min-w-0 flex-1 bg-transparent outline-none" placeholder="Filter shortcuts" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Filter shortcuts" />
@@ -64,6 +65,7 @@ export function ShortcutsPane({ vs }: { vs: ViewState }): ReactNode {
               {g.rows.map((b) => (
                 <Row
                   key={b.id}
+                  setting={shortcutSettingId(b.id)}
                   label={b.title}
                   detail={message?.id === b.id ? <span className="font-semibold text-[var(--danger)]">{message.text}</span> : undefined}
                 >

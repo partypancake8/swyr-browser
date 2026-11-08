@@ -31,6 +31,7 @@ export function AdvancedPane(): ReactNode {
     <>
       <Section title="Import">
         <Row
+          setting="import"
           label={IMPORT_FROM_LABEL}
           detail={
             <>
@@ -55,7 +56,7 @@ export function AdvancedPane(): ReactNode {
       </Section>
 
       <Section title="Your data">
-        <Row label="Export swyr data" detail="Saves your spaces, tabs, archive and settings as one JSON file.">
+        <Row setting="export" label="Export swyr data" detail="Saves your spaces, tabs, archive and settings as one JSON file.">
           <Button
             onClick={() =>
               void invoke('data.export').then((r) => {
@@ -69,7 +70,7 @@ export function AdvancedPane(): ReactNode {
           </Button>
         </Row>
         {exported && <Row label="Exported" detail={exported} />}
-        <Row label="Reset settings" detail="Puts every setting and shortcut back to its default. Spaces, tabs, extensions and Link Rules stay.">
+        <Row setting="reset" label="Reset settings" detail="Puts every setting and shortcut back to its default. Spaces, tabs, extensions and Link Rules stay.">
           {confirmReset ? (
             <>
               <Button onClick={() => setConfirmReset(false)}>Cancel</Button>
