@@ -1,0 +1,113 @@
+# Builds swyr on a macOS arm64 runner and publishes GitHub release v<version> when a tag v* is pushed, with the DMG,
+# the zip and latest-mac.yml attached (installed copies update themselves from latest-mac.yml).
+# The tag must equal "v" + the version in package.json. Release notes come from release-notes/<tag>.md when that
+# file exists, otherwise GitHub generates them.
+# Run it by hand (workflow_dispatch, dry_run true) to build and check everything and keep the three files as a run
+# artifact without publishing anything. Releases only ever come from tags.
+# CI has no signing identity: the app is signed ad hoc (codesign identity "-") after the afterPack hook has flipped
+# the Electron fuses, so the signature covers those changes.
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and check, keep the files as a run artifact, publish nothing
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: releases come from tags
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run != true
+        run: |
+          echo "::error::A manual run only does a dry run. To publish, push a tag v<version> (swyr-release --live does that)."
+          exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: version and tag
+        id: version
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          TAG="v$VER"
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" != "refs/tags/$TAG" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $VER (expected $TAG)"
+            exit 1
+          fi
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "building swyr $VER ($TAG)"
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+
+      - run: npm ci
+
+      - name: build and package
+        run: |
+          npx electron-vite build
+          npx electron-builder --mac --arm64 --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false
+
+      - name: check the packaged app
+        env:
+          VER: ${{ steps.version.outputs.ver }}
+        run: |
+          APP=dist/mac-arm64/swyr.app
+          for f in "dist/swyr-$VER-arm64.dmg" "dist/swyr-$VER-arm64.zip" dist/latest-mac.yml; do
+            test -f "$f" || { echo "::error::$f was not built"; exit 1; }
+          done
+          grep -q "^version: $VER$" dist/latest-mac.yml || { echo "::error::latest-mac.yml does not name $VER"; exit 1; }
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv "$APP" 2>&1 | grep -E 'Signature|flags'
+          test "$(plutil -extract NSAppTransportSecurity.NSAllowsArbitraryLoads raw -o - "$APP/Contents/Info.plist")" = "false"
+          test ! -e "$APP/Contents/Resources/default_app.asar"
+          npx @electron/fuses read --app "$APP"
+
+      - name: packaged smoke test
+        run: SWYR_PACKAGED_APP=dist/mac-arm64/swyr.app node tests/packaged.mjs "$RUNNER_TEMP/packaged"
+
+      - name: keep the files (dry run)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: swyr-${{ steps.version.outputs.ver }}-dry-run
+          path: |
+            dist/swyr-${{ steps.version.outputs.ver }}-arm64.dmg
+            dist/swyr-${{ steps.version.outputs.ver }}-arm64.zip
+            dist/latest-mac.yml
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: publish the release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          VER: ${{ steps.version.outputs.ver }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          NOTES=(--generate-notes)
+          if [ -f "release-notes/$TAG.md" ]; then NOTES=(--notes-file "release-notes/$TAG.md"); fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "swyr $VER" "${NOTES[@]}" \
+            "dist/swyr-$VER-arm64.dmg" "dist/swyr-$VER-arm64.zip" dist/latest-mac.yml
+          echo "published https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
