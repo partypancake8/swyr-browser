@@ -840,7 +840,7 @@ try {
     await t.dispatch('tab.activate', { id: styled })
     await t.waitIdle()
     const info = await t.dispatch('siteSettings.info')
-    for (const k of ['permissions', 'adblockEnabled', 'blocked', 'styles', 'extensions', 'zoom']) assert.ok(k in info, 'site info has ' + k)
+    for (const k of ['permissions', 'adblockEnabled', 'blockedCount', 'styles', 'extensions', 'zoom']) assert.ok(k in info, 'site info has ' + k)
     const d = await t.dispatch('siteSettings.setPermission', { permission: 'notifications', value: 'deny' })
     assert.equal(d.notifications, 'deny')
     await t.dispatch('siteSettings.open')

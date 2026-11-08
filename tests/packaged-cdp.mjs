@@ -1,7 +1,9 @@
 // Drives the packaged app without the Node inspector. Its Electron fuses are locked (no --inspect, no
 // ELECTRON_RUN_AS_NODE), so Playwright's _electron.launch, which needs the inspector, cannot attach. These helpers
 // start the binary with --remote-debugging-port (a Chromium switch, not a fuse), talk Chrome DevTools Protocol to
-// its pages, and run commands through the same window.swyr bridge the sidebar uses.
+// its pages, and run commands through the main-process test hook (globalThis.__swyr), which SWYR_TEST_STDIO=1 opens on
+// the binary's stdin and stdout. The renderer bridges stay locked down: the sidebar's window.swyr is only read for
+// state and probed to prove the IPC guard refuses what it should.
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
@@ -18,12 +20,40 @@ export const tempDir = (prefix) => fs.mkdtempSync(path.join(os.tmpdir(), prefix)
 /** start the packaged binary headless (SWYR_TEST=1 never shows a window) in a fresh profile */
 export function start(args, env = {}) {
   const userData = env.SWYR_USER_DATA ?? tempDir('swyr-packaged-data-')
-  const proc = spawn(binary, args, { env: { ...process.env, SWYR_TEST: '1', SWYR_USER_DATA: userData, ...env }, stdio: ['ignore', 'pipe', 'pipe'] })
+  const proc = spawn(binary, args, { env: { ...process.env, SWYR_TEST: '1', SWYR_TEST_STDIO: '1', SWYR_USER_DATA: userData, ...env }, stdio: ['pipe', 'pipe', 'pipe'] })
   let output = ''
-  proc.stdout.on('data', (d) => (output += d))
+  let line = ''
+  const waiting = new Map()
+  let next = 0
+  proc.stdout.on('data', (d) => {
+    output += d
+    line += d
+    let nl
+    while ((nl = line.indexOf('\n')) >= 0) {
+      const l = line.slice(0, nl)
+      line = line.slice(nl + 1)
+      const m = l.match(/^SWYR-TEST-REPLY (.*)$/)
+      if (!m) continue
+      const msg = JSON.parse(m[1])
+      const w = waiting.get(msg.id)
+      if (!w) continue
+      waiting.delete(msg.id)
+      if ('error' in msg) w.reject(new Error(msg.error))
+      else w.resolve(msg.value)
+    }
+  })
   proc.stderr.on('data', (d) => (output += d))
+  proc.stdin.on('error', () => undefined)
   const exited = new Promise((r) => proc.once('exit', r))
-  return { proc, exited, userData, output: () => output }
+  /** call a method of the main-process test hook (globalThis.__swyr) over stdin */
+  const hook = (method, ...args) =>
+    new Promise((resolve, reject) => {
+      const id = ++next
+      waiting.set(id, { resolve, reject })
+      proc.stdin.write(JSON.stringify({ id, method, args }) + '\n')
+      setTimeout(() => waiting.has(id) && (waiting.delete(id), reject(new Error('test hook timeout: ' + method))), 30000)
+    })
+  return { proc, exited, userData, output: () => output, hook }
 }
 
 export async function until(fn, label, ms = 30000) {
@@ -80,7 +110,10 @@ export async function launchPackaged(extraArgs = [], env = {}) {
   const shell = await connect(shellTarget.webSocketDebuggerUrl)
   await until(() => shell.evaluate('typeof window.swyr?.getState === "function"'), 'window.swyr bridge')
   const view = () => shell.evaluate('window.swyr.getState()')
-  const invoke = (command, payload) => shell.evaluate(`window.swyr.invoke(${JSON.stringify(command)}, ${JSON.stringify(payload ?? null)})`)
+  /** run a command through the main-process test hook, the sanctioned path under SWYR_TEST */
+  const invoke = (command, payload) => run.hook('dispatch', command, payload ?? null)
+  /** send a command through the sidebar's renderer bridge, which the IPC guard checks like any renderer message */
+  const shellInvoke = (command, payload) => shell.evaluate(`window.swyr.invoke(${JSON.stringify(command)}, ${JSON.stringify(payload ?? null)})`)
   const activeItem = (v) => v?.state.items.find((i) => i.id === v.window.activeItemId)
   async function close() {
     await invoke('app.quit').catch(() => undefined)
@@ -88,5 +121,5 @@ export async function launchPackaged(extraArgs = [], env = {}) {
     const done = await Promise.race([run.exited.then(() => true), sleep(15000).then(() => false)])
     if (!done) run.proc.kill('SIGKILL')
   }
-  return { run, port, targets, target, shell, view, invoke, activeItem, close }
+  return { run, port, targets, target, shell, view, invoke, shellInvoke, hook: run.hook, activeItem, close }
 }

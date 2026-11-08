@@ -234,3 +234,46 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
     }
   }
 }
+
+/**
+ * The packaged app's fuses refuse --inspect, so a test that launches the signed binary cannot reach globalThis.__swyr
+ * through the Node inspector. With SWYR_TEST=1 and SWYR_TEST_STDIO=1 the hook also answers on the process's own stdin:
+ * one JSON line {"id", "method", "args"} per call, answered on stdout as "SWYR-TEST-REPLY {"id", "value" | "error"}".
+ * Only the process that started swyr holds that pipe; renderers and web pages never see it.
+ */
+export function installTestStdio(): void {
+  if (process.env.SWYR_TEST !== '1' || process.env.SWYR_TEST_STDIO !== '1') return
+  const reply = (msg: unknown): void => void process.stdout.write('SWYR-TEST-REPLY ' + JSON.stringify(msg) + '\n')
+  let buf = ''
+  process.stdin.setEncoding('utf8')
+  process.stdin.on('data', (chunk: string) => {
+    buf += chunk
+    let nl: number
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl).trim()
+      buf = buf.slice(nl + 1)
+      if (!line) continue
+      let req: { id?: unknown; method?: unknown; args?: unknown }
+      try {
+        req = JSON.parse(line)
+      } catch {
+        continue
+      }
+      const id = req.id
+      const hook = globalThis.__swyr as unknown as Record<string, unknown> | undefined
+      const fn = hook && typeof req.method === 'string' ? hook[req.method] : undefined
+      if (typeof fn !== 'function') {
+        reply({ id, error: `no test hook method ${String(req.method)}` })
+        continue
+      }
+      const args = Array.isArray(req.args) ? req.args : []
+      Promise.resolve()
+        .then(() => (fn as (...a: unknown[]) => unknown).apply(hook, args))
+        .then(
+          (value) => reply({ id, value: value === undefined ? null : value }),
+          (err: unknown) => reply({ id, error: err instanceof Error ? err.message : String(err) })
+        )
+    }
+  })
+  process.stdin.resume()
+}

@@ -8,7 +8,7 @@ import { installChromeIdentity } from './profiles/ChromeIdentity'
 import { Core } from './windows/WindowManager'
 import { registerIpc } from './ipc'
 import { startAutoArchive, runAutoArchive } from './archive/AutoArchive'
-import { installTestHook } from './test/TestHook'
+import { installTestHook, installTestStdio } from './test/TestHook'
 import { initPlatform } from './commands/platform'
 import { setupAppIdentity } from './menu/About'
 import { startOnboarding } from './onboarding/Onboarding'
@@ -53,7 +53,10 @@ let core: Core | null = null
 const pendingUrls: Array<{ url: string; source: Promise<SourceApp | null> }> = []
 let markReady: (c: Core) => void = () => undefined
 const ready = new Promise<Core>((resolve) => (markReady = resolve))
-if (TEST) installTestHook(ready, () => core)
+if (TEST) {
+  installTestHook(ready, () => core)
+  installTestStdio()
+}
 
 /**
  * every URL that arrives from outside (open-url, second instance, default browser) goes through Link Rules;

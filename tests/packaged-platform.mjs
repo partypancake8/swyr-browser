@@ -46,7 +46,15 @@ try {
   await until(async () => /^swyr:\/\/onboarding/.test(app.activeItem(await app.view())?.url || ''), 'onboarding')
   await app.invoke('onboarding.complete', { adblock: true })
 
-  // 1. unpacked extension loads
+  // 0. the renderer bridge stays locked down in the packaged build: the IPC guard drops local paths from the sidebar's
+  // payloads and refuses main-only commands
+  const viaBridge = await app.shellInvoke('extensions.loadUnpacked', { path: extDir })
+  assert.equal(viaBridge?.error, 'a path is required in test mode', 'the sidebar bridge passed a local path: ' + JSON.stringify(viaBridge))
+  const runJs = await app.shell.evaluate(`window.swyr.invoke('page.runJs', { js: '1' }).then(() => 'ran', (e) => 'refused: ' + e.message)`)
+  assert.match(runJs, /^refused/, 'the sidebar bridge ran page.runJs')
+  console.log('PACKAGED PLATFORM ipc guard holds', runJs)
+
+  // 1. unpacked extension loads (through the main-process test hook)
   await app.invoke('extensions.loadUnpacked', { path: extDir })
   const ext = await until(async () => (await app.view()).state.settings.extensions?.find((e) => e.path === extDir || e.name === 'swyr native test'), 'extension in settings')
   const extId = ext.id

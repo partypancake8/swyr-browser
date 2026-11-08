@@ -33,7 +33,7 @@ Tests launch the built app with `SWYR_TEST=1` through Playwright's `_electron.la
 
 - `npm test` runs every suite one after another, never in parallel, and ends with the parity suite.
 - `node tests/parity.mjs` re-proves every feature marked done in the table below. It prints `PARITY <row> ok` for each row, or `PARITY <row> FAIL <reason>` and exits non-zero. Pages come from a local HTTP server, so it needs no network. Set `SWYR_TEST_OUT=<dir>` to keep its captures.
-- `node tests/packaged.mjs` smoke-tests the packaged app after `npm run dist`. Its fuses lock out the Node inspector, so this test and `node tests/packaged-platform.mjs` (extensions, native messaging and the ad blocker in the signed app) drive it over the Chrome DevTools Protocol instead of Playwright.
+- `node tests/packaged.mjs` smoke-tests the packaged app after `npm run dist`. Its fuses lock out the Node inspector, so this test and `node tests/packaged-platform.mjs` (extensions, native messaging and the ad blocker in the signed app) drive it over the Chrome DevTools Protocol instead of Playwright. Commands go to `globalThis.__swyr` in the main process over the binary's stdin and stdout, which `SWYR_TEST_STDIO=1` opens only under `SWYR_TEST=1`. The sidebar's bridge is only read for state and probed to show the IPC guard still drops local paths and refuses main-only commands.
 - `node tests/updater.mjs` proves an update offered by a local feed reaches state and the sidebar.
 
 Gestures and window chrome (hover reveal, swipe, drags, full screen, traffic lights, DevTools and picture-in-picture windows) cannot be driven headless. For these the suite proves the command or state change that the gesture triggers, and the row's note says so.
@@ -178,6 +178,10 @@ Private windows. A private window uses an in-memory session and writes nothing t
 Styles. Style CSS applies wherever its pattern matches, but style JavaScript runs only for styles you turned on for a named site, never for catch-all patterns such as `*`. Installing a shared style that contains JavaScript first shows a confirmation that names the site and says the code will run there.
 
 Extensions and downloads. Extensions install only from the Chrome Web Store flow or from a folder you choose in the Load Unpacked dialog. Downloads never open by themselves. Disk images, installer packages, apps, shell scripts, `.command`, `.js` and `.jar` files are flagged in the downloads panel and ask for confirmation before they open.
+
+Packaged app. The signed binary has its Electron fuses set before signing: it cannot run as Node, ignores `NODE_OPTIONS` and `--inspect`, and refuses to start if `app.asar` was edited. It runs with the hardened runtime and keeps library validation on. Dependencies install from the lockfile with `npm ci`, and `npm run audit` reports no vulnerabilities in the production dependencies; a few fixes come from `overrides` in `package.json`.
+
+Reporting. SECURITY.md covers how to report a vulnerability, which versions get fixes, and the full list of fuses, entitlements and overrides.
 
 Other. swyr runs no script built from page text in pages; its own helpers on web pages run in isolated worlds. The spellchecker downloads dictionaries only from Chromium's default server. swyr does not hide automation signals beyond what Chrome itself shows.
 
