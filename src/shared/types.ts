@@ -449,7 +449,7 @@ export interface SiteInfo {
   adblockEnabled: boolean
   /** ads allowed on this site (settings.adblockAllow) */
   adblockAllowed: boolean
-  blocked: number
+  blockedCount: number
   styles: Style[]
   zoom: number
   permissions: Partial<Record<SitePermission, PermissionDecision>>

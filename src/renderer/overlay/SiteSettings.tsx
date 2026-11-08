@@ -112,7 +112,7 @@ export function SiteSettings({ vs }: { vs: ViewState }): ReactNode {
             <Line
               icon={<ShieldCheck size={16} strokeWidth={1.9} />}
               label="Block ads and trackers"
-              detail={!info.adblockEnabled ? 'The ad blocker is off in Settings' : `${info.blocked} blocked on this page`}
+              detail={!info.adblockEnabled ? 'The ad blocker is off in Settings' : `${info.blockedCount} blocked on this page`}
             >
               <Toggle
                 label={blocking ? 'Allow ads on this site' : 'Block ads on this site'}

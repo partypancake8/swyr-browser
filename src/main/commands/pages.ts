@@ -153,7 +153,7 @@ function siteInfo(core: Core, w: SwyrWindow | undefined): SiteInfo {
     web,
     adblockEnabled: s.settings.adblock !== false,
     adblockAllowed: Boolean(bareHost && /^https?:/i.test(url) && hostAllowed(bareHost, s.settings.adblockAllow ?? [])),
-    blocked: item ? (plat.adblockStats.perTab[item.id] ?? 0) : 0,
+    blockedCount: item ? (plat.adblockStats.perTab[item.id] ?? 0) : 0,
     styles: web ? stylesFor(s.styles ?? [], url, false) : [],
     zoom: wc && !wc.isDestroyed() ? wc.getZoomLevel() : 0,
     permissions: origin ? decisions(core, origin) : {},
