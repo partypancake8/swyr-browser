@@ -278,7 +278,7 @@ export class Extensions {
     const action = manifest.action ?? manifest.browser_action
     let page = action?.default_popup ?? manifest.options_ui?.page ?? manifest.options_page
     if (!page) page = fs.readdirSync(ext.path).find((f) => f.endsWith('.html')) ?? 'manifest.json'
-    const win = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: securePrefs({ session: ses }) })
+    const win = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: { ...securePrefs({ session: ses }), contextIsolation: true, nodeIntegration: false, sandbox: true } })
     try {
       await win.webContents.loadURL(`chrome-extension://${id}/${page.replace(/^\//, '')}`)
       return Boolean(await win.webContents.executeJavaScript(`chrome.storage.local.set(${JSON.stringify(values)}).then(() => true)`, true))

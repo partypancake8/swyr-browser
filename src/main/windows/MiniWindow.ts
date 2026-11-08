@@ -53,10 +53,16 @@ export class MiniWindow {
       titleBarStyle: 'hiddenInset',
       trafficLightPosition: { x: 12, y: 12 },
       backgroundColor: baseColor(space, dark),
-      webPreferences: securePrefs({
-        preload: preloadPath('mini'),
-        spellcheck: false
-      })
+      // these three are in SECURE_PREFS too; they are spelled out here so scanners see it on the window itself
+      webPreferences: {
+        ...securePrefs({
+          preload: preloadPath('mini'),
+          spellcheck: false
+        }),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true
+      }
     })
     this.id = this.win.id
     const view = new WebContentsView({
