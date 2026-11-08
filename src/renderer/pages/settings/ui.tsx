@@ -9,7 +9,7 @@ export function Section({ title, children, note, setting }: { title: string; chi
   return (
     <section data-setting={setting}>
       <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide">{title}</h2>
-      {note && <p className="mb-2 text-[13px]">{note}</p>}
+      {note && <div className="mb-2 text-[13px]">{note}</div>}
       <Card>{children}</Card>
     </section>
   )

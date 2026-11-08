@@ -40,9 +40,9 @@ export function ShortcutsPane({ vs }: { vs: ViewState }): ReactNode {
     if (!q) return list
     return list.filter((b) => b.title.toLowerCase().includes(q) || acceleratorLabel(b.accelerator).toLowerCase().includes(q) || b.command.includes(q))
   }, [list, query])
-  const groups: { title: string; rows: ShortcutEntry[] }[] = [
+  const groups: { title: string; note?: string; rows: ShortcutEntry[] }[] = [
     { title: 'Everywhere', rows: filtered.filter((b) => !b.scope) },
-    { title: 'In a Mini Window', rows: filtered.filter((b) => b.scope === 'mini') }
+    { title: 'Mini Window', note: 'These apply inside the small single-tab window. Cmd+L there edits its address field; in the main window Cmd+L opens the Command Bar.', rows: filtered.filter((b) => b.scope === 'mini') }
   ]
   const changed = list.filter((b) => b.overridden).length
 
@@ -61,7 +61,7 @@ export function ShortcutsPane({ vs }: { vs: ViewState }): ReactNode {
       {groups.map(
         (g) =>
           g.rows.length > 0 && (
-            <Section key={g.title} title={g.title}>
+            <Section key={g.title} title={g.title} note={g.note}>
               {g.rows.map((b) => (
                 <Row
                   key={b.id}
