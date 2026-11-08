@@ -48,21 +48,51 @@ function rendererDir(): string {
   return path.join(__dirname, '../renderer')
 }
 
-const CSP = [
+/**
+ * the Content-Security-Policy of every swyr:// page: scripts only from swyr's own bundles (no inline script, no eval,
+ * nothing remote), inline styles for Excalidraw and TipTap, images from anywhere (favicons, pasted images), and no
+ * framing by any page
+ */
+export const CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   'img-src * data: blob:',
   "font-src 'self' data:",
   "connect-src 'self'",
+  "media-src 'self' data: blob:",
   "object-src 'none'",
-  "base-uri 'none'"
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'"
 ].join('; ')
+
+/** the CSP of swyr's error and not-found responses: no script at all */
+const STATIC_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'"
+
+/**
+ * a request for a swyr:// URL that web content started: a web page linking, framing, fetching or embedding an
+ * internal page or asset. swyr's own loads (loadURL from main) carry no referrer or origin, and swyr pages loading
+ * their own assets are same-origin swyr:// requests.
+ */
+export function fromWebContent(headers: Headers, referrer: string): boolean {
+  const sources = [headers.get('origin') ?? '', referrer && referrer !== 'about:client' ? referrer : '', headers.get('referer') ?? '']
+  for (const src of sources) {
+    if (!src || src === 'null') continue
+    if (!/^swyr:/i.test(src) && !/^devtools:/i.test(src)) return true
+  }
+  const site = headers.get('sec-fetch-site')
+  return site === 'cross-site' && Boolean(headers.get('origin'))
+}
 
 const devUrl = (): string | undefined => process.env.ELECTRON_RENDERER_URL
 
 async function serve(request: Request): Promise<Response> {
   const url = new URL(request.url)
+  // internal pages and their assets are only for swyr itself and for other internal pages
+  if (fromWebContent(request.headers, request.referrer)) {
+    return new Response('Not allowed', { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8', 'content-security-policy': STATIC_CSP } })
+  }
   const host = url.hostname
   const dev = devUrl()
   const page = PAGES[host]
@@ -88,7 +118,7 @@ async function serve(request: Request): Promise<Response> {
   }
   return new Response(
     `<!doctype html><meta charset="utf-8"><title>Not found</title><body style="font:15px system-ui;padding:40px;color:#111">swyr could not find <b>${host}${url.pathname.replace(/[<>&]/g, '')}</b></body>`,
-    { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } }
+    { status: 404, headers: { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': STATIC_CSP } }
   )
 }
 

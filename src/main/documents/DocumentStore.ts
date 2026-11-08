@@ -46,6 +46,16 @@ export class DocumentStore {
   private readonly dirty = new Set<string>()
   private timer: NodeJS.Timeout | null = null
   private scanned = false
+  /** private window documents: kept in memory, never written */
+  private readonly ephemeral = new Set<string>()
+
+  markEphemeral(id: string): void {
+    if (isDocId(id)) this.ephemeral.add(id)
+  }
+
+  isEphemeral(id: string): boolean {
+    return this.ephemeral.has(id)
+  }
 
   constructor(dir = path.join(app.getPath('userData'), 'documents')) {
     this.dir = dir
@@ -131,7 +141,7 @@ export class DocumentStore {
     for (const id of [...this.dirty]) {
       const doc = this.cache.get(id)
       this.dirty.delete(id)
-      if (!doc) continue
+      if (!doc || this.ephemeral.has(id)) continue
       const target = this.file(id)
       const tmp = `${target}.tmp`
       try {

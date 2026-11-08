@@ -1,5 +1,6 @@
 // One browser window: BaseWindow + shell view + tab views + overlay view.
 import { BaseWindow, type WebContents, type WebContentsView } from 'electron'
+import { secretsView } from '../secrets/Secrets'
 import type { Item, OverlayInput, OverlayState, Rect, Space, ViewState, WindowRuntime } from '@shared/types'
 import { baseColor, isDark } from '@shared/theme'
 import { blankItems, itemVisibleInSpace, sidebarOrder, sortedSpaces, spaceById, regularSpaces } from '@shared/ops'
@@ -11,6 +12,7 @@ import type { Core } from './WindowManager'
 import { PreviewController } from '../views/PreviewView'
 import { MediaTracker } from '../media/Media'
 import { focusedPaneId, isSplit, resolveActivation, visiblePanes } from '../commands/split'
+import { forgetWindow as forgetPermissionPrompts, onOverlayClosed as onPermissionOverlayClosed } from '../sitesettings/PermissionPrompts'
 
 export const TRAFFIC_LIGHTS = { x: 14, y: 14 }
 
@@ -118,6 +120,7 @@ export class SwyrWindow {
     })
     this.win.on('closed', () => {
       this.closed = true
+      forgetPermissionPrompts(this)
       if (this.boundsTimer) clearTimeout(this.boundsTimer)
       try {
         this.preview.dispose()
@@ -314,10 +317,13 @@ export class SwyrWindow {
     if (!this.overlayState) return
     if (this.overlayState.kind === 'find') this.activeContents()?.stopFindInPage('clearSelection')
     if (this.overlayState.kind === 'preview') this.preview.dispose()
+    const closed = this.overlayState
     this.overlayState = null
     this.layout()
     if (refocus) this.focusContent()
     this.core.scheduleBroadcast()
+    // a dismissed permission prompt denies once; one hidden behind another overlay comes back
+    onPermissionOverlayClosed(this, closed.kind === 'permission' ? { kind: closed.kind, promptId: closed.promptId } : { kind: closed.kind })
   }
 
   toast(message: string): void {
@@ -383,7 +389,7 @@ export class SwyrWindow {
   }
 
   viewState(): ViewState {
-    return { state: this.core.store.state, window: this.runtime(), systemDark: this.core.systemDark() }
+    return { state: this.core.store.state, window: this.runtime(), systemDark: this.core.systemDark(), secrets: secretsView() }
   }
 
   sendState(): void {

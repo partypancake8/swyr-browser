@@ -1,6 +1,7 @@
 // The React shell: one view per window that fills the window at the bottom of the z-order.
 import { WebContentsView, type WebContents } from 'electron'
 import path from 'node:path'
+import { securePrefs } from '../security/Hardening'
 
 export function preloadPath(name: 'index' | 'page' | 'mini'): string {
   return path.join(__dirname, `../preload/${name}.js`)
@@ -23,14 +24,11 @@ export function reviveOnCrash(wc: WebContents, url: string): void {
 
 export function createShellView(background: string): WebContentsView {
   const view = new WebContentsView({
-    webPreferences: {
+    webPreferences: securePrefs({
       preload: preloadPath('index'),
-      sandbox: true,
-      contextIsolation: true,
-      nodeIntegration: false,
       backgroundThrottling: false,
       spellcheck: false
-    }
+    })
   })
   view.setBackgroundColor(background)
   void view.webContents.loadURL(rendererUrl('shell'))

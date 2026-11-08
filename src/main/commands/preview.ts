@@ -3,6 +3,7 @@ import type { Item } from '@shared/types'
 import { resolveWithSettings } from '@shared/url'
 import { makeItem } from './builtins'
 import type { Commands } from './Commands'
+import { isCodeUrl } from '../security/urlPolicy'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
 
@@ -41,7 +42,7 @@ export function registerPreviewCommands(c: Commands): void {
     const input = str(p.url)
     if (!input) return false
     const url = resolveWithSettings(input, core.store.state.settings).url
-    if (/^\s*(javascript|file|swyr):/i.test(url)) return false
+    if (isCodeUrl(input) || isCodeUrl(url) || /^\s*(file|swyr):/i.test(url)) return false
     w.preview.show(url, str(p.fromItemId) ?? null)
     w.openOverlay({ kind: 'preview' }, false)
     if (!core.test) w.preview.view?.webContents.focus()

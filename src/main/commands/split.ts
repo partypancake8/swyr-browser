@@ -9,6 +9,7 @@ import { archiveItems, makeItem } from './builtins'
 import type { Commands } from './Commands'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
+import { isCodeUrl } from '../security/urlPolicy'
 
 type SplitItem = Item & { panes: SplitPanes }
 type Edge = SplitEdge
@@ -122,7 +123,10 @@ export function addToSplit(
     }
     // favorites stay favorites: their page joins the split as a copy
     let pane = target
-    if (!pane) pane = fresh(opts.url ? resolveWithSettings(opts.url, st.settings).url : 'swyr://newtab')
+    if (!pane) {
+      const url = opts.url && !isCodeUrl(opts.url) ? resolveWithSettings(opts.url, st.settings).url : 'swyr://newtab'
+      pane = fresh(isCodeUrl(url) ? 'swyr://newtab' : url)
+    }
     else if (pane.section === 'favorites') pane = fresh(pane.url, pane)
 
     let split = current

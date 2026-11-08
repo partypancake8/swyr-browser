@@ -32,6 +32,7 @@ import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { exportDocuments } from './documents' // round 3b
 import { updateRuntime } from '../updates/Updater' // round 7
+import { cleanUrl, externalOpenKind } from '../security/urlPolicy'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
 
@@ -410,6 +411,8 @@ export function registerPlatformCommands(c: Commands): void {
   })
 
   c.register('settings.set', ({ core }, p) => {
+    // secrets never go through settings: the GitHub token is set with liveFolder.setToken, which encrypts it
+    if ('githubToken' in p || p.key === 'githubToken') throw new Error('settings.set does not take githubToken; use liveFolder.setToken')
     const keys: (keyof Settings)[] = [
       'archiveAfter',
       'searchEngine',
@@ -565,6 +568,17 @@ export function registerPlatformCommands(c: Commands): void {
     const d = P?.downloads.get(str(p.id) ?? '')
     if (!d || d.state !== 'completed') return false
     if (core.test) return 'skipped in test mode'
+    if (d.dangerous) {
+      const r = await dialog.showMessageBox({
+        type: 'warning',
+        buttons: ['Open', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1,
+        message: `${d.filename} can run code on this Mac`,
+        detail: `It was downloaded from ${d.url.slice(0, 200)}. Open it only if you trust where it came from.`
+      })
+      if (r.response !== 0) return false
+    }
     return (await shell.openPath(d.path)) === ''
   })
   c.register('downloads.reveal', ({ core }, p) => {
@@ -621,9 +635,19 @@ export function registerPlatformCommands(c: Commands): void {
     return core.store.state.settings.linkRules.length < before
   })
 
+  // links from outside swyr (open-url, default browser) and from pages: web pages open in swyr, a short list of app
+  // schemes (mailto, tel, zoommtg...) goes to macOS, and anything else is refused with false, never an error
   c.register('link.openExternal', async ({ core, w }, p) => {
     const url = str(p.url)
-    if (!url || !/^https?:\/\//i.test(url)) return false
+    const kind = externalOpenKind(url)
+    if (!url || !kind) return false
+    if (kind === 'app') {
+      if (core.test) return true
+      return shell.openExternal(cleanUrl(url), { activate: true }).then(
+        () => true,
+        () => false
+      )
+    }
     const s = core.store.state
     const pick = (): SwyrWindow => {
       const regular = core.windows.filter((x) => !x.closed && !x.blank && !x.space().incognito)
@@ -699,7 +723,7 @@ export function registerPlatformCommands(c: Commands): void {
     }
     // round 3b: notes and canvases go along in full; the GitHub token for Live Folders stays out
     const data = withoutPrivate(core.store.state)
-    fs.writeFileSync(file, JSON.stringify({ ...data, settings: { ...data.settings, githubToken: undefined }, documents: exportDocuments() }, null, 1))
+    fs.writeFileSync(file, JSON.stringify({ ...data, documents: exportDocuments() }, null, 1))
     return file
   })
 

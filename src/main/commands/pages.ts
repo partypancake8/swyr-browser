@@ -16,7 +16,8 @@ import { sitePattern, stylesFor } from '../styles/match'
 import { History } from '../history/History'
 import { defaultHistoryPath, readBrowserHistory, type HistoryBrowser } from '../import/BrowserHistory'
 import { showReader } from '../reader/Reader'
-import { SITE_PERMISSIONS, attachPermissions, decisions, originOf, setDecision } from '../sitesettings/SiteSettings'
+import { SITE_PERMISSIONS, decisions, originOf, setDecision } from '../sitesettings/SiteSettings'
+import { attachPermissions, respond as respondPermission } from '../sitesettings/PermissionPrompts'
 import { onProfileSession } from '../profiles/Profiles'
 import { platformRuntime } from './platform'
 import { hostAllowed } from '../adblock/Adblock'
@@ -156,12 +157,27 @@ function siteInfo(core: Core, w: SwyrWindow | undefined): SiteInfo {
     blockedCount: item ? (plat.adblockStats.perTab[item.id] ?? 0) : 0,
     styles: web ? stylesFor(s.styles ?? [], url, false) : [],
     zoom: wc && !wc.isDestroyed() ? wc.getZoomLevel() : 0,
-    permissions: origin ? decisions(core, origin) : {},
+    permissions: origin ? decisions(core, origin, wc?.session) : {},
     mini: Boolean(miniRule),
     extensions: plat.extensions
       .filter((e) => e.enabled && e.profileId === profileId)
       .map((e) => ({ id: e.id, name: e.name, iconDataUrl: e.iconDataUrl }))
   }
+}
+
+/** the confirmation before a shared style with JavaScript is installed; headless test runs answer yes */
+async function confirmStyleCode(core: Core, w: SwyrWindow | undefined, hostPattern: string): Promise<boolean> {
+  if (core.test) return true
+  const opts = {
+    type: 'warning' as const,
+    buttons: ['Install and Run Code', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    message: `This style runs code on ${hostPattern}`,
+    detail: `Its JavaScript will run on every page of ${hostPattern} and can read and change anything there, including what you type. Install it only if you trust the person who shared it.`
+  }
+  const r = w && !w.closed ? await dialog.showMessageBox(w.win, opts) : await dialog.showMessageBox(opts)
+  return r.response === 0
 }
 
 export function registerPageCommands(c: Commands): void {
@@ -198,6 +214,11 @@ export function registerPageCommands(c: Commands): void {
     if (!text.startsWith(STYLE_CODE_PREFIX)) return { error: 'That is not a swyr style code.' }
     try {
       const data = JSON.parse(Buffer.from(text.slice(STYLE_CODE_PREFIX.length), 'base64url').toString('utf8')) as Record<string, unknown>
+      const hostPattern = typeof data.hostPattern === 'string' ? data.hostPattern.trim() : ''
+      // a style with code: say which site it runs on and that it will run there, and install only on a yes
+      if (typeof data.js === 'string' && data.js.trim() && hostPattern) {
+        if (!(await confirmStyleCode(core, w, hostPattern))) return { error: 'Not installed.' }
+      }
       const style = saveStyle(core, { ...data, id: undefined, enabled: true } as unknown as Record<string, unknown> & { hostPattern: string })
       if (!style) return { error: 'That style code has no site.' }
       w?.toast(`Installed a style for ${style.hostPattern}`)
@@ -246,8 +267,21 @@ export function registerPageCommands(c: Commands): void {
     const perm = str(p.permission) as SitePermission | undefined
     if (!origin || !perm || !SITE_PERMISSIONS.includes(perm)) return false
     const value = p.value === 'allow' || p.value === 'deny' ? (p.value as PermissionDecision) : null
-    setDecision(core, origin, perm, value)
-    return decisions(core, origin)
+    const ses = active(w).wc?.session
+    setDecision(core, origin, perm, value, ses)
+    return decisions(core, origin, ses)
+  })
+  c.register('siteSettings.resetPermissions', ({ core, w }, p) => {
+    const origin = str(p.origin) ?? originOf(pageUrl(w))
+    if (!origin) return false
+    const ses = active(w).wc?.session
+    for (const perm of Object.keys(decisions(core, origin, ses)) as SitePermission[]) setDecision(core, origin, perm, null, ses)
+    return true
+  })
+  // the permission prompt in the overlay: Allow or Block for the request on screen
+  c.register('permission.respond', ({ w }, p) => {
+    if (typeof p.allow !== 'boolean') return false
+    return respondPermission(w, p.allow, str(p.promptId), p.remember !== false)
   })
   c.register('siteSettings.clearData', async ({ w }) => {
     const { wc } = active(w)
@@ -292,13 +326,18 @@ export function registerPageCommands(c: Commands): void {
   // links from outside swyr: a site marked "always open in a mini window" opens in one
   const handlers = (c as unknown as { handlers?: Map<string, CommandHandler> }).handlers
   const openExternal = handlers?.get('link.openExternal')
-  c.register('link.openExternal', (ctx, p) => {
-    const url = str(p.url)
-    if (url && /^https?:\/\//i.test(url)) {
-      const rule = matchRule(ctx.core.store.state.settings.linkRules, url, sourceFromPayload(p))
-      if (rule?.mini && openInMiniWindow(url, ctx.core) !== null) return 'mini'
+  c.register('link.openExternal', async (ctx, p) => {
+    try {
+      const url = str(p.url)
+      if (url && /^https?:\/\//i.test(url)) {
+        const rule = matchRule(ctx.core.store.state.settings.linkRules, url, sourceFromPayload(p))
+        if (rule?.mini && openInMiniWindow(url, ctx.core) !== null) return 'mini'
+      }
+      return openExternal ? await openExternal(ctx, p) : false
+    } catch (err) {
+      console.error('[swyr] link.openExternal', err instanceof Error ? err.message : err)
+      return false
     }
-    return openExternal ? openExternal(ctx, p) : false
   })
 
   // ----- Reader

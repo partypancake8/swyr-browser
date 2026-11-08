@@ -14,6 +14,7 @@ import { setupAppIdentity } from './menu/About'
 import { startOnboarding } from './onboarding/Onboarding'
 import { frontmostApp, type SourceApp } from './linkrules/SourceApp'
 import { registerUpdateCommands, startUpdateChecks } from './updates/Updater'
+import { installHardening } from './security/Hardening'
 
 const TEST = process.env.SWYR_TEST === '1'
 
@@ -34,6 +35,8 @@ if (TEST && process.env.SWYR_USER_DATA) app.setPath('userData', path.resolve(pro
 // headless test runs keep their renderer count small: same-site pages share a process past this limit
 if (TEST) app.commandLine.appendSwitch('renderer-process-limit', process.env.SWYR_RENDERER_LIMIT || '4')
 
+// round 8: every renderer sandboxed, secure web preferences and the navigation policy on every webContents
+installHardening()
 registerSchemePrivileges()
 // site compatibility: every session (created anywhere) sends Chrome's user agent and client hint brands
 installChromeIdentity()

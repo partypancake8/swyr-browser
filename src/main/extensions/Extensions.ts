@@ -7,6 +7,7 @@ import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { installChromeWebStore, uninstallExtension } from 'electron-chrome-web-store'
 import type { ExtensionRuntime, ExtensionSetting, Profile } from '@shared/types'
 import { installNativeMessaging } from './NativeMessaging'
+import { securePrefs } from '../security/Hardening'
 
 export const WEB_STORE_URL = 'https://chromewebstore.google.com/'
 
@@ -277,7 +278,7 @@ export class Extensions {
     const action = manifest.action ?? manifest.browser_action
     let page = action?.default_popup ?? manifest.options_ui?.page ?? manifest.options_page
     if (!page) page = fs.readdirSync(ext.path).find((f) => f.endsWith('.html')) ?? 'manifest.json'
-    const win = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: { session: ses, sandbox: true, contextIsolation: true } })
+    const win = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: securePrefs({ session: ses }) })
     try {
       await win.webContents.loadURL(`chrome-extension://${id}/${page.replace(/^\//, '')}`)
       return Boolean(await win.webContents.executeJavaScript(`chrome.storage.local.set(${JSON.stringify(values)}).then(() => true)`, true))
@@ -401,8 +402,10 @@ function relabelStore(wc: WebContents): void {
       window.__swyrStoreObserver.observe(document.documentElement, { subtree: true, childList: true, characterData: true })
     }
   })()`
-  void wc.executeJavaScript(js, false).catch(() => undefined)
+  // an isolated world: the store page's own scripts cannot see or replace the observer
+  void wc.executeJavaScriptInIsolatedWorld(STORE_WORLD, [{ code: js }], false).catch(() => undefined)
 }
+const STORE_WORLD = 1041
 
 // single instance shared with TabViews
 let current: Extensions | null = null

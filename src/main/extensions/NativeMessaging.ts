@@ -41,10 +41,14 @@ export type Lookup = { ok: true; manifest: HostManifest } | { ok: false; error: 
 
 const NAME_RE = /^([a-z0-9_]+\.)*[a-z0-9_]+$/
 
-/** host manifest directories, in lookup order: swyr's own first, then Chrome, Chromium and Mozilla */
+/**
+ * host manifest directories, in lookup order: swyr's own (<userData>/NativeMessagingHosts) first, then Chrome's and
+ * Chromium's. Nothing else is honoured: a host is never looked up in a path a page or extension supplies, and the
+ * SWYR_NATIVE_HOST_DIRS override works only in headless test runs.
+ */
 export function hostDirs(): string[] {
-  const override = process.env.SWYR_NATIVE_HOST_DIRS
-  if (override !== undefined) return override.split(path.delimiter).filter(Boolean)
+  const override = process.env.SWYR_TEST === '1' ? process.env.SWYR_NATIVE_HOST_DIRS : undefined
+  if (override !== undefined) return override.split(path.delimiter).filter((d) => path.isAbsolute(d))
   const home = os.homedir()
   const own = path.join(app.getPath('userData'), 'NativeMessagingHosts')
   if (process.platform === 'darwin') {
@@ -54,9 +58,7 @@ export function hostDirs(): string[] {
       path.join(lib, 'Google', 'Chrome', 'NativeMessagingHosts'),
       '/Library/Google/Chrome/NativeMessagingHosts',
       path.join(lib, 'Chromium', 'NativeMessagingHosts'),
-      '/Library/Application Support/Chromium/NativeMessagingHosts',
-      path.join(lib, 'Mozilla', 'NativeMessagingHosts'),
-      '/Library/Application Support/Mozilla/NativeMessagingHosts'
+      '/Library/Application Support/Chromium/NativeMessagingHosts'
     ]
   }
   return [
@@ -64,9 +66,7 @@ export function hostDirs(): string[] {
     path.join(home, '.config', 'google-chrome', 'NativeMessagingHosts'),
     '/etc/opt/chrome/native-messaging-hosts',
     path.join(home, '.config', 'chromium', 'NativeMessagingHosts'),
-    '/etc/chromium/native-messaging-hosts',
-    path.join(home, '.mozilla', 'native-messaging-hosts'),
-    '/usr/lib/mozilla/native-messaging-hosts'
+    '/etc/chromium/native-messaging-hosts'
   ]
 }
 

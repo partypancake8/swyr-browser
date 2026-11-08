@@ -5,7 +5,7 @@ import type { WebContents } from 'electron'
 import type { Style, StyleSavePayload } from '@shared/types'
 import { newId } from '../util/id'
 import type { Core } from '../windows/WindowManager'
-import { sitePattern, styleCss, stylesFor } from './match'
+import { patternNamesSite, sitePattern, styleCss, stylesFor } from './match'
 
 interface Applied {
   /** style id -> inserted css key and the css it carries */
@@ -94,7 +94,9 @@ export class StyleApplier {
       if (key) doc.css.set(s.id, { key, css })
     }
     if (!doc.ready) return
+    // style JavaScript runs only for enabled styles of a named site (never for catch-all patterns), in the page
     for (const s of want) {
+      if (!s.enabled || !patternNamesSite(s.hostPattern)) continue
       const js = (s.js ?? '').trim()
       const tag = `${s.id}:${js}`
       if (!js || doc.ran.has(tag)) continue

@@ -8,6 +8,7 @@ import { splitTarget } from './split'
 import type { Commands } from './Commands'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
+import { isCodeUrl } from '../security/urlPolicy'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
@@ -278,8 +279,10 @@ export function registerItemCommands(c: Commands): void {
   c.register('tab.navigate', ({ core, w }, p) => {
     if (!w) return false
     const input = str(p.url) ?? str(p.input)
-    if (!input) return false
+    // round 8: javascript: and vbscript: never load into a tab (they would run in the page that is showing)
+    if (!input || isCodeUrl(input)) return false
     const url = resolveWithSettings(input, core.store.state.settings).url
+    if (isCodeUrl(url)) return false
     const item = splitTarget(core, findItem(core, p, w))
     if (!item || item.kind === 'folder') return core.commands.run('tab.new', { url }, w)
     core.store.update(() => (item.url = url))

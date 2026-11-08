@@ -15,6 +15,7 @@ import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { routeSplitClose } from './split'
 import { registerAppCommands } from './app'
+import { isCodeUrl } from '../security/urlPolicy'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
@@ -135,7 +136,10 @@ export function registerBuiltins(c: Commands): void {
     const s = core.store.state
     const space = (w.blank ? undefined : spaceById(s, str(p.spaceId))) ?? w.space()
     const input = str(p.url) ?? str(p.input)
+    // round 8: javascript: and vbscript: never open, from anywhere; data: and file: from renderers stop at the IPC guard
+    if (input && isCodeUrl(input)) return undefined
     const url = input ? resolveWithSettings(input, s.settings).url : 'swyr://newtab'
+    if (isCodeUrl(url)) return undefined
     // round 5: a blank window only has Today tabs, owned by that window
     const section = w.blank ? 'today' : ((str(p.section) as Section | undefined) ?? 'today')
     const item = makeItem(s, {
@@ -275,6 +279,8 @@ export function registerBuiltins(c: Commands): void {
   c.register('settings.open', (ctx) => openInternal(ctx, 'swyr://settings'))
 
   c.register('settings.set', ({ core }, p) => {
+    // secrets never go through settings: the GitHub token is set with liveFolder.setToken, which encrypts it
+    if ('githubToken' in p || p.key === 'githubToken') throw new Error('settings.set does not take githubToken; use liveFolder.setToken')
     const allowed: (keyof Settings)[] = ['archiveAfter', 'searchEngine', 'appearance', 'adblock', 'pipAuto', 'openExternalLinksInMiniWindow', 'shortcuts', 'siteSearch']
     core.store.update((s) => {
       for (const key of allowed) if (key in p) (s.settings as unknown as Record<string, unknown>)[key] = p[key]

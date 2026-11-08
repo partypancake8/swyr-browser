@@ -10,6 +10,7 @@ import { archiveItems } from './builtins'
 import type { Commands } from './Commands'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
+import { cleanToken, secrets } from '../secrets/Secrets'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
@@ -78,9 +79,9 @@ function pagesFor(core: Core, docId: string): WebContents[] {
 
 /** tell the open pages of a document about a change made outside them (the page listens for 'doc-updated') */
 function pushToPages(core: Core, docId: string, detail: Record<string, unknown>): number {
-  const js = `window.dispatchEvent(new CustomEvent('doc-updated', { detail: ${JSON.stringify({ docId, ...detail })} }))`
+  // sent as data over IPC (the page preload turns it into the event); no script is built from document content
   const pages = pagesFor(core, docId)
-  for (const wc of pages) void wc.executeJavaScript(js, false).catch(() => undefined)
+  for (const wc of pages) wc.send('swyr:doc-updated', { docId, ...detail })
   return pages.length
 }
 
@@ -100,6 +101,9 @@ function createDocItem(core: Core, w: SwyrWindow | undefined, kind: 'note' | 'ca
   const fallback = kind === 'note' ? NOTE_TITLE : CANVAS_TITLE
   const title = (str(p.title) ?? '').trim().slice(0, 300) || fallback
   const id = newId(kind)
+  // round 8: notes and canvases made in a private window live in memory only and are never written to disk
+  const priv = space.incognito === true || s.profiles.some((x) => x.id === space.profileId && x.incognito)
+  if (priv) documents().markEphemeral(id)
   const doc: SwyrDocument =
     kind === 'note'
       ? { id, kind: 'note', title, markdown: typeof p.markdown === 'string' ? p.markdown : '', updatedAt: 0 }
@@ -252,7 +256,7 @@ export function mediaEntries(core: Core): MediaEntry[] {
 export function exportDocuments(): { folder: string; documents: SwyrDocument[] } {
   const store = documents()
   store.flush()
-  return { folder: store.dir, documents: store.list() }
+  return { folder: store.dir, documents: store.list().filter((d) => !store.isEphemeral(d.id)) }
 }
 
 // ----- live folders
@@ -420,8 +424,8 @@ export function registerDocumentCommands(c: Commands): void {
     const space = spaceById(s, str(p.spaceId)) ?? w?.space() ?? sortedSpaces(s)[0]
     const name = (str(p.name) ?? str(p.title) ?? 'Live Folder').trim().slice(0, 200) || 'Live Folder'
     const raw = (p.sourceConfig && typeof p.sourceConfig === 'object' ? p.sourceConfig : {}) as Record<string, unknown>
-    const token = str(raw.token)?.trim()
-    if (token) core.store.update((st) => (st.settings.githubToken = token))
+    const token = cleanToken(raw.token)
+    if (token) secrets().set('githubToken', token)
     const now = Date.now()
     const folder: Item = {
       id: newId('live'),
@@ -479,18 +483,28 @@ export function registerDocumentCommands(c: Commands): void {
     const live = folder.live
     const source = isLiveSource(p.source) ? p.source : live.source
     const raw = p.sourceConfig && typeof p.sourceConfig === 'object' ? (p.sourceConfig as Record<string, unknown>) : null
-    const token = raw && typeof raw.token === 'string' ? raw.token.trim() : undefined
+    const token = raw && raw.token !== undefined ? (cleanToken(raw.token) ?? undefined) : undefined
     const changedSource = source !== live.source || raw !== null
-    core.store.update((st) => {
+    core.store.update(() => {
       const name = str(p.name)?.trim()
       if (name) folder.title = name.slice(0, 200)
       if (typeof p.collapsed === 'boolean') folder.collapsed = p.collapsed
       if (changedSource) folder.live = { ...live, source, sourceConfig: cleanConfig(source, raw ?? live.sourceConfig), error: null }
-      if (token !== undefined) st.settings.githubToken = token || undefined
     })
+    if (token !== undefined) secrets().set('githubToken', token || undefined)
     if (changedSource || token !== undefined) void refreshFolder(core, folder.id).catch(() => undefined)
     return true
   })
+
+  // the GitHub token goes to the encrypted secrets file; renderers only ever see whether one is set
+  c.register('liveFolder.setToken', ({ core }, p) => {
+    const token = cleanToken(p.token)
+    if (token === null) return false
+    secrets().set('githubToken', token || undefined)
+    core.store.notify()
+    return secrets().has('githubToken')
+  })
+  c.register('liveFolder.hasToken', () => secrets().has('githubToken'))
 
   c.register('liveFolder.toggle', ({ core }, p) => {
     const folder = liveOf(core, p)
