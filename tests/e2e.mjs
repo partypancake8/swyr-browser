@@ -124,7 +124,7 @@ try {
   assert.ok(!s.windows[0].loaded.includes(pinned.id), 'pinned tab unloaded')
 
   step('spaces by index, next, prev, dark space')
-  await t.dispatch('space.new', { name: 'Work', emoji: '💼' })
+  await t.dispatch('space.new', { name: 'Work', icon: 'briefcase' })
   await t.dispatch('space.edit', { theme: { appearance: 'dark' } })
   await t.dispatch('tab.new', { url: 'https://example.com' })
   await t.waitFor((s) => s.items.filter((i) => i.spaceId === s.windows[0].activeSpaceId).length === 1, 'work tab')

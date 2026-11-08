@@ -2,6 +2,7 @@ import { SCHEMA_VERSION, type PersistedState, type Settings, type Space } from '
 import { THEME_PRESETS } from '@shared/theme'
 import { DEFAULT_SEARCH } from '@shared/url'
 import { newId } from '../util/id'
+import { DEFAULT_SPACE_ICON } from '@shared/spaceIcons'
 
 export function defaultSettings(): Settings {
   return {
@@ -25,12 +26,12 @@ export function defaultSettings(): Settings {
   }
 }
 
-export function makeSpace(name: string, profileId: string, order: number, emoji = ''): Space {
+export function makeSpace(name: string, profileId: string, order: number, icon: string = DEFAULT_SPACE_ICON): Space {
   const colors = THEME_PRESETS[order % THEME_PRESETS.length]
   return {
     id: newId('space'),
     name,
-    emoji,
+    icon,
     profileId,
     theme: { colors: [...colors], angle: 150, noise: 0.18, appearance: 'auto' },
     order
@@ -43,7 +44,7 @@ export function defaultState(): PersistedState {
   return {
     schemaVersion: SCHEMA_VERSION,
     profiles: [{ id: profileId, name: 'Personal', partition: `persist:profile-${profileId}`, createdAt: now }],
-    spaces: [makeSpace('Personal', profileId, 0, '🏠')],
+    spaces: [makeSpace('Personal', profileId, 0, 'home')],
     items: [],
     archive: [],
     settings: defaultSettings(),

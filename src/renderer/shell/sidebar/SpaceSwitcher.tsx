@@ -1,11 +1,11 @@
 // The space switcher in the sidebar's bottom bar: one button per space, drag to reorder, drop tabs to move them.
+import { SpaceIcon } from '../../common/SpaceIcon'
 import type { ReactNode } from 'react'
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Plus } from 'lucide-react'
 import type { MenuEntry, Space, ViewState } from '@shared/types'
 import { windowSpaces } from '@shared/ops'
-import { gradientCss } from '@shared/theme'
 import { SEP, showMenu } from '../../common/menu'
 import { invoke } from '../../common/store'
 import { justDragged, spaceDndId, useDndUi, type DragData } from './dnd'
@@ -22,7 +22,7 @@ export function spaceMenu(space: Space, index: number, count: number): MenuEntry
   ]
 }
 
-function SpaceButton({ space, index, count, active, dark }: { space: Space; index: number; count: number; active: boolean; dark: boolean }): ReactNode {
+function SpaceButton({ space, index, count, active }: { space: Space; index: number; count: number; active: boolean }): ReactNode {
   const data: DragData = { kind: 'space', spaceId: space.id }
   const id = spaceDndId(space.id)
   const sortable = useSortable({ id, data })
@@ -45,28 +45,21 @@ function SpaceButton({ space, index, count, active, dark }: { space: Space; inde
       onContextMenu={(e) => showMenu(spaceMenu(space, index, count), e)}
       data-space={space.id}
     >
-      {space.emoji ? (
-        <span className="text-[14px] leading-none" style={{ opacity: active ? 1 : 0.85 }}>
-          {space.emoji}
-        </span>
-      ) : (
-        <span
-          className="block rounded-full border border-[var(--card-border)]"
-          style={{ width: active ? 12 : 9, height: active ? 12 : 9, background: gradientCss({ ...space.theme, angle: 135 }, dark) }}
-        />
-      )}
+      <span className="flex items-center justify-center leading-none" data-space-icon={space.icon} style={{ opacity: active ? 1 : 0.75 }}>
+        <SpaceIcon name={space.icon} size={15} strokeWidth={active ? 2.2 : 1.9} />
+      </span>
       {active && <span className="absolute -bottom-[3px] h-[3px] w-3 rounded-full bg-[var(--fg)]" />}
     </button>
   )
 }
 
-export function SpaceSwitcher({ vs, dark }: { vs: ViewState; dark: boolean }): ReactNode {
+export function SpaceSwitcher({ vs }: { vs: ViewState }): ReactNode {
   const spaces = windowSpaces(vs.state, vs.window.activeSpaceId)
   return (
     <div className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none]" role="tablist" aria-label="Spaces">
       <SortableContext items={spaces.map((s) => spaceDndId(s.id))} strategy={horizontalListSortingStrategy}>
         {spaces.map((s, i) => (
-          <SpaceButton key={s.id} space={s} index={i} count={spaces.length} active={s.id === vs.window.activeSpaceId} dark={dark} />
+          <SpaceButton key={s.id} space={s} index={i} count={spaces.length} active={s.id === vs.window.activeSpaceId} />
         ))}
       </SortableContext>
       <button

@@ -200,7 +200,7 @@ try {
 
   let work
   await row(4, async () => {
-    work = await t.dispatch('space.new', { name: 'Work', emoji: '💼' })
+    work = await t.dispatch('space.new', { name: 'Work', icon: 'briefcase' })
     s = await t.waitFor((s) => win(s).activeSpaceId === work, 'work active')
     const wt = await open(A('/p/WorkTab'))
     await t.dispatch('tab.pin', { id: wt })
@@ -214,8 +214,8 @@ try {
 
   await row(6, async () => {
     await sleep(300)
-    const txt = await shellJs(`document.querySelector('[data-space="${work}"]')?.innerText ?? ''`)
-    assert.ok(txt.includes('💼'), 'switcher shows the emoji: ' + txt)
+    const ok = await shellJs(`Boolean(document.querySelector('[data-space="${work}"] [data-space-icon="briefcase"] svg'))`)
+    assert.ok(ok, 'switcher shows the briefcase icon')
   })
 
   await row(5, async () => {
@@ -307,7 +307,7 @@ try {
     assert.equal(s.items.find((i) => i.id === alpha).spaceId, null)
     await open(A('/p/Other'))
     await menuKey('Cmd+1', (s) => win(s).activeItemId === alpha, 'cmd+1 opens the first favorite')
-    side = await t.dispatch('space.new', { name: 'Side', emoji: '🌿' })
+    side = await t.dispatch('space.new', { name: 'Side', icon: 'leaf' })
     await sleep(500)
     assert.equal(await shellJs(`Boolean(document.querySelector('[data-section="favorites"] [data-item="${alpha}"]'))`), true, 'favorite shared with another space of the profile')
     await t.dispatch('space.switch', { id: work })

@@ -1,4 +1,5 @@
 // swyr://settings: General, Profiles, Link Rules, Shortcuts, Extensions and Advanced panes.
+import { SpaceIcon } from '../../common/SpaceIcon'
 import { createRoot } from 'react-dom/client'
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Blocks, Keyboard, Route, Search, Settings2, Users, Wrench } from 'lucide-react'
@@ -258,7 +259,7 @@ function ProfilesPane({ vs }: { vs: ViewState }): ReactNode {
                 pr.name
               )
             }
-            detail={used.length ? `Used by ${used.map((sp) => `${sp.emoji ? sp.emoji + ' ' : ''}${sp.name}`).join(', ')}` : 'No spaces use this profile yet.'}
+            detail={used.length ? `Used by ${used.map((sp) => sp.name).join(', ')}` : 'No spaces use this profile yet.'}
           >
             {editing?.id === pr.id ? (
               <Button
@@ -303,8 +304,8 @@ function ProfilesPane({ vs }: { vs: ViewState }): ReactNode {
         <div className="mb-2 text-[14px] font-semibold">Spaces</div>
         {spaces.map((sp) => (
           <div key={sp.id} className="flex items-center justify-between gap-3 py-1">
-            <span className="text-[13px] font-medium">
-              {sp.emoji ? sp.emoji + ' ' : ''}
+            <span className="flex items-center gap-1.5 text-[13px] font-medium">
+              <SpaceIcon name={sp.icon} size={14} />
               {sp.name}
             </span>
             <select className={selectClass} value={sp.profileId} onChange={(e) => invoke('space.edit', { id: sp.id, profileId: e.target.value })}>
@@ -329,7 +330,7 @@ function LinkRulesPane({ vs }: { vs: ViewState }): ReactNode {
   const [editing, setEditing] = useState<string | null>(null)
   const spaceName = (id: string): string => {
     const sp = spaces.find((x) => x.id === id)
-    return sp ? `${sp.emoji ? sp.emoji + ' ' : ''}${sp.name}` : 'a deleted space'
+    return sp ? sp.name : 'a deleted space'
   }
   const label = (r: { pattern: string; sourceApp?: string }): string =>
     r.pattern && r.sourceApp ? `${r.pattern} from ${r.sourceApp}` : r.pattern || `Any link from ${r.sourceApp}`
@@ -395,7 +396,6 @@ function RuleEditor(props: { spaces: Space[]; initial: RuleFields; submitLabel: 
       <select className={selectClass} value={spaceId} onChange={(e) => setSpaceId(e.target.value)}>
         {spaces.map((sp) => (
           <option key={sp.id} value={sp.id}>
-            {sp.emoji ? sp.emoji + ' ' : ''}
             {sp.name}
           </option>
         ))}

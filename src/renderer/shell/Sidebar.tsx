@@ -1,4 +1,5 @@
 // The sidebar: window controls row, URL field, Favorites, Pinned, Today, bottom bar with the space switcher.
+import { SpaceIcon } from '../common/SpaceIcon'
 import { useEffect, useRef, useState, type ReactNode, type WheelEvent } from 'react'
 import {
   DndContext,
@@ -17,7 +18,6 @@ import { ArrowLeft, ArrowRight, Download, Folder, History, Paintbrush, PanelLeft
 import type { Item, ViewState } from '@shared/types'
 import { itemTitle, windowSpaces } from '@shared/ops'
 import { displayUrl } from '@shared/url'
-import { isDark } from '@shared/theme'
 import { Favicon } from '../common/Favicon'
 import { SEP, showMenu } from '../common/menu'
 import { invoke, useView } from '../common/store'
@@ -58,7 +58,6 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
   const active = focusedItem(vs)
   const rt = active ? win.tabs[active.id] : undefined
   const blank = win.blank === true
-  const dark = space && !blank ? isDark(space.theme, vs.systemDark) : vs.systemDark
   const spaces = windowSpaces(state, win.activeSpaceId)
   const spaceIndex = spaces.findIndex((s) => s.id === space?.id)
 
@@ -299,7 +298,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
           <button className="icon-btn" title="Archive" onClick={() => invoke('archive.open')} onContextMenu={(e) => showMenu([{ label: 'Open Library', command: 'library.open' }], e)}>
             <History size={16} strokeWidth={1.9} />
           </button>
-          {blank ? <div className="flex-1" /> : <SpaceSwitcher vs={vs} dark={dark} />}
+          {blank ? <div className="flex-1" /> : <SpaceSwitcher vs={vs} />}
           <button className="icon-btn" title="Downloads" onClick={() => invoke('downloads.open')}>
             <Download size={16} strokeWidth={1.9} />
           </button>
@@ -307,7 +306,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
         {peek && <div className="sr-only">sidebar preview</div>}
       </div>
       <DragOverlay dropAnimation={null}>
-        {dragItem ? <DragGhost item={dragItem} /> : dragSpace ? <div className="flex h-7 min-w-7 items-center justify-center rounded-full bg-[var(--tile-active)] px-1 text-[14px] shadow-lg">{dragSpace.emoji || '•'}</div> : null}
+        {dragItem ? <DragGhost item={dragItem} /> : dragSpace ? <div className="flex h-7 min-w-7 items-center justify-center rounded-full bg-[var(--tile-active)] px-1 text-[14px] shadow-lg"><SpaceIcon name={dragSpace.icon} size={14} /></div> : null}
       </DragOverlay>
     </DndContext>
   )

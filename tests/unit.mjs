@@ -14,7 +14,7 @@ const test = (name, fn) => {
 }
 
 test('ops: a private space is listed only in its own window', () => {
-  const sp = (id, order, incognito) => ({ id, name: id, emoji: '', profileId: 'p', order, theme: { colors: ['#fff'], angle: 0, noise: 0, appearance: 'light' }, ...(incognito ? { incognito: true } : {}) })
+  const sp = (id, order, incognito) => ({ id, name: id, icon: 'home', profileId: 'p', order, theme: { colors: ['#fff'], angle: 0, noise: 0, appearance: 'light' }, ...(incognito ? { incognito: true } : {}) })
   const st = { spaces: [sp('a', 0), sp('priv', 1, true), sp('b', 2)] }
   assert.deepEqual(windowSpaces(st, 'a').map((x) => x.id), ['a', 'b'])
   assert.deepEqual(windowSpaces(st, null).map((x) => x.id), ['a', 'b'])

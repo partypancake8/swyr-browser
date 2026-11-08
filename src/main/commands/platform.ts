@@ -10,6 +10,7 @@ import { resolveBindings } from '@shared/commands'
 import { sortedSpaces, spaceById, favoritesFor } from '@shared/ops'
 import { clampSidebar } from '../layout/Layout'
 import { defaultSettings, makeSpace } from '../state/defaults'
+import { iconFromEmoji } from '../state/migrateIcons'
 import { newId } from '../util/id'
 import { Adblock, hostAllowed } from '../adblock/Adblock'
 import { Downloads } from '../downloads/Downloads'
@@ -384,7 +385,7 @@ function applyImport(core: Core, w: SwyrWindow | undefined, sidebar: ImportedSid
       ...p
     })
     for (const sp of sidebar.spaces) {
-      const space = makeSpace(sp.title, profileId, order, '')
+      const space = makeSpace(sp.title, profileId, order, iconFromEmoji(sp.icon))
       order++
       st.spaces.push(space)
       created.push(space.id)
@@ -778,7 +779,7 @@ export function registerPlatformCommands(c: Commands): void {
     let space = sortedSpaces(s).find((x) => x.profileId === profile.id)
     if (!space) {
       const order = s.spaces.reduce((m, x) => Math.max(m, x.order), -1) + 1
-      space = makeSpace(profile.name, profile.id, order, '')
+      space = makeSpace(profile.name, profile.id, order)
       const created = space
       core.store.update((st) => st.spaces.push(created))
     }
@@ -790,7 +791,7 @@ export function registerPlatformCommands(c: Commands): void {
     const profile = makeIncognitoProfile()
     const s = core.store.state
     const order = s.spaces.reduce((m, x) => Math.max(m, x.order), -1) + 1
-    const space = makeSpace('Private', profile.id, order, '')
+    const space = makeSpace('Private', profile.id, order)
     space.incognito = true
     space.theme = { colors: ['#2c2e35', '#3b3546'], angle: 160, noise: 0.12, appearance: 'dark' }
     core.store.update((st) => {

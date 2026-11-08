@@ -39,6 +39,8 @@ export interface SwyrTestHook {
 
 declare global {
   var __swyr: SwyrTestHook | undefined
+  /** test-only: the emoji pattern that headless checks interpolate into scripts evaluated in the main process */
+  var EMOJI: RegExp | undefined
 }
 
 interface Layer {
@@ -111,6 +113,7 @@ export function composite(width: number, height: number, scale: number, layers: 
  * calls made before the app is ready return null (getState) or wait for readiness.
  */
 export function installTestHook(ready: Promise<Core>, current: () => Core | null): void {
+  globalThis.EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u
   globalThis.__swyr = {
     getState(): TestState | null {
       const core = current()

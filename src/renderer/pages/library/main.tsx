@@ -1,4 +1,5 @@
 // swyr://library: Archive, Spaces, Downloads, Notes, Canvases, Styles and Media in one place.
+import { SpaceIcon } from '../../common/SpaceIcon'
 import { createRoot } from 'react-dom/client'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Archive, Clapperboard, Download, LayoutGrid, Paintbrush, Pencil, Shapes, StickyNote, Trash2, type LucideIcon } from 'lucide-react'
@@ -41,7 +42,9 @@ function Swatch({ space, dark, size = 44 }: { space: Space; dark: boolean; size?
   return (
     <div className="relative shrink-0 overflow-hidden rounded-xl border border-[var(--card-border)]" style={{ width: size, height: size, background: gradientCss(space.theme, dark) }}>
       {space.theme.noise > 0 && <div className="noise" style={{ backgroundImage: NOISE_URL, opacity: Math.min(1, space.theme.noise * 1.2) }} />}
-      <div className="relative flex h-full items-center justify-center text-[20px]">{space.emoji}</div>
+      <div className="relative flex h-full items-center justify-center">
+        <SpaceIcon name={space.icon} size={Math.round(size * 0.45)} />
+      </div>
     </div>
   )
 }

@@ -128,7 +128,7 @@ try {
   s = await t.waitFor((s) => s.items.find((i) => i.id === B).url.includes('Beta'), 'reset by button')
 
   step('spaces: create, drag a tab onto a space button, drag to reorder')
-  const second = await t.dispatch('space.new', { name: 'Work', emoji: '💼', theme: { colors: ['#9ad0ec', '#c8b6ff'], angle: 90, noise: 0.1, appearance: 'light' }, activate: false })
+  const second = await t.dispatch('space.new', { name: 'Work', icon: 'briefcase', theme: { colors: ['#9ad0ec', '#c8b6ff'], angle: 90, noise: 0.1, appearance: 'light' }, activate: false })
   await sleep(300)
   await drag(`[data-item="${A}"]`, center(`[data-space="${second}"]`))
 

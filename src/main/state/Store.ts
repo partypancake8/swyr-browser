@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { SCHEMA_VERSION, type PersistedState } from '@shared/types'
 import { defaultSettings, defaultState } from './defaults'
+import { migrateSpaceIcon } from './migrateIcons'
 import { SECRET_NAMES, adoptLegacySecrets } from '../secrets/Secrets'
 
 /** secrets never reach state.json, even if a bug puts one into the state */
@@ -33,6 +34,8 @@ export function migrate(raw: Record<string, unknown>): PersistedState {
   if (version < 1) {
     // version 0 had no schema field; nothing else to convert yet
   }
+  // spaces carried an emoji before 0.2.3; they now carry a Lucide icon name
+  for (const sp of out.spaces) if (sp && typeof sp === 'object') migrateSpaceIcon(sp as unknown as Record<string, unknown>)
   if (!out.spaces.length) {
     const space = base.spaces[0]
     space.profileId = out.profiles[0].id

@@ -1,4 +1,5 @@
 // The shell renders the sidebar and the frame behind the tab views.
+import { SpaceIcon } from '../common/SpaceIcon'
 import { useCallback, useRef, type ReactNode } from 'react'
 import { Plus } from 'lucide-react'
 import { useView, invoke } from '../common/store'
@@ -72,7 +73,10 @@ export function App(): ReactNode {
       >
         {!showsTab && (
           <div className="flex h-full flex-col items-center justify-center gap-3">
-            <div className="text-[15px] font-semibold">{space ? `${space.emoji ? space.emoji + ' ' : ''}${space.name}` : 'swyr'}</div>
+            <div className="flex items-center gap-1.5 text-[15px] font-semibold">
+              {space && <SpaceIcon name={space.icon} size={16} />}
+              {space ? space.name : 'swyr'}
+            </div>
             <button
               className="flex items-center gap-2 rounded-lg bg-[var(--select)] px-3 py-1.5 text-[13px] font-medium hover:brightness-95"
               onClick={() => invoke('commandbar.open', { mode: 'new' })}

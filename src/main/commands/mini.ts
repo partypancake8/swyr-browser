@@ -143,7 +143,7 @@ export function registerMiniCommands(c: Commands, core: Core): void {
     const current = k.current()?.activeSpaceId
     Menu.buildFromTemplate(
       regularSpaces(k.store.state).map((sp) => ({
-        label: `${sp.emoji ? sp.emoji + '  ' : ''}${sp.name}`,
+        label: sp.name,
         type: 'checkbox' as const,
         checked: sp.id === current,
         click: () => void openMiniInMain(k, m, sp.id)

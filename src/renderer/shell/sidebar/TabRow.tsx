@@ -98,7 +98,7 @@ export function tabMenu(item: Item, vs: ViewState, space: Space | undefined): Me
       others.length > 0 && {
         label: 'Move to Space',
         submenu: others.map((x) => ({
-          label: `${x.emoji ? x.emoji + '  ' : ''}${x.name}`,
+          label: x.name,
           command: 'tab.move',
           payload: { itemId: item.id, section: item.section, parentId: null, spaceId: x.id }
         }))

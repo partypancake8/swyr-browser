@@ -97,7 +97,7 @@ export function DocumentsView({ vs, kind }: { vs: ViewState | null; kind: Docume
                   <div className="truncate text-[12px]">
                     {when(d.updatedAt)}
                     {' · '}
-                    {where.length ? where.map((s) => `${s?.emoji ? s.emoji + ' ' : ''}${s?.name}`).join(', ') : 'not in the sidebar'}
+                    {where.length ? where.map((s) => s?.name ?? '').join(', ') : 'not in the sidebar'}
                     {d.preview ? ` · ${d.preview}` : ''}
                   </div>
                 </button>

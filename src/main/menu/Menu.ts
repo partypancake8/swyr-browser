@@ -41,7 +41,7 @@ export class AppMenu {
     const w = this.core.current()
     const item = w?.activeItem()
     const sig = JSON.stringify([
-      s.spaces.map((x) => [x.id, x.name, x.emoji, x.order]),
+      s.spaces.map((x) => [x.id, x.name, x.order]),
       w?.activeSpaceId,
       item?.section,
       s.settings.shortcuts,
@@ -204,7 +204,7 @@ export class AppMenu {
           this.cmd('Previous Space', 'space.prev'),
           sep,
           ...spaces.map((sp, i): MenuItemConstructorOptions => {
-            const base = this.cmd(`${sp.emoji ? sp.emoji + '  ' : ''}${sp.name}`, 'space.switch', i < 9 ? { index: i } : { id: sp.id })
+            const base = this.cmd(sp.name, 'space.switch', i < 9 ? { index: i } : { id: sp.id })
             return { ...base, type: 'checkbox', checked: sp.id === w?.activeSpaceId }
           }),
           sep,

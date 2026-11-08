@@ -1,8 +1,9 @@
-// Space commands: create, edit (name, emoji, theme, profile), reorder and delete.
+// Space commands: create, edit (name, icon, theme, profile), reorder and delete.
 import type { Appearance, Item, PersistedState, Space, SpaceTheme } from '@shared/types'
 import { baseColor, isDark } from '@shared/theme'
 import { sortedSpaces, spaceById, regularSpaces } from '@shared/ops'
 import { makeSpace } from '../state/defaults'
+import { DEFAULT_SPACE_ICON, isSpaceIcon } from '@shared/spaceIcons'
 import { archiveItems } from './builtins'
 import type { Commands } from './Commands'
 import type { Core } from '../windows/WindowManager'
@@ -43,7 +44,7 @@ export function registerSpaceCommands(c: Commands): void {
   c.register('space.new', ({ core, w }, p) => {
     const s = core.store.state
     const profileId = str(p.profileId) && s.profiles.some((x) => x.id === p.profileId) ? (p.profileId as string) : (w?.space().profileId ?? s.profiles[0].id)
-    const space = makeSpace(str(p.name)?.trim() || `Space ${s.spaces.length + 1}`, profileId, s.spaces.length, str(p.emoji) ?? '')
+    const space = makeSpace(str(p.name)?.trim() || `Space ${s.spaces.length + 1}`, profileId, s.spaces.length, isSpaceIcon(p.icon) ? p.icon : DEFAULT_SPACE_ICON)
     if (Array.isArray(p.colors)) applyTheme(space.theme, { colors: p.colors })
     applyTheme(space.theme, p.theme)
     core.store.update((st) => {
@@ -59,7 +60,7 @@ export function registerSpaceCommands(c: Commands): void {
     const s = core.store.state
     const space = spaceById(s, str(p.id) ?? w?.activeSpaceId)
     if (!space) return false
-    const hasPatch = 'name' in p || 'emoji' in p || 'theme' in p || 'profileId' in p
+    const hasPatch = 'name' in p || 'icon' in p || 'theme' in p || 'profileId' in p
     if (!hasPatch) {
       w?.openOverlay({ kind: 'spaceEdit', spaceId: space.id })
       return true
@@ -69,7 +70,8 @@ export function registerSpaceCommands(c: Commands): void {
     const reload: Item[] = []
     core.store.update((st) => {
       if (typeof p.name === 'string' && p.name.trim()) space.name = p.name.trim().slice(0, 80)
-      if (typeof p.emoji === 'string') space.emoji = [...p.emoji.trim()].slice(0, 8).join('')
+      // only Lucide icon names; anything else (an emoji, an unknown name) leaves the icon as it was
+      if (isSpaceIcon(p.icon)) space.icon = p.icon
       applyTheme(space.theme, p.theme)
       if (newProfile) {
         space.profileId = newProfile

@@ -50,7 +50,7 @@ The table lists every row of the feature inventory swyr set out to match. A row 
 | 3 | Hover sidebar reveal | done | synthetic mouseMove onto the 6 px left-edge hot zone opens the sidebar overlay (sidebar.peek), capture r03-hover-reveal; real pointer gesture itself unverified headless |
 | 4 | Spaces | done | space.new with own pinned tabs; Ctrl+1 / Ctrl+2 keys through the shell switch spaces and hide the other space rows |
 | 5 | Space color / gradient | done | space.edit with three colour stops at 135 deg; shell .space-bg computes a 3-stop linear-gradient(135deg), capture r05-gradient |
-| 6 | Space icon / emoji | done | space.new emoji shows on its [data-space] switcher button |
+| 6 | Space icon | done | space.new icon (a Lucide icon name such as briefcase) renders as an svg on its [data-space] switcher button; the space editor offers a searchable Lucide icon picker |
 | 7 | Space swipe | done | synthetic precise horizontal mouseWheel events on the sidebar switch the space; a real two-finger trackpad swipe is unverified headless |
 | 8 | Next/prev space | done | Cmd+Opt+Right / Left keys through the shell run space.next / space.prev |
 | 9 | Per-space profile | done | space.edit profileId links Work to the Alt profile; activePartition of its tab is persist:profile-<alt>; Favorites shared only within a profile |

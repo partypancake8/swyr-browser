@@ -19,7 +19,7 @@ function folderMenu(folder: Item, vs: ViewState, space: Space | undefined): Menu
       ? [
           {
             label: 'Move to Space',
-            submenu: others.map((x) => ({ label: `${x.emoji ? x.emoji + '  ' : ''}${x.name}`, command: 'tab.move', payload: { itemId: folder.id, section: 'pinned', parentId: null, spaceId: x.id } }))
+            submenu: others.map((x) => ({ label: x.name, command: 'tab.move', payload: { itemId: folder.id, section: 'pinned', parentId: null, spaceId: x.id } }))
           }
         ]
       : []),

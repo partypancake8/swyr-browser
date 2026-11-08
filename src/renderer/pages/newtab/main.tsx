@@ -1,5 +1,6 @@
 // swyr://newtab: the space gradient with a large search field, the profile's Favorites, recently archived tabs
 // and quick links. Typing hands off to the command bar (current tab); a pasted address opens on Enter.
+import { SpaceIcon } from '../../common/SpaceIcon'
 import { createRoot } from 'react-dom/client'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Archive, Library, Search, Settings } from 'lucide-react'
@@ -73,7 +74,12 @@ function NewTab(): ReactNode {
       <div className="relative flex w-full max-w-[640px] flex-1 flex-col justify-center py-12">
         <div className="mb-7 text-center">
           <div className="text-[40px] font-bold leading-none tracking-tight">swyr</div>
-          {space && <div className="mt-2 text-[14px] font-semibold">{space.emoji ? `${space.emoji}  ` : ''}{space.name}</div>}
+          {space && (
+            <div className="mt-2 flex items-center justify-center gap-1.5 text-[14px] font-semibold">
+              <SpaceIcon name={space.icon} size={15} />
+              {space.name}
+            </div>
+          )}
         </div>
         <SearchField />
 

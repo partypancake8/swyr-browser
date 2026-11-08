@@ -33,6 +33,8 @@ export type ImportedNode = ImportedTab | ImportedFolder
 
 export interface ImportedSpace {
   title: string
+  /** the exported space emoji or icon name as found; the import command maps it to a Lucide icon name (iconFromEmoji) */
+  icon: string | null
   pinned: ImportedNode[]
   today: ImportedTab[]
 }
@@ -40,6 +42,15 @@ export interface ImportedSpace {
 export interface ImportedSidebar {
   spaces: ImportedSpace[]
   favorites: ImportedTab[]
+}
+
+/** a space's exported emoji or icon name (customInfo.iconType.emoji_v2, emoji or icon) */
+function importedIcon(sp: Dict): string | null {
+  const info = isDict(sp.customInfo) ? sp.customInfo : {}
+  const type = isDict(info.iconType) ? info.iconType : {}
+  const raw = str(type.emoji_v2) ?? str(type.emoji) ?? str(type.icon) ?? str(sp.emoji) ?? str(sp.icon)
+  // symbol names may carry a suffix such as "star.fill"
+  return raw ? raw.split('.')[0] : null
 }
 
 /** the dicts of a list that alternates id strings and dicts */
@@ -124,6 +135,7 @@ export function parseSidebar(root: unknown): ImportedSidebar {
     const seen = new Set<string>()
     spaces.push({
       title: str(sp.title) ?? `Imported space ${spaces.length + 1}`,
+      icon: importedIcon(sp),
       pinned: pinnedId ? walk(pinnedId, 0, seen) : [],
       today: unpinnedId ? flatTabs(walk(unpinnedId, 0, seen)) : []
     })

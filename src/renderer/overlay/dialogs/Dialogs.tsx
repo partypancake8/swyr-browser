@@ -76,7 +76,7 @@ function ConfirmDeleteSpace({ vs, spaceId }: { vs: ViewState; spaceId: string })
   const c = spaceCounts(vs.state, space.id)
   const last = vs.state.spaces.length < 2
   return (
-    <Card title={`Delete ${space.emoji ? space.emoji + ' ' : ''}${space.name}?`} onClose={close}>
+    <Card title={`Delete ${space.name}?`} onClose={close}>
       <p className="mb-4 text-[13px] leading-5">
         {last
           ? 'This is your only space, so it cannot be deleted.'

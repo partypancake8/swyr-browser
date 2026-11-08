@@ -24,7 +24,8 @@ export interface SpaceTheme {
 export interface Space {
   id: string
   name: string
-  emoji: string
+  /** a Lucide icon name in kebab case, such as home or briefcase */
+  icon: string
   profileId: string
   theme: SpaceTheme
   order: number
@@ -287,7 +288,7 @@ export interface TabMovePayload {
 export interface SpaceEditPayload {
   id: string
   name?: string
-  emoji?: string
+  icon?: string
   theme?: Partial<SpaceTheme>
   profileId?: string
 }

@@ -61,7 +61,7 @@ export function ArchiveView({ vs, heading = true }: { vs: ViewState | null; head
   const archive = vs?.state.archive
   const spaces = vs?.state.spaces
   const groups = useMemo(() => {
-    const names = new Map((spaces ?? []).map((s) => [s.id, `${s.emoji ? s.emoji + ' ' : ''}${s.name}`]))
+    const names = new Map((spaces ?? []).map((s) => [s.id, s.name]))
     const list = [...(archive ?? [])]
       .filter((a) => fuzzyScore(q, itemTitle(a.item), a.item.url, names.get(a.item.spaceId ?? '') ?? '') > 0)
       .sort((a, b) => b.archivedAt - a.archivedAt)

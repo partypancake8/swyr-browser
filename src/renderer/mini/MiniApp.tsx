@@ -30,7 +30,7 @@ export function MiniApp(): ReactNode {
   const m = vs.mini
   const blank = !m.url || m.url === 'about:blank'
   const showInput = editing || blank
-  const target = space ? `${space.emoji ? space.emoji + ' ' : ''}${space.name}` : 'main window'
+  const target = space ? space.name : 'main window'
   return (
     <SpaceBackground space={space} dark={dark} className="h-full w-full overflow-hidden">
       <div className="drag relative flex h-[38px] items-center gap-0.5 pr-1.5" style={{ paddingLeft: 76 }}>
