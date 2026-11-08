@@ -101,6 +101,23 @@ test('shortcuts: defaults, overrides, labels', () => {
   assert.equal(acceleratorLabel('Cmd+Shift+T'), '⇧⌘T')
   assert.equal(acceleratorLabel('Cmd+Alt+Down'), '⌥⌘↓')
   assert.equal(resolveBindings({ 'tab.close': 'Cmd+Shift+X' }).find((b) => b.id === 'tab.close').accelerator, 'Cmd+Shift+X')
+  // Opt+1..9 jump to the Nth favorite, separate from Cmd+1..9
+  assert.equal(accel('favorite.goTo.1'), 'Alt+1')
+  assert.deepEqual(bindingAction(DEFAULT_BINDINGS.find((b) => b.id === 'favorite.goTo.9')), { command: 'favorite.goTo', payload: { index: 8 } })
+})
+
+test('shortcuts: resolveBindings applies an override by binding id', () => {
+  const resolved = resolveBindings({ 'commandbar.current': 'Cmd+K' })
+  assert.equal(resolved.length, DEFAULT_BINDINGS.length)
+  const row = resolved.find((b) => b.id === 'commandbar.current')
+  assert.equal(row.accelerator, 'Cmd+K')
+  // the action and the rest of the table stay as they were
+  assert.deepEqual(bindingAction(row), { command: 'commandbar.open', payload: { mode: 'current' } })
+  assert.equal(resolved.find((b) => b.id === 'tab.new').accelerator, 'Cmd+T')
+  assert.ok(!resolved.some((b) => b.scope !== 'mini' && normalizeAccelerator(b.accelerator) === 'cmd+l'), 'Cmd+L is free in the main scope after the rebind')
+  // empty and unknown overrides are ignored
+  assert.deepEqual(resolveBindings({ 'commandbar.current': '', nope: 'Cmd+Q' }), DEFAULT_BINDINGS)
+  assert.deepEqual(resolveBindings(undefined), DEFAULT_BINDINGS)
 })
 
 test('ops: sidebar order is favorites, pinned, today', () => {

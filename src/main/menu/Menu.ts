@@ -13,8 +13,6 @@ export const REPO_URL = 'https://github.com/partypancake8/swyr-browser'
 
 export class AppMenu {
   private signature = ''
-  /** binding ids registered as menu accelerators in the menu being built */
-  private bound = new Set<string>()
 
   constructor(private readonly core: Core) {}
 
@@ -27,8 +25,8 @@ export class AppMenu {
     const b = this.core.shortcuts.accelerator(command, payload)
     const action = b ? bindingAction(b) : { command, payload }
     const enabled = this.core.commands.has(action.command)
+    // before-input-event handles the key first in every swyr contents; the menu accelerator covers the rest
     const register = Boolean(b && !b.raw && enabled)
-    if (b && register) this.bound.add(b.id)
     return {
       label,
       accelerator: b?.accelerator,
@@ -52,9 +50,7 @@ export class AppMenu {
     ])
     if (sig === this.signature) return
     this.signature = sig
-    this.bound = new Set()
     Menu.setApplicationMenu(Menu.buildFromTemplate(this.template()))
-    this.core.shortcuts.setMenuBound(this.bound)
   }
 
   /** the dock icon's menu */
@@ -109,7 +105,7 @@ export class AppMenu {
           sep,
           this.cmd('New Live Folder…', 'liveFolder.editor'), // round 3b
           sep,
-          this.cmd('Open Location…', 'commandbar.open', { mode: 'current' }),
+          this.cmd('Open Location', 'commandbar.open', { mode: 'current' }),
           sep,
           this.cmd('Close Tab', 'tab.close'),
           this.cmd('Close Window', 'window.close'),
@@ -246,6 +242,10 @@ export class AppMenu {
           {
             label: 'Go to Sidebar Item',
             submenu: Array.from({ length: 9 }, (_, i) => this.cmd(`Item ${i + 1}`, 'tab.goTo', { index: i }))
+          },
+          {
+            label: 'Go to Favorite',
+            submenu: Array.from({ length: 9 }, (_, i) => this.cmd(`Favorite ${i + 1}`, 'favorite.goTo', { index: i }))
           }
         ]
       },
