@@ -78,6 +78,7 @@ export class AppMenu {
         label: 'swyr',
         submenu: [
           this.cmd('About swyr', 'app.about'),
+          this.cmd('Check for Updates…', 'update.checkInteractive'),
           this.cmd('Welcome Guide', 'onboarding.open'),
           sep,
           this.cmd('Settings…', 'settings.open'),

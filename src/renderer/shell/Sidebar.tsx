@@ -29,6 +29,7 @@ import { TodayList } from './sidebar/TodayList'
 import { SpaceSwitcher } from './sidebar/SpaceSwitcher'
 import { focusedItem } from './SplitRow'
 import { MediaBar } from './MediaBar'
+import { UpdateBar } from './UpdateBar'
 import { ExtensionActions } from './urlrow/ExtensionActions'
 
 /** pointer drags start after 5 px; Option-drags and drags from inputs or buttons marked data-no-dnd are left alone */
@@ -293,6 +294,7 @@ export function Sidebar({ vs, peek = false }: { vs: ViewState; peek?: boolean })
         </div>
 
         <MediaBar vs={vs} />
+        <UpdateBar />
         <div className="flex h-10 shrink-0 items-center gap-1 pt-1">
           <button className="icon-btn" title="Archive" onClick={() => invoke('archive.open')} onContextMenu={(e) => showMenu([{ label: 'Open Library', command: 'library.open' }], e)}>
             <History size={16} strokeWidth={1.9} />

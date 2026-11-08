@@ -4,9 +4,11 @@ swyr is an open-source macOS browser built around a vertical sidebar, written fr
 
 ## Install
 
-1. Download `swyr-0.1.0-arm64.dmg` (Apple silicon) from the releases page, or build it with `npm run dist`, which writes it to `dist/`.
+1. Download `swyr-0.2.0-arm64.dmg` (Apple silicon) from the [releases page](https://github.com/partypancake8/swyr-browser/releases), or build it with `npm run dist`, which writes it to `dist/`.
 2. Open the DMG and drag swyr into Applications.
 3. Start swyr. The first run opens a short guide that imports your sidebar or your Chrome, Safari or Firefox bookmarks, lets you pick colours and web apps, and sets the defaults. Passwords are not imported because Electron has no password store.
+
+You install the DMG once. After that swyr updates itself (see Updates).
 
 ## Build and run
 
@@ -19,7 +21,7 @@ npm run build      # build main, preload and renderers into out/
 npm run typecheck
 npm run lint
 npm test           # build, then unit checks and headless end-to-end flows
-npm run dist       # package dist/swyr-0.1.0-arm64.dmg (and a zip)
+npm run dist       # package dist/swyr-<version>-arm64.dmg, the zip and latest-mac.yml
 ```
 
 ## Headless tests
@@ -29,6 +31,7 @@ Tests launch the built app with `SWYR_TEST=1` through Playwright's `_electron.la
 - `npm test` runs every suite one after another, never in parallel, and ends with the parity suite.
 - `node tests/parity.mjs` re-proves every feature marked done in the table below. It prints `PARITY <row> ok` for each row, or `PARITY <row> FAIL <reason>` and exits non-zero. Pages come from a local HTTP server, so it needs no network. Set `SWYR_TEST_OUT=<dir>` to keep its captures.
 - `node tests/packaged.mjs` smoke-tests the packaged app after `npm run dist`.
+- `node tests/updater.mjs` proves an update offered by a local feed reaches state and the sidebar.
 
 Gestures and window chrome (hover reveal, swipe, drags, full screen, traffic lights, DevTools and picture-in-picture windows) cannot be driven headless. For these the suite proves the command or state change that the gesture triggers, and the row's note says so.
 
@@ -126,6 +129,20 @@ The table lists every row of the feature inventory swyr set out to match. A row 
 | 85 | Mobile companion | out-of-scope | mobile app, not part of a desktop browser |
 | 86 | Onboarding | done | swyr://onboarding steps Welcome, Import, Make it yours, Defaults (with the web app picker added this round), Done; onboarding.complete applies colours, archive timer, ad blocker and picked Favorites; no account step because swyr has no account |
 <!-- feature-table:end -->
+
+## Updates
+
+swyr updates itself from the GitHub releases of this repository through electron-updater.
+
+- A release build checks 20 seconds after it starts and then every 2 hours. It reads `latest-mac.yml` from the newest release, downloads the zip it names and checks its sha512.
+- While the download runs, and once it is ready, a row at the bottom of the sidebar says so. Click "swyr 0.2.1 is ready. Restart to update." to install it now. Otherwise the update installs the next time you quit swyr.
+- Settings > General > Updates shows the running version and the last check, and has a Check for updates button. The swyr menu has Check for Updates… as well.
+- If a download or install fails, the row and Settings keep the new version on offer and open its release page, where you can download the DMG by hand.
+- Development builds started from `out/main/index.js` never check.
+
+Releases are signed with an Apple Development certificate and are not notarized. Squirrel.Mac, which installs the update, accepts a new version only when its signature matches the installed app, so every release must be signed with the same certificate. The first install still needs a right-click Open past Gatekeeper. If Squirrel.Mac refuses an update, swyr falls back to the release page as above. Installing an update over an unnotarized build has not been tested end to end yet; 0.2.0 to 0.2.1 is the first real case.
+
+To publish a release, bump `version` in package.json, commit and push main, then run `swyr-release` (in `~/bin`) from the repository. It checks that main is clean and matches origin/main, runs `npm run dist` and `node tests/packaged.mjs`, and creates the GitHub release `v<version>` with the DMG, the zip and `latest-mac.yml`. `swyr-release --notes-file <path>` sets the release notes. It refuses to run when that release already exists. The headless check `node tests/updater.mjs` serves a local feed that offers 9.9.9 and proves the app reports it and shows the sidebar row (`SWYR_UPDATE_FEED` and `SWYR_UPDATE_NO_DOWNLOAD=1` under `SWYR_TEST=1`).
 
 ## Site compatibility
 

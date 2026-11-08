@@ -1,5 +1,6 @@
 // swyr main process: lifecycle, protocol, windows, menus, test hook.
 import { app } from 'electron'
+import fs from 'node:fs'
 import path from 'node:path'
 import { registerSchemePrivileges } from './protocol/Protocol'
 import { setupDefaultSession } from './profiles/Profiles'
@@ -12,10 +13,23 @@ import { initPlatform } from './commands/platform'
 import { setupAppIdentity } from './menu/About'
 import { startOnboarding } from './onboarding/Onboarding'
 import { frontmostApp, type SourceApp } from './linkrules/SourceApp'
+import { registerUpdateCommands, startUpdateChecks } from './updates/Updater'
 
 const TEST = process.env.SWYR_TEST === '1'
 
 app.setName('swyr')
+// development runs (electron out/main/index.js) report swyr's version, not Electron's, so the About panel and
+// the updater compare against the real one
+if (!app.isPackaged) {
+  try {
+    const v = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8')).version
+    // app.setVersion exists at runtime but is missing from Electron's typings
+    const setVersion = (app as unknown as { setVersion?: (v: string) => void }).setVersion
+    if (typeof v === 'string' && setVersion) setVersion.call(app, v)
+  } catch {
+    /* keep Electron's */
+  }
+}
 if (TEST && process.env.SWYR_USER_DATA) app.setPath('userData', path.resolve(process.env.SWYR_USER_DATA))
 // headless test runs keep their renderer count small: same-site pages share a process past this limit
 if (TEST) app.commandLine.appendSwitch('renderer-process-limit', process.env.SWYR_RENDERER_LIMIT || '4')
@@ -80,12 +94,15 @@ if (!gotLock) {
     core = new Core()
     initPlatform(core)
     core.commands.register('archive.runAuto', ({ core: c }, p) => runAutoArchive(c, typeof p.now === 'number' && Number.isFinite(p.now) ? p.now : undefined))
+    const c0 = core
+    registerUpdateCommands(core.commands, () => c0.store.notify()) // round 7: in-app updates
     registerIpc(core)
     core.menu.refresh()
     core.createWindow()
     app.dock?.setMenu(core.menu.dockMenu()) // round 3c
     startOnboarding(core) // round 3c: first run opens swyr://onboarding
     startAutoArchive(core)
+    startUpdateChecks()
     markReady(core)
     for (const p of pendingUrls.splice(0)) openUrl(p.url, p.source)
 

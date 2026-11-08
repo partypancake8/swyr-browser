@@ -5,6 +5,7 @@ import { PLATFORM_PAGE_COMMANDS } from './commands/platform'
 import { PAGE_3A_COMMANDS } from './commands/pages'
 import { DOCUMENT_PAGE_COMMANDS } from './commands/documents' // round 3b
 import { APP_PAGE_COMMANDS } from './commands/app'
+import { UPDATE_PAGE_COMMANDS } from './updates/Updater'
 
 /** commands an internal page (swyr://newtab, settings, archive) may run */
 const PAGE_COMMANDS = new Set([
@@ -25,7 +26,8 @@ const PAGE_COMMANDS = new Set([
   ...PLATFORM_PAGE_COMMANDS, // round 2c
   ...PAGE_3A_COMMANDS, // round 3a: swyr://styles, swyr://history
   ...DOCUMENT_PAGE_COMMANDS, // round 3b
-  ...APP_PAGE_COMMANDS // round 3c
+  ...APP_PAGE_COMMANDS, // round 3c
+  ...UPDATE_PAGE_COMMANDS // round 7
 ])
 
 export function registerIpc(core: Core): void {

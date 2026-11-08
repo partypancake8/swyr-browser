@@ -1,7 +1,7 @@
 {
   "name": "swyr",
   "productName": "swyr",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "swyr, an open-source macOS browser with a vertical sidebar, spaces and a command bar",
   "license": "MIT",
   "author": "Sawyer Smith",
@@ -92,7 +92,14 @@
       "title": "swyr ${version}",
       "icon": "resources/icon.icns"
     },
-    "afterPack": "scripts/after-pack.mjs"
+    "afterPack": "scripts/after-pack.mjs",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "partypancake8",
+        "repo": "swyr-browser"
+      }
+    ]
   },
   "scripts": {
     "dev": "electron-vite dev",
@@ -125,6 +132,7 @@
     "cmdk": "1.1.1",
     "electron-chrome-extensions": "4.10.0",
     "electron-chrome-web-store": "0.13.0",
+    "electron-updater": "6.8.11",
     "lucide-react": "1.70.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",

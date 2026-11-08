@@ -361,6 +361,24 @@ export interface PlatformRuntime {
   defaultBrowser: boolean
   adblockLists: 'bundled' | 'full'
   downloadDirectory: string
+  /** round 7: in-app updates from GitHub Releases */
+  update: UpdateRuntime
+}
+
+export type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error' | 'upToDate'
+
+/** round 7: the updater's runtime state (src/main/updates/Updater.ts) */
+export interface UpdateRuntime {
+  status: UpdateStatus
+  /** the version on offer (available, downloading, ready) */
+  version?: string
+  /** download progress, 0 to 100 */
+  percent?: number
+  error?: string
+  /** epoch ms of the last finished check */
+  checkedAt?: number
+  /** the running version */
+  current: string
 }
 
 export interface ImportSummary {
@@ -375,6 +393,7 @@ export interface TestState {
   extensions?: ExtensionRuntime[]
   downloads?: DownloadEntry[]
   adblockStats?: AdblockStats
+  update?: UpdateRuntime
 }
 
 // round 3a: Styles, Site Settings, Reader, History, capture.

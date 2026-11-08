@@ -115,12 +115,12 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
     getState(): TestState | null {
       const core = current()
       if (!core) return null
-      const { extensions, downloads, adblockStats } = platformRuntime()
+      const { extensions, downloads, adblockStats, update } = platformRuntime()
       const windows = [
         ...core.windows.map((w) => ({ ...w.runtime(), kind: 'main' as const })),
         ...core.minis.filter((m) => !m.closed).map((m) => m.runtime())
       ]
-      return JSON.parse(JSON.stringify({ ...core.store.state, windows, extensions, downloads, adblockStats }))
+      return JSON.parse(JSON.stringify({ ...core.store.state, windows, extensions, downloads, adblockStats, update }))
     },
     activePartition(): string {
       const core = current()

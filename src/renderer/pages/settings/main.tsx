@@ -8,7 +8,7 @@ import './settings.css'
 import { invoke, startViewSync, useView } from '../../common/store'
 import { activeSpace, useSpaceTheme } from '../../common/theme'
 import { sortedSpaces } from '@shared/ops'
-import type { Appearance, ArchiveAfter, PlatformRuntime, Space, ViewState } from '@shared/types'
+import type { Appearance, ArchiveAfter, PlatformRuntime, Space, UpdateRuntime, ViewState } from '@shared/types'
 import { usePlatformPage } from './usePlatformPage'
 import { Button, Card, Row, Section, Toggle, inputClass, selectClass } from './ui'
 import { searchSettings, type PaneId, type SettingEntry } from './search'
@@ -155,6 +155,8 @@ function GeneralPane({ vs, p }: { vs: ViewState; p: PlatformRuntime | null }): R
         </Row>
       </Section>
 
+      <UpdatesSection p={p} />
+
       <Section title="Default browser">
         <Row
           setting="defaultBrowser"
@@ -169,6 +171,47 @@ function GeneralPane({ vs, p }: { vs: ViewState; p: PlatformRuntime | null }): R
         </Row>
       </Section>
     </>
+  )
+}
+
+// ----- Updates (round 7)
+
+function updateDetail(u: UpdateRuntime): string {
+  const when = u.checkedAt ? `Last checked ${new Date(u.checkedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}.` : 'Not checked yet.'
+  const state =
+    u.status === 'checking'
+      ? 'Checking now.'
+      : u.status === 'upToDate'
+        ? 'This is the newest version.'
+        : u.status === 'available'
+          ? `swyr ${u.version} is available.${u.error ? ' ' + u.error : ''}`
+          : u.status === 'downloading'
+            ? `Downloading swyr ${u.version}${typeof u.percent === 'number' ? `, ${u.percent}%` : ''}.`
+            : u.status === 'ready'
+              ? `swyr ${u.version} is ready. Restart to update.`
+              : u.status === 'error'
+                ? u.error || 'The last check failed.'
+                : ''
+  return [state, when].filter(Boolean).join(' ')
+}
+
+function UpdatesSection({ p }: { p: PlatformRuntime | null }): ReactNode {
+  const u = p?.update
+  return (
+    <Section title="Updates" note="swyr checks for a new version 20 seconds after it starts and every 2 hours, downloads it, and installs it when you quit.">
+      <Row setting="updates" label={u ? `swyr ${u.current}` : 'swyr'} detail={u ? updateDetail(u) : ''}>
+        {u?.version && u.status !== 'ready' && <Button onClick={() => invoke('update.openReleaseNotes')}>Release notes</Button>}
+        {u?.status === 'ready' ? (
+          <Button kind="primary" onClick={() => invoke('update.install')}>
+            Restart to update
+          </Button>
+        ) : (
+          <Button kind="primary" disabled={u?.status === 'checking' || u?.status === 'downloading'} onClick={() => invoke('update.check')}>
+            Check for updates
+          </Button>
+        )}
+      </Row>
+    </Section>
   )
 }
 

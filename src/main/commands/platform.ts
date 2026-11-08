@@ -31,6 +31,7 @@ import type { CommandContext, Commands } from './Commands'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { exportDocuments } from './documents' // round 3b
+import { updateRuntime } from '../updates/Updater' // round 7
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined)
 
@@ -84,7 +85,7 @@ function isDefaultBrowser(): boolean {
 
 export function platformRuntime(): PlatformRuntime {
   if (!P) {
-    return { extensions: [], downloads: [], adblockStats: { blocked: 0, perTab: {} }, downloadsPanel: [], defaultBrowser: false, adblockLists: 'bundled', downloadDirectory: '' }
+    return { extensions: [], downloads: [], adblockStats: { blocked: 0, perTab: {} }, downloadsPanel: [], defaultBrowser: false, adblockLists: 'bundled', downloadDirectory: '', update: updateRuntime() }
   }
   return {
     extensions: P.extensions.list(liveSessions()),
@@ -93,7 +94,8 @@ export function platformRuntime(): PlatformRuntime {
     downloadsPanel: [...P.panels],
     defaultBrowser: P.defaultBrowser,
     adblockLists: P.adblock.lists,
-    downloadDirectory: P.downloads.directory()
+    downloadDirectory: P.downloads.directory(),
+    update: updateRuntime()
   }
 }
 

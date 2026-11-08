@@ -24,6 +24,7 @@ const STATIC: SettingEntry[] = [
   { id: 'adblock', pane: 'general', label: 'Block ads and trackers', detail: 'EasyList and EasyPrivacy.', keywords: 'ad blocker adblock trackers privacy content blocking' },
   { id: 'adblockAllow', pane: 'general', label: 'Sites allowed to show ads', keywords: 'ad blocker allow list whitelist exception site' },
   { id: 'downloadDirectory', pane: 'general', label: 'Save downloads to', keywords: 'downloads folder location directory' },
+  { id: 'updates', pane: 'general', label: 'Check for updates', detail: 'The current version and the last check.', keywords: 'update upgrade version release new software' },
   { id: 'defaultBrowser', pane: 'general', label: 'Default browser', detail: 'Make swyr the default browser.', keywords: 'default browser links other apps' },
   // Profiles
   { id: 'profiles', pane: 'profiles', label: 'Your profiles', detail: 'Each profile has its own cookies, logins, history, extensions and Favorites.', keywords: 'profile rename delete cookies logins accounts' },

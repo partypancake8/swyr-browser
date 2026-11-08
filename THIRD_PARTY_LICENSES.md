@@ -54,6 +54,7 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | electron-builder | 26.18.0 | MIT |
 | electron-chrome-extensions | 4.10.0 | MIT |
 | electron-chrome-web-store | 0.13.0 | MIT |
+| electron-updater | 6.8.11 | MIT |
 | electron-vite | 6.0.0 | MIT |
 | eslint | 10.14.0 | MIT |
 | eslint-plugin-react-hooks | 7.1.1 | MIT |
@@ -240,10 +241,12 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | @upsetjs/venn.js | 2.0.0 | MIT |
 | adm-zip | 0.5.18 | MIT |
 | anymatch | 3.1.3 | ISC |
+| argparse | 2.0.1 | Python-2.0 |
 | aria-hidden | 1.2.6 | MIT |
 | binary-extensions | 2.3.0 | MIT |
 | braces | 3.0.3 | MIT |
 | browser-fs-access | 0.29.1 | Apache-2.0 |
+| builder-util-runtime | 9.7.0 | MIT |
 | canvas-roundrect-polyfill | 0.0.1 | MIT |
 | chevrotain | 11.0.3 | Apache-2.0 |
 | chevrotain-allstar | 0.3.1 | MIT |
@@ -305,6 +308,7 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | electron | 45.2.3 | MIT |
 | electron-chrome-extensions | 4.10.0 | MIT |
 | electron-chrome-web-store | 0.13.0 | MIT |
+| electron-updater | 6.8.11 | MIT |
 | env-paths | 3.0.0 | MIT |
 | es-toolkit | 1.53.2 | MIT |
 | es6-promise-pool | 2.5.0 | MIT |
@@ -312,6 +316,7 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | fastdom | 1.0.12 | MIT |
 | fill-range | 7.1.1 | MIT |
 | fractional-indexing | 3.2.0 | CC0-1.0 |
+| fs-extra | 10.1.0 | MIT |
 | fsevents | 2.3.3 | MIT |
 | fuzzy | 0.1.3 | MIT |
 | get-nonce | 1.0.1 | MIT |
@@ -333,14 +338,19 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | isexe | 2.0.0 | ISC |
 | jotai | 2.11.0 | MIT |
 | jotai-scope | 0.7.2 | MIT |
+| js-yaml | 4.3.2 | MIT |
+| jsonfile | 6.2.1 | MIT |
 | katex | 0.16.47 | MIT |
 | khroma | 2.1.0 | MIT |
 | langium | 3.3.1 | MIT |
 | layout-base | 2.0.1 | MIT |
 | layout-base | 1.0.2 | MIT |
+| lazy-val | 1.0.5 | MIT |
 | linkifyjs | 4.4.0 | MIT |
 | lodash-es | 4.17.21 | MIT |
 | lodash.debounce | 4.0.8 | MIT |
+| lodash.escaperegexp | 4.1.2 | MIT |
+| lodash.isequal | 4.5.0 | MIT |
 | lodash.throttle | 4.1.1 | MIT |
 | lucide-react | 1.70.0 | ISC |
 | marked | 17.0.6 | MIT |
@@ -398,6 +408,7 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | rw | 1.3.3 | BSD-3-Clause |
 | safer-buffer | 2.1.2 | MIT |
 | sass | 1.51.0 | MIT |
+| sax | 1.6.1 | BlueOak-1.0.0 |
 | scheduler | 0.28.0 | MIT |
 | semver | 7.8.6 | ISC |
 | shebang-command | 2.0.0 | MIT |
@@ -407,6 +418,7 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | strictdom | 1.0.1 | MIT |
 | stylis | 4.4.0 | MIT |
 | sumchecker | 3.0.1 | Apache-2.0 |
+| tiny-typed-emitter | 2.1.0 | MIT |
 | tinyexec | 1.3.1 | MIT |
 | tldts-core | 7.4.20 | MIT |
 | tldts-experimental | 7.4.19 | MIT |
@@ -416,6 +428,7 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | tunnel-rat | 0.1.2 | MIT |
 | undici | 7.30.2 | MIT |
 | undici-types | 7.24.6 | MIT |
+| universalify | 2.0.1 | MIT |
 | use-callback-ref | 1.3.3 | MIT |
 | use-sidecar | 1.1.3 | MIT |
 | use-sync-external-store | 1.7.0 | MIT |
@@ -589,7 +602,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | ansi-regex | 5.0.1 | MIT |
 | ansi-styles | 4.3.0 | MIT |
 | app-builder-lib | 26.18.0 | MIT |
-| argparse | 2.0.1 | Python-2.0 |
 | asn1js | 3.1.0 | BSD-3-Clause |
 | async | 3.2.6 | MIT |
 | async-exit-hook | 2.0.1 | MIT |
@@ -608,7 +620,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | browserslist | 4.29.5 | MIT |
 | buffer-from | 1.1.2 | MIT |
 | builder-util | 26.16.0 | MIT |
-| builder-util-runtime | 9.7.0 | MIT |
 | bytestreamjs | 2.0.1 | BSD-3-Clause |
 | cac | 7.1.0 | MIT |
 | cacheable | 2.5.0 | MIT |
@@ -692,7 +703,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | fs-extra | 11.4.1 | MIT |
 | fs-extra | 8.1.0 | MIT |
 | fs-extra | 7.0.1 | MIT |
-| fs-extra | 10.1.0 | MIT |
 | fs-extra | 11.3.1 | MIT |
 | fs.realpath | 1.0.0 | ISC |
 | function-bind | 1.1.2 | MIT |
@@ -736,7 +746,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | jake | 10.9.4 | Apache-2.0 |
 | jiti | 2.7.0 | MIT |
 | js-tokens | 4.0.0 | MIT |
-| js-yaml | 4.3.2 | MIT |
 | jsesc | 3.1.0 | MIT |
 | json-buffer | 3.0.1 | MIT |
 | json-schema-traverse | 1.0.0 | MIT |
@@ -745,10 +754,8 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | json-stringify-safe | 5.0.1 | ISC |
 | json5 | 2.2.3 | MIT |
 | jsonfile | 4.0.0 | MIT |
-| jsonfile | 6.2.1 | MIT |
 | keyv | 4.5.4 | MIT |
 | keyv | 5.6.0 | MIT |
-| lazy-val | 1.0.5 | MIT |
 | levn | 0.4.1 | MIT |
 | lightningcss | 1.33.0 | MPL-2.0 |
 | lightningcss-android-arm64 | 1.33.0 | MPL-2.0 |
@@ -833,7 +840,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | rolldown | 1.2.16 | MIT |
 | safe-buffer | 5.1.2 | MIT |
 | sanitize-filename | 1.6.4 | WTFPL OR ISC |
-| sax | 1.6.1 | BlueOak-1.0.0 |
 | semver | 6.3.2 | ISC |
 | semver | 7.7.4 | ISC |
 | semver | 5.7.3 | ISC |
@@ -868,7 +874,6 @@ Regenerate this file with `node scripts/licenses.mjs`.
 | typescript-eslint | 8.72.1 | MIT |
 | undici | 6.29.1 | MIT |
 | universalify | 0.1.2 | MIT |
-| universalify | 2.0.1 | MIT |
 | unzipper | 0.12.5 | MIT |
 | update-browserslist-db | 1.3.4 | MIT |
 | uri-js | 4.4.1 | BSD-2-Clause |
