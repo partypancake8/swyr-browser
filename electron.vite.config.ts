@@ -42,7 +42,7 @@ export default defineConfig({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        input: { index: r('src/preload/index.ts'), page: r('src/preload/page.ts'), mini: r('src/preload/mini.ts') },
+        input: { index: r('src/preload/index.ts'), page: r('src/preload/page.ts'), mini: r('src/preload/mini.ts'), extension: r('src/preload/extension.ts') },
         output: { format: 'cjs', entryFileNames: '[name].js' }
       }
     },
