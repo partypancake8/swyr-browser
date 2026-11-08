@@ -4,7 +4,7 @@ swyr is an open-source macOS browser built around a vertical sidebar, written fr
 
 ## Install
 
-1. Download `swyr-0.2.0-arm64.dmg` (Apple silicon) from the [releases page](https://github.com/partypancake8/swyr-browser/releases), or build it with `npm run dist`, which writes it to `dist/`.
+1. Download `swyr-0.2.3-arm64.dmg` (Apple silicon) from the [releases page](https://github.com/partypancake8/swyr-browser/releases), or build it with `npm run dist`, which writes it to `dist/`.
 2. Open the DMG and drag swyr into Applications.
 3. Start swyr. The first run opens a short guide that imports your sidebar or your Chrome, Safari or Firefox bookmarks, lets you pick colours and web apps, and sets the defaults. Passwords are not imported because Electron has no password store.
 
