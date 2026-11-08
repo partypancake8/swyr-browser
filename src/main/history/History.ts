@@ -95,6 +95,12 @@ export class History {
     )
   }
 
+  /** whether a URL was visited (in any profile, or the one named) */
+  has(url: string, profileId?: string): boolean {
+    for (const id of profileId ? [profileId] : this.knownProfiles()) if (this.list(id).some((v) => v.url === url)) return true
+    return false
+  }
+
   /** merge visits imported from another browser; returns how many were new */
   importVisits(profileId: string, visits: Visit[]): number {
     const l = this.list(profileId)

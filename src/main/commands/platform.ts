@@ -84,13 +84,22 @@ function isDefaultBrowser(): boolean {
   }
 }
 
-export function platformRuntime(): PlatformRuntime {
+/** the profile a window shows, for filtering private downloads (undefined: no filter, as the test hook asks) */
+function viewerOf(w: SwyrWindow | undefined): { incognito: boolean; profileId: string } | undefined {
+  if (!w || !P) return undefined
+  const space = w.closed ? undefined : w.space()
+  const profile = space ? P.core.store.state.profiles.find((x) => x.id === space.profileId) : undefined
+  return { incognito: Boolean(profile?.incognito || space?.incognito), profileId: space?.profileId ?? '' }
+}
+
+/** platform runtime state; with a window, downloads are the ones that window may list */
+export function platformRuntime(w?: SwyrWindow): PlatformRuntime {
   if (!P) {
     return { extensions: [], downloads: [], adblockStats: { blocked: 0, perTab: {} }, downloadsPanel: [], defaultBrowser: false, adblockLists: 'bundled', downloadDirectory: '', update: updateRuntime() }
   }
   return {
     extensions: P.extensions.list(liveSessions()),
-    downloads: P.downloads.list.map((d) => ({ ...d })),
+    downloads: P.downloads.visibleTo(viewerOf(w)).map((d) => ({ ...d })),
     adblockStats: { blocked: P.adblock.stats.blocked, perTab: { ...P.adblock.stats.perTab } },
     downloadsPanel: [...P.panels],
     defaultBrowser: P.defaultBrowser,
@@ -106,10 +115,9 @@ function notifyPlatform(): void {
   notifyTimer = setTimeout(() => {
     notifyTimer = null
     if (!P) return
-    const platform = platformRuntime()
     for (const w of P.core.windows) {
       const wc = w.shell.webContents
-      if (!w.closed && !wc.isDestroyed()) wc.send('swyr:event', { type: 'platform', platform })
+      if (!w.closed && !wc.isDestroyed()) wc.send('swyr:event', { type: 'platform', platform: platformRuntime(w) })
     }
   }, 60)
 }
@@ -160,7 +168,10 @@ function purgePrivate(core: Core, profileId?: string): void {
     st.spaces = st.spaces.filter((x) => !ids.has(x.profileId) && !(x.incognito && !profileId))
     st.profiles = st.profiles.filter((p) => !ids.has(p.id))
   })
-  for (const id of ids) void forgetProfileSession(id, true)
+  for (const id of ids) {
+    P?.downloads.forgetProfile(id)
+    void forgetProfileSession(id, true)
+  }
 }
 
 // ----- init
@@ -250,7 +261,7 @@ export function initPlatform(core: Core): void {
 
   onProfileSession((ses: Session, profile: Profile) => {
     adblock.attach(ses)
-    downloads.attach(ses)
+    downloads.attach(ses, { profileId: profile.id, incognito: Boolean(profile.incognito) })
     extensions.attach(ses, profile)
   })
   void adblock.loadFullLists()
@@ -405,9 +416,9 @@ function applyImport(core: Core, w: SwyrWindow | undefined, sidebar: ImportedSid
 // ----- commands
 
 export function registerPlatformCommands(c: Commands): void {
-  c.register('platform.state', () => {
+  c.register('platform.state', ({ w }) => {
     if (P) P.defaultBrowser = isDefaultBrowser()
-    return platformRuntime()
+    return platformRuntime(w)
   })
 
   c.register('settings.set', ({ core }, p) => {
@@ -563,7 +574,7 @@ export function registerPlatformCommands(c: Commands): void {
     return resolved
   })
   c.register('downloads.cancel', (_ctx, p) => Boolean(P && str(p.id) && P.downloads.cancel(str(p.id)!)))
-  c.register('downloads.clear', () => (P ? P.downloads.clear() : 0))
+  c.register('downloads.clear', ({ w }) => (P ? P.downloads.clear(viewerOf(w)) : 0))
   c.register('downloads.openFile', async ({ core }, p) => {
     const d = P?.downloads.get(str(p.id) ?? '')
     if (!d || d.state !== 'completed') return false

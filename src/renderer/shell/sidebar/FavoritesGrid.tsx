@@ -48,7 +48,7 @@ function Tile({ item, vs }: { item: Item; vs: ViewState }): ReactNode {
         if (e.button === 0) void invoke('tab.activate', { id: item.id })
       }}
       onContextMenu={(e) => showMenu(favoriteMenu(item), e)}
-      data-item={item.id}
+      data-item={item.id} data-item-id={item.id}
       data-section="favorites"
     >
       <span style={{ opacity: loaded || active ? 1 : 0.8 }}>

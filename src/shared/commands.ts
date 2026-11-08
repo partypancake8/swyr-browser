@@ -160,6 +160,7 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'history.clear', title: 'Clear History' },
   { name: 'history.remove', title: 'Remove from History' },
   { name: 'history.open', title: 'History', palette: true },
+  { name: 'history.visit', title: 'Open from History' },
   // round 3b: notes, canvases, live folders, library
   { name: 'note.new', title: 'New Note', palette: true },
   { name: 'note.get', title: 'Read Note' },
@@ -176,6 +177,7 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'documents.delete', title: 'Delete Note or Canvas' },
   { name: 'document.open', title: 'Open Note or Canvas' },
   { name: 'library.media', title: 'Media in Tabs' },
+  { name: 'library.mediaRecent', title: 'Recently Played Media' },
   { name: 'liveFolder.editor', title: 'New Live Folder…', palette: true },
   { name: 'liveFolder.new', title: 'New Live Folder' },
   { name: 'liveFolder.refresh', title: 'Refresh Live Folder' },

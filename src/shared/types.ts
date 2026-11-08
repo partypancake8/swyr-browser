@@ -66,6 +66,8 @@ export interface ArchiveEntry {
   item: Item
   archivedAt: number
   reason: ArchiveReason
+  /** an archived split's pane items, in pane order, so the split restores whole */
+  children?: Item[]
 }
 
 export interface SiteSearch {
@@ -363,6 +365,10 @@ export interface DownloadEntry {
   startedAt: number
   /** round 8: a file that runs code when opened (dmg, pkg, app, sh, command, js, jar...): the panel warns */
   dangerous?: boolean
+  /** started in a private window: listed only in private windows of that profile, never saved, gone when it closes */
+  incognito?: boolean
+  /** the profile whose session started the download */
+  profileId?: string
 }
 
 export interface AdblockStats {
@@ -395,7 +401,7 @@ export interface UpdateRuntime {
   /** download progress, 0 to 100 */
   percent?: number
   error?: string
-  /** epoch ms of the last finished check */
+  /** epoch ms of the last check: stamped when a check starts and again when it finishes (failed checks too) */
   checkedAt?: number
   /** the running version */
   current: string
@@ -525,6 +531,8 @@ export interface DocumentSummary {
   spaceIds: string[]
   /** a short preview: the first text of a note, or the element count of a canvas */
   preview: string
+  /** canvases: a PNG data URL of the board, exported by the canvas page when it saves */
+  thumbnail?: string | null
 }
 
 export type LiveFolderSource = 'github-prs' | 'github-issues' | 'rss' | 'test'

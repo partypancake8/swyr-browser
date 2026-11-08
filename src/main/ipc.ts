@@ -7,7 +7,23 @@ import { PAGE_3A_COMMANDS } from './commands/pages'
 import { DOCUMENT_PAGE_COMMANDS } from './commands/documents' // round 3b
 import { APP_PAGE_COMMANDS } from './commands/app'
 import { UPDATE_PAGE_COMMANDS } from './updates/Updater'
-import { MAIN_ONLY_COMMANDS, handle, isCommandName, on, rendererPayload, setGuardCore } from './security/IpcGuard'
+import { MAIN_ONLY_COMMANDS, handle, isCommandName, isRecord, on, rendererPayload, setGuardCore, type Sender } from './security/IpcGuard'
+import { isFile, isScriptUrl } from './security/urlPolicy'
+import { historyHas } from './commands/pages'
+
+/**
+ * swyr://history may reopen or remove a file:// visit that is in history: swyr itself is asking, for a URL it
+ * recorded. Anything else (another page, another command, a file that was never visited) takes the normal path,
+ * where local files are refused.
+ */
+function historyPagePayload(core: Core, sender: Sender, command: string, payload: unknown): Record<string, unknown> | null {
+  if (sender.role !== 'internalPage' || !/^swyr:\/\/history(\/|$|[?#])/.test(sender.url)) return null
+  if (command !== 'history.visit' && command !== 'history.remove') return null
+  if (!isRecord(payload) || typeof payload.url !== 'string' || payload.url.length > 8192) return null
+  const url = payload.url
+  if (!isFile(url) || isScriptUrl(url) || !historyHas(core, url)) return null
+  return { url, ...(typeof payload.profileId === 'string' ? { profileId: payload.profileId } : {}) }
+}
 
 /** commands an internal page (swyr://newtab, settings, archive) may run */
 export const PAGE_COMMANDS = new Set([
@@ -45,7 +61,7 @@ export function registerIpc(core: Core): void {
   handle('swyr:invoke', ['shell', 'overlay', 'internalPage'], async (sender, command, payload) => {
     if (!isCommandName(command) || MAIN_ONLY_COMMANDS.has(command)) throw new Error('bad command')
     if (sender.role === 'internalPage' && !PAGE_COMMANDS.has(command)) throw new Error(`not allowed: ${command}`)
-    const p = rendererPayload(command, payload)
+    const p = historyPagePayload(core, sender, command, payload) ?? rendererPayload(command, payload)
     return clone(await core.commands.run(command, p, sender.w))
   })
   // page preload: mouse back/forward buttons, from tab and mini window pages only; the sender navigates its own
