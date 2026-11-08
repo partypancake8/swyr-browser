@@ -5,6 +5,7 @@ import type { PersistedState, Profile } from '@shared/types'
 import { handleProtocol } from '../protocol/Protocol'
 import { newId } from '../util/id'
 import { applyChromeIdentity, chromeLikeUserAgent } from './ChromeIdentity'
+import { attachUiPermissions } from '../sitesettings/PermissionPrompts'
 
 export { chromeLikeUserAgent } from './ChromeIdentity'
 
@@ -32,10 +33,9 @@ export function profileSession(profile: Profile): Session {
   partitions.set(ses, partition)
   applyChromeIdentity(ses)
   handleProtocol(ses)
-  ses.setPermissionRequestHandler((_wc, permission, callback) => {
-    const deny = new Set(['openExternal'])
-    callback(!deny.has(permission))
-  })
+  // nothing is granted until the prompting handlers (sitesettings/PermissionPrompts.ts) attach through the hooks below
+  ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false))
+  ses.setPermissionCheckHandler(() => false)
   sessions.set(profile.id, ses)
   profilesById.set(profile.id, profile)
   for (const hook of hooks) {
@@ -99,4 +99,6 @@ export function setupDefaultSession(): void {
   app.userAgentFallback = chromeLikeUserAgent(app.userAgentFallback)
   applyChromeIdentity(session.defaultSession)
   handleProtocol(session.defaultSession)
+  // the default session only shows swyr's own UI (shell, overlay, Mini Window bar)
+  attachUiPermissions(session.defaultSession)
 }

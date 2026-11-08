@@ -143,6 +143,22 @@ export type OverlayState =
   // round 3a: popovers anchored to the URL row
   | { kind: 'siteSettings'; seq: number }
   | { kind: 'stylePanel'; seq: number }
+  // round 8: a site asks for a permission (answered with permission.respond)
+  | PermissionOverlay
+
+/** the permission prompt: which site asks for what */
+export interface PermissionOverlay {
+  kind: 'permission'
+  promptId: string
+  origin: string
+  host: string
+  /** the first permission asked for (a camera and microphone request lists both in permissions) */
+  permission: SitePermission
+  permissions: SitePermission[]
+  /** the request comes from a private window: the answer is not remembered after the window closes */
+  incognito: boolean
+  seq: number
+}
 
 /** an edge of the content area a tab can be dropped on to split */
 export type SplitEdge = 'left' | 'right' | 'top' | 'bottom'
@@ -217,6 +233,8 @@ export interface ViewState {
   state: PersistedState
   window: WindowRuntime
   systemDark: boolean
+  /** which secrets are set (the values stay in the main process, see src/main/secrets/Secrets.ts) */
+  secrets?: { githubToken: boolean }
 }
 
 /** what the test hook returns */
@@ -343,6 +361,8 @@ export interface DownloadEntry {
   receivedBytes: number
   totalBytes: number
   startedAt: number
+  /** round 8: a file that runs code when opened (dmg, pkg, app, sh, command, js, jar...): the panel warns */
+  dangerous?: boolean
 }
 
 export interface AdblockStats {
@@ -398,7 +418,20 @@ export interface TestState {
 
 // round 3a: Styles, Site Settings, Reader, History, capture.
 
-export type SitePermission = 'camera' | 'microphone' | 'notifications' | 'location' | 'clipboard'
+export type SitePermission =
+  | 'camera'
+  | 'microphone'
+  | 'notifications'
+  | 'location'
+  | 'clipboard'
+  // round 8: every permission a site can ask for prompts in the overlay
+  | 'midi'
+  | 'pointerLock'
+  | 'keyboardLock'
+  | 'idleDetection'
+  | 'windowManagement'
+  | 'localFonts'
+  | 'localNetwork'
 export type PermissionDecision = 'allow' | 'deny'
 
 export interface Settings {
@@ -518,10 +551,6 @@ export interface Item {
   live?: LiveFolderInfo
 }
 
-export interface Settings {
-  /** personal access token for GitHub Live Folders, entered in the folder editor */
-  githubToken?: string
-}
 
 /** one tab with media, for the Library's Media section */
 export interface MediaEntry {

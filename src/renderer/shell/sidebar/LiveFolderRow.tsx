@@ -110,7 +110,7 @@ export function LiveFolderEditor({ vs, itemId }: { vs: ViewState; itemId?: strin
   const [query, setQuery] = useState(live?.sourceConfig.query ?? 'is:pr is:open author:@me')
   const [feed, setFeed] = useState(live?.sourceConfig.url ?? '')
   const [token, setToken] = useState('')
-  const hasToken = Boolean(vs.state.settings.githubToken)
+  const hasToken = Boolean(vs.secrets?.githubToken)
   const ref = useRef<HTMLInputElement>(null)
   useEffect(() => {
     ref.current?.focus()

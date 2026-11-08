@@ -77,13 +77,14 @@ try {
   s = await t.state()
   assert.ok(s.items.find((i) => i.id === lf).live.error)
 
-  step('the GitHub token goes to settings, never onto the item')
+  step('the GitHub token goes to the encrypted secrets file, never onto the item or into settings')
   await t.dispatch('liveFolder.edit', { itemId: lf, name: 'PRs', source: 'github-prs', sourceConfig: { query: 'repo:a/b', token: 'tok123' } })
   s = await t.state()
   const folder = s.items.find((i) => i.id === lf)
   assert.equal(folder.title, 'PRs')
   assert.deepEqual(folder.live.sourceConfig, { query: 'repo:a/b' })
-  assert.equal(s.settings.githubToken, 'tok123')
+  assert.equal(s.settings.githubToken, undefined)
+  assert.equal(await t.dispatch('liveFolder.hasToken'), true)
 
   step('liveFolder.delete removes the folder and its children')
   await t.dispatch('liveFolder.delete', { itemId: lf })

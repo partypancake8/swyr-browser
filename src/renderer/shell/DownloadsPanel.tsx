@@ -1,6 +1,6 @@
 // Sidebar downloads panel: progress, open, show in Finder, cancel, clear.
 import { useEffect, type ReactNode } from 'react'
-import { File, FolderOpen, X } from 'lucide-react'
+import { File, FolderOpen, TriangleExclamationPoint, X } from 'lucide-react'
 import type { DownloadEntry } from '@shared/types'
 import { invoke } from '../common/store'
 import { startPlatformSync, usePlatform } from './urlrow/platform'
@@ -28,6 +28,12 @@ function Row({ d }: { d: DownloadEntry }): ReactNode {
       <button className="min-w-0 flex-1 text-left" disabled={!done} title={done ? 'Open' : d.filename} onClick={() => invoke('downloads.openFile', { id: d.id })}>
         <div className="truncate text-[13px] font-semibold">{d.filename}</div>
         <div className="truncate text-[11px] font-medium">{status(d)}</div>
+        {d.dangerous && d.state !== 'cancelled' && (
+          <div className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-[var(--danger)]">
+            <TriangleExclamationPoint size={12} strokeWidth={2.2} className="shrink-0" />
+            <span className="truncate">Can run code. Open only if you trust it.</span>
+          </div>
+        )}
         {d.state === 'progressing' && (
           <div className="mt-1 h-[3px] overflow-hidden rounded-full bg-[var(--divider)]">
             <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />

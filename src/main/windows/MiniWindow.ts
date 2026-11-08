@@ -10,6 +10,8 @@ import { isInternalUrl } from '../protocol/Protocol'
 import { parseAccelerator } from '../shortcuts/Shortcuts'
 import { newId } from '../util/id'
 import type { Core } from './WindowManager'
+import { securePrefs } from '../security/Hardening'
+import { webContentMayOpen } from '../security/urlPolicy'
 
 export const MINI_SIZE = { width: 560, height: 720 }
 export const MINI_CHROME = 38
@@ -51,24 +53,18 @@ export class MiniWindow {
       titleBarStyle: 'hiddenInset',
       trafficLightPosition: { x: 12, y: 12 },
       backgroundColor: baseColor(space, dark),
-      webPreferences: {
+      webPreferences: securePrefs({
         preload: preloadPath('mini'),
-        sandbox: true,
-        contextIsolation: true,
-        nodeIntegration: false,
         spellcheck: false
-      }
+      })
     })
     this.id = this.win.id
     const view = new WebContentsView({
-      webPreferences: {
+      webPreferences: securePrefs({
         session: profileSession(profile),
         preload: preloadPath('page'),
-        sandbox: true,
-        contextIsolation: true,
-        nodeIntegration: false,
         scrollBounce: true
-      }
+      })
     })
     view.setBackgroundColor('#ffffff')
     view.setBorderRadius(MINI_RADIUS)
@@ -125,7 +121,7 @@ export class MiniWindow {
     on('before-input-event', ((e: ElectronEvent, input: Input) => this.handleInput(e, input)) as Listener)
     // a mini window holds one page: links that ask for a new window load in place
     wc.setWindowOpenHandler(({ url }) => {
-      if (!isInternalUrl(url)) void wc.loadURL(url).catch(() => undefined)
+      if (!isInternalUrl(url) && webContentMayOpen(url, wc.getURL())) void wc.loadURL(url).catch(() => undefined)
       return { action: 'deny' }
     })
   }

@@ -5,6 +5,7 @@ import { childrenOf, sameUrl } from '@shared/ops'
 import { newId } from '../util/id'
 import type { Core } from '../windows/WindowManager'
 import { githubQuery, parseFeed, parseFixture, type LiveEntry } from './feed'
+import { secrets } from '../secrets/Secrets'
 
 export const LIVE_SOURCES: LiveFolderSource[] = ['github-prs', 'github-issues', 'rss', 'test']
 export const AUTO_REFRESH_MS = 10 * 60 * 1000
@@ -13,7 +14,7 @@ const MAX_ENTRIES = 50
 
 export const isLiveSource = (v: unknown): v is LiveFolderSource => typeof v === 'string' && (LIVE_SOURCES as string[]).includes(v)
 
-/** keep only the config fields a source uses; the GitHub token never lives on the item (it goes to settings.githubToken) */
+/** keep only the config fields a source uses; the GitHub token never lives on the item (it goes to the encrypted secrets file) */
 export function cleanConfig(source: LiveFolderSource, raw: unknown): LiveFolderConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   const s = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 2000) : undefined)
@@ -61,7 +62,7 @@ export async function fetchEntries(core: Core, live: LiveFolderInfo): Promise<Li
     }
     case 'github-prs':
     case 'github-issues': {
-      const token = core.store.state.settings.githubToken
+      const token = secrets().get('githubToken')
       const q = githubQuery(live.source, cfg.query)
       if (!token && /@me\b/.test(q)) throw new Error('add a GitHub token to use @me in the query')
       const headers: Record<string, string> = { accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28', 'user-agent': 'swyr' }

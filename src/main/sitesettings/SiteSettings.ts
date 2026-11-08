@@ -1,12 +1,45 @@
-// Site permissions: requests from pages are recorded per origin in settings.sitePermissions so the
-// Site Settings popover can list and revoke them. A recorded 'deny' blocks the permission for that origin.
+// Site permissions: what each Electron permission request means for swyr, and the decisions remembered per origin.
+// Regular profiles keep decisions in settings.sitePermissions (Site Settings lists, changes and resets them);
+// private windows keep them in memory for the life of the window. The prompt itself is in PermissionPrompts.ts.
+// Type imports only, so tests/unit-3a.mjs and tests/security.mjs can load this file directly.
 import type { Session } from 'electron'
 import type { PermissionDecision, SitePermission } from '@shared/types'
 import type { Core } from '../windows/WindowManager'
 
-export const SITE_PERMISSIONS: SitePermission[] = ['camera', 'microphone', 'notifications', 'location', 'clipboard']
+export const SITE_PERMISSIONS: SitePermission[] = [
+  'camera',
+  'microphone',
+  'notifications',
+  'location',
+  'clipboard',
+  'midi',
+  'pointerLock',
+  'keyboardLock',
+  'idleDetection',
+  'windowManagement',
+  'localFonts',
+  'localNetwork'
+]
 
-/** the swyr permission names an Electron permission request stands for */
+/** permissions Chrome grants without asking: allowed for every site */
+export const AUTO_ALLOW = new Set([
+  'clipboard-sanitized-write',
+  'fullscreen',
+  'mediaKeySystem',
+  'persistent-storage',
+  'screen-wake-lock',
+  'background-sync',
+  'background-fetch',
+  'periodic-background-sync',
+  'sensors',
+  'speaker-selection',
+  'storage-access',
+  'top-level-storage-access',
+  // the File System Access API asks through the file picker itself
+  'fileSystem'
+])
+
+/** the swyr permission names an Electron permission request stands for ([] when it never prompts) */
 export function permissionsFor(permission: string, mediaTypes?: string[]): SitePermission[] {
   switch (permission) {
     case 'media': {
@@ -19,13 +52,45 @@ export function permissionsFor(permission: string, mediaTypes?: string[]): SiteP
     case 'notifications':
       return ['notifications']
     case 'geolocation':
+    case 'geolocation-approximate':
       return ['location']
     case 'clipboard-read':
-    case 'clipboard-sanitized-write':
+    case 'deprecated-sync-clipboard-read':
       return ['clipboard']
+    case 'midi':
+    case 'midiSysex':
+      return ['midi']
+    case 'pointerLock':
+      return ['pointerLock']
+    case 'keyboardLock':
+      return ['keyboardLock']
+    case 'idle-detection':
+      return ['idleDetection']
+    case 'window-management':
+      return ['windowManagement']
+    case 'local-fonts':
+      return ['localFonts']
+    case 'local-network':
+    case 'local-network-access':
+    case 'loopback-network':
+      return ['localNetwork']
     default:
       return []
   }
+}
+
+/** what to do with a request before looking at remembered decisions */
+export function requestPolicy(permission: string, origin: string, mediaTypes?: string[]): 'allow' | 'deny' | 'ask' {
+  if (!origin) return 'deny'
+  if (permission === 'openExternal') return 'deny'
+  if (AUTO_ALLOW.has(permission)) return 'allow'
+  const perms = permissionsFor(permission, mediaTypes)
+  if (!perms.length) return 'deny'
+  // swyr's own pages: media and notifications without a prompt; nothing else
+  if (origin.startsWith('swyr://')) return perms.every((p) => p === 'camera' || p === 'microphone' || p === 'notifications' || p === 'clipboard') ? 'allow' : 'deny'
+  // extensions declare what they use in their manifest, as in Chrome
+  if (origin.startsWith('chrome-extension://')) return perms.every((p) => p === 'notifications' || p === 'clipboard') ? 'allow' : 'deny'
+  return 'ask'
 }
 
 export function originOf(url: string | undefined): string {
@@ -39,11 +104,35 @@ export function originOf(url: string | undefined): string {
   }
 }
 
-export function decisions(core: Core, origin: string): Partial<Record<SitePermission, PermissionDecision>> {
+type Decisions = Partial<Record<SitePermission, PermissionDecision>>
+
+/** private window decisions: per session, in memory only */
+const privateDecisions = new WeakMap<Session, Map<string, Decisions>>()
+const privateSessions = new WeakSet<Session>()
+
+export function markPrivateSession(ses: Session): void {
+  privateSessions.add(ses)
+}
+
+export const isPrivateSession = (ses: Session | undefined | null): boolean => Boolean(ses && privateSessions.has(ses))
+
+export function decisions(core: Core, origin: string, ses?: Session | null): Decisions {
+  if (ses && privateSessions.has(ses)) return privateDecisions.get(ses)?.get(origin) ?? {}
   return core.store.state.settings.sitePermissions?.[origin] ?? {}
 }
 
-export function setDecision(core: Core, origin: string, perm: SitePermission, value: PermissionDecision | null): void {
+export function setDecision(core: Core, origin: string, perm: SitePermission, value: PermissionDecision | null, ses?: Session | null): void {
+  if (ses && privateSessions.has(ses)) {
+    let map = privateDecisions.get(ses)
+    if (!map) privateDecisions.set(ses, (map = new Map()))
+    const site = { ...(map.get(origin) ?? {}) }
+    if (value) site[perm] = value
+    else delete site[perm]
+    if (Object.keys(site).length) map.set(origin, site)
+    else map.delete(origin)
+    core.store.notify()
+    return
+  }
   core.store.update((s) => {
     const all = { ...(s.settings.sitePermissions ?? {}) }
     const site = { ...(all[origin] ?? {}) }
@@ -55,28 +144,17 @@ export function setDecision(core: Core, origin: string, perm: SitePermission, va
   })
 }
 
-const ALWAYS_DENY = new Set(['openExternal'])
+/** the remembered answer for a request: allow when every permission it needs is allowed, deny when any is blocked */
+export function remembered(site: Decisions, perms: SitePermission[]): boolean | null {
+  if (perms.some((p) => site[p] === 'deny')) return false
+  if (perms.length && perms.every((p) => site[p] === 'allow')) return true
+  return null
+}
 
-/** install the recording permission handlers on a profile session */
-export function attachPermissions(core: Core, ses: Session, incognito: boolean): void {
-  ses.setPermissionRequestHandler((wc, permission, callback, details) => {
-    if (ALWAYS_DENY.has(permission)) return callback(false)
-    const perms = permissionsFor(permission, (details as { mediaTypes?: string[] }).mediaTypes)
-    const origin = originOf(details.requestingUrl || wc?.getURL())
-    if (!perms.length || !origin) return callback(true)
-    const site = decisions(core, origin)
-    if (perms.some((p) => site[p] === 'deny')) return callback(false)
-    // granted (swyr has no prompt yet): remember it so Site Settings can revoke it; private windows keep nothing
-    if (!incognito) for (const p of perms) if (site[p] !== 'allow') setDecision(core, origin, p, 'allow')
-    callback(true)
-  })
-  ses.setPermissionCheckHandler((_wc, permission, requestingOrigin, details) => {
-    if (ALWAYS_DENY.has(permission)) return false
-    const mediaType = (details as { mediaType?: string }).mediaType
-    const perms = permissionsFor(permission, mediaType && mediaType !== 'unknown' ? [mediaType] : undefined)
-    const origin = originOf(requestingOrigin)
-    if (!perms.length || !origin) return true
-    const site = decisions(core, origin)
-    return !perms.some((p) => site[p] === 'deny')
-  })
+/** the synchronous permission check (navigator.permissions, Notification.permission): granted only once allowed */
+export function checkPolicy(core: Core, permission: string, origin: string, mediaType: string | undefined, ses?: Session | null): boolean {
+  const policy = requestPolicy(permission, origin, mediaType && mediaType !== 'unknown' ? [mediaType] : undefined)
+  if (policy !== 'ask') return policy === 'allow'
+  const perms = permissionsFor(permission, mediaType && mediaType !== 'unknown' ? [mediaType] : undefined)
+  return remembered(decisions(core, origin, ses), perms) === true
 }

@@ -4,6 +4,7 @@ import type { Item } from '@shared/types'
 import { resolveWithSettings } from '@shared/url'
 import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
+import { webContentMayOpen } from '../security/urlPolicy'
 
 export class ContextMenus {
   /** test mode only: the last menu that would have been shown (menus never pop up headless) */
@@ -72,7 +73,10 @@ export class ContextMenus {
     if (!wc) return
     const sep: MenuItemConstructorOptions = { type: 'separator' }
     const t: MenuItemConstructorOptions[] = []
-    if (params.linkURL) {
+    // links a page may not open (swyr:// pages, local files, script URLs) get only Copy Link
+    if (params.linkURL && !webContentMayOpen(params.linkURL, wc.getURL())) {
+      t.push({ label: 'Copy Link', click: () => clipboard.writeText(params.linkURL) }, sep)
+    } else if (params.linkURL) {
       t.push(
         { label: 'Open Link in New Tab', click: this.run(w, 'tab.new', { url: params.linkURL, background: true }) },
         { label: 'Open Link in Mini Window', click: this.run(w, 'mini.new', { url: params.linkURL }) },

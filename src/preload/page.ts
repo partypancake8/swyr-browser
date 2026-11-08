@@ -1,6 +1,7 @@
-// Preload for tab views. Only swyr:// internal pages get an API. Web pages get no API, only Chrome's look
-// (navigator.userAgentData brands and window.chrome, see chromeLook.ts), set before page scripts run, and
-// mouse back/forward.
+// Preload for tab, mini window and preview pages. Only swyr:// internal pages get an API (window.swyr, checked
+// again by main on every call). Web pages get no API and no Node or Electron objects: only Chrome's look
+// (navigator.userAgentData brands and window.chrome, see chromeLook.ts), set before page scripts run, and the mouse
+// back/forward channel. Reader, Styles and the hide-element picker run from main in isolated worlds.
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { chromeLook } from './chromeLook'
 
@@ -16,6 +17,22 @@ if (loc?.protocol === 'swyr:') {
     },
     onEvent(): () => void {
       return () => undefined
+    }
+  })
+  // a note or canvas changed outside the page (sidebar rename, a command): main sends the change as data and the
+  // page sees it as a 'doc-updated' event on window
+  ipcRenderer.on('swyr:doc-updated', (_e: IpcRendererEvent, detail: unknown) => {
+    if (!detail || typeof detail !== 'object') return
+    try {
+      contextBridge.executeInMainWorld({
+        func: (d: unknown) => {
+          const g = globalThis as unknown as { dispatchEvent(e: unknown): void; CustomEvent: new (type: string, init: { detail: unknown }) => unknown }
+          g.dispatchEvent(new g.CustomEvent('doc-updated', { detail: d }))
+        },
+        args: [detail]
+      })
+    } catch {
+      /* the page is going away */
     }
   })
 } else if (loc && /^(https?|file):$/.test(loc.protocol)) {

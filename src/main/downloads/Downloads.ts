@@ -1,10 +1,12 @@
 // Downloads: will-download on every profile session, saved straight into the downloads folder (no dialog),
-// progress kept as runtime state for the sidebar panel.
+// progress kept as runtime state for the sidebar panel. swyr never opens a download by itself: files open only
+// from the panel, and files that run code (dmg, pkg, app, sh, command, js, jar...) are flagged and ask first.
 import { app, type DownloadItem, type Session } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import type { DownloadEntry } from '@shared/types'
 import { newId } from '../util/id'
+import { isDangerousDownload } from '../security/urlPolicy'
 
 export interface DownloadsHost {
   directory(): string | undefined
@@ -55,7 +57,8 @@ export class Downloads {
       state: 'progressing',
       receivedBytes: 0,
       totalBytes: item.getTotalBytes(),
-      startedAt: Date.now()
+      startedAt: Date.now(),
+      dangerous: isDangerousDownload(path.basename(savePath))
     }
     this.list.unshift(entry)
     this.items.set(entry.id, item)
@@ -70,6 +73,7 @@ export class Downloads {
       entry.totalBytes = item.getTotalBytes() || entry.receivedBytes
       entry.path = item.getSavePath() || entry.path
       entry.filename = path.basename(entry.path)
+      entry.dangerous = isDangerousDownload(entry.filename)
       entry.state = state === 'completed' ? 'completed' : state === 'cancelled' ? 'cancelled' : 'interrupted'
       this.items.delete(entry.id)
       this.host.changed()

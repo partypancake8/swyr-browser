@@ -4,6 +4,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { SCHEMA_VERSION, type PersistedState } from '@shared/types'
 import { defaultSettings, defaultState } from './defaults'
+import { SECRET_NAMES, adoptLegacySecrets } from '../secrets/Secrets'
+
+/** secrets never reach state.json, even if a bug puts one into the state */
+const SECRET_KEYS = new Set<string>(SECRET_NAMES)
+const withoutSecrets = (key: string, value: unknown): unknown => (SECRET_KEYS.has(key) ? undefined : value)
 
 type Listener = (state: PersistedState) => void
 
@@ -46,6 +51,8 @@ export class Store {
   constructor(dir = app.getPath('userData')) {
     this.file = path.join(dir, 'state.json')
     this.state = this.load()
+    // older versions kept the GitHub token in settings: it moves to the encrypted secrets file
+    adoptLegacySecrets(this.state.settings as unknown as Record<string, unknown>)
     this.scheduleWrite()
   }
 
@@ -105,7 +112,7 @@ export class Store {
     const tmp = this.file + '.tmp'
     try {
       fs.mkdirSync(path.dirname(this.file), { recursive: true })
-      fs.writeFileSync(tmp, JSON.stringify(this.state, null, 1))
+      fs.writeFileSync(tmp, JSON.stringify(this.state, withoutSecrets, 1))
       fs.renameSync(tmp, this.file)
     } catch (err) {
       console.error('[swyr] state write failed', err)

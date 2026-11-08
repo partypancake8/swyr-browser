@@ -41,6 +41,18 @@ export function hostMatches(pattern: string, url: string): boolean {
   return host === bare || host.endsWith('.' + bare)
 }
 
+/**
+ * a pattern that names a site rather than every site: style JavaScript runs only on these. "*", "*://*",
+ * "https://*" and "*.*" match everything, so their styles apply CSS but never run code.
+ */
+export function patternNamesSite(pattern: string): boolean {
+  const p = pattern.trim().toLowerCase().replace(/\/+$/, '')
+  if (!p) return false
+  const host = p.includes('://') ? p.slice(p.indexOf('://') + 3) : p
+  if (p.startsWith('file://')) return true
+  return /[a-z0-9-]/.test(host.replace(/\*/g, ''))
+}
+
 /** the default host pattern for a new style on this page */
 export function sitePattern(url: string): string {
   try {

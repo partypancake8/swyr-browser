@@ -6,6 +6,8 @@ import { profileSession } from '../profiles/Profiles'
 import { isInternalUrl } from '../protocol/Protocol'
 import { PREVIEW_RADIUS } from '../layout/Layout'
 import type { SwyrWindow } from '../windows/SwyrWindow'
+import { securePrefs } from '../security/Hardening'
+import { webContentMayOpen } from '../security/urlPolicy'
 
 type Listener = (...a: never[]) => void
 type Emitter = { on(ev: string, fn: Listener): unknown; off(ev: string, fn: Listener): unknown }
@@ -43,14 +45,11 @@ export class PreviewController {
     const profile = core.store.state.profiles.find((p) => p.id === profileId) ?? core.store.state.profiles[0]
     this.profileId = profile.id
     const view = new WebContentsView({
-      webPreferences: {
+      webPreferences: securePrefs({
         session: profileSession(profile),
         preload: preloadPath('page'),
-        sandbox: true,
-        contextIsolation: true,
-        nodeIntegration: false,
         scrollBounce: true
-      }
+      })
     })
     view.setBackgroundColor('#ffffff')
     view.setBorderRadius(PREVIEW_RADIUS)
@@ -81,7 +80,7 @@ export class PreviewController {
     }) as Listener)
     // links that open new windows stay inside the preview
     wc.setWindowOpenHandler(({ url }) => {
-      if (!isInternalUrl(url)) void wc.loadURL(url).catch(() => undefined)
+      if (!isInternalUrl(url) && webContentMayOpen(url, wc.getURL())) void wc.loadURL(url).catch(() => undefined)
       return { action: 'deny' }
     })
   }

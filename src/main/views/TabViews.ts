@@ -8,6 +8,8 @@ import { extensionsService } from '../extensions/Extensions'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { leavesSite, previewSource } from '../commands/preview'
 import { isErrorPageUrl, showErrorPage } from '../errorpage/ErrorPage'
+import { securePrefs } from '../security/Hardening'
+import { webContentMayOpen } from '../security/urlPolicy'
 
 export const WARM_CACHE = 8
 /** test runs may shrink the warm cache (SWYR_WARM_TABS) to stay under a machine's renderer process limit */
@@ -50,14 +52,11 @@ export class TabViews {
     const core = this.w.core
     const profile = core.store.state.profiles.find((p) => p.id === item.profileId) ?? core.store.state.profiles[0]
     const view = new WebContentsView({
-      webPreferences: {
+      webPreferences: securePrefs({
         session: profileSession(profile),
         preload: preloadPath('page'),
-        sandbox: true,
-        contextIsolation: true,
-        nodeIntegration: false,
         scrollBounce: true
-      }
+      })
     })
     view.setBackgroundColor('#ffffff')
     view.setBorderRadius(TAB_RADIUS)
@@ -169,7 +168,8 @@ export class TabViews {
       }
     })
     wc.setWindowOpenHandler(({ url, disposition }) => {
-      if (isInternalUrl(url) && !isInternalUrl(wc.getURL())) return { action: 'deny' }
+      // web pages open web pages only: never swyr:// pages, local files or script URLs
+      if (!webContentMayOpen(url, wc.getURL())) return { action: 'deny' }
       if (disposition !== 'background-tab' && /^https?:/i.test(url) && previewSource(item())) {
         void core.commands.run('preview.open', { url, fromItemId: id }, this.w)
         return { action: 'deny' }

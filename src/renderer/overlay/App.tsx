@@ -11,6 +11,7 @@ import { Preview } from './Preview'
 import { SplitDropZones } from '../shell/SplitDropZones'
 import { SiteSettings } from './SiteSettings'
 import { StylePanel } from './StylePanel'
+import { PermissionPrompt } from './PermissionPrompt'
 
 export function App(): ReactNode {
   const vs = useView((s) => s.vs)
@@ -79,6 +80,9 @@ export function App(): ReactNode {
       return <SiteSettings key={overlay.seq} vs={vs} />
     case 'stylePanel':
       return <StylePanel key={overlay.seq} vs={vs} />
+    // round 8
+    case 'permission':
+      return <PermissionPrompt key={overlay.promptId} vs={vs} prompt={overlay} />
     default:
       return null
   }

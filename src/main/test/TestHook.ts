@@ -220,7 +220,17 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
       const core = await ready
       const wc = core.first()?.activeContents()
       if (!wc || wc.isDestroyed()) return null
-      return json(await wc.executeJavaScript(js, true))
+      // a promise the page keeps pending (Notification.requestPermission while its prompt is on screen) returns
+      // null after a few seconds and keeps running in the page, so the check can answer the prompt
+      const result = wc.executeJavaScript(js, true)
+      let timer: NodeJS.Timeout | undefined
+      const pending = new Promise<null>((resolve) => (timer = setTimeout(() => resolve(null), Number(process.env.SWYR_EVAL_WAIT_MS) || 5000)))
+      result.catch(() => undefined)
+      try {
+        return json(await Promise.race([result, pending]))
+      } finally {
+        clearTimeout(timer)
+      }
     }
   }
 }

@@ -1,7 +1,8 @@
 // Ad and tracker blocking with @ghostery/adblocker-electron (MPL-2.0, see THIRD_PARTY_LICENSES.md).
 // A small bundled list is active immediately; the prebuilt EasyList + EasyPrivacy engine replaces it once
 // fetched (cached under userData/adblock). Blocking is per session, with a per-site allow list.
-import { ipcMain, net, type Session } from 'electron'
+import { net, type Session } from 'electron'
+import { handleEvent } from '../security/IpcGuard'
 import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -174,12 +175,18 @@ export class Adblock {
   private ensureIpc(): void {
     if (this.ipcReady) return
     this.ipcReady = true
-    for (const ch of COSMETIC_CHANNELS) ipcMain.removeHandler(ch)
-    ipcMain.handle(COSMETIC_CHANNELS[0], async (event, url: string, msg?: unknown) => {
-      if (!this.sessions.has(event.sender.session) || !this.active(url)) return undefined
-      return this.engine.onInjectCosmeticFilters(event, url, msg as never)
-    })
-    ipcMain.handle(COSMETIC_CHANNELS[1], async (event) => this.engine.onIsMutationObserverEnabled(event))
+    // web pages in tabs, mini windows and the preview, in every frame (the cosmetic preload runs in sub-frames too)
+    const roles = ['webPage', 'miniPage', 'previewPage'] as const
+    handleEvent(
+      COSMETIC_CHANNELS[0],
+      roles,
+      async (event, _sender, url, msg) => {
+        if (typeof url !== 'string' || url.length > 8192 || !this.sessions.has(event.sender.session) || !this.active(url)) return undefined
+        return this.engine.onInjectCosmeticFilters(event, url, (msg && typeof msg === 'object' ? msg : undefined) as never)
+      },
+      { subframes: true }
+    )
+    handleEvent(COSMETIC_CHANNELS[1], roles, async (event) => this.engine.onIsMutationObserverEnabled(event), { subframes: true })
   }
 
   forgetTab(itemId: string): void {

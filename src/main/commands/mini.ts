@@ -1,11 +1,13 @@
 // Mini Window commands, the chrome's IPC channel, and openInMiniWindow for external links.
-import { ipcMain, Menu } from 'electron'
+import { Menu } from 'electron'
 import { sortedSpaces, spaceById, regularSpaces } from '@shared/ops'
 import { resolveWithSettings } from '@shared/url'
 import { MiniWindow } from '../windows/MiniWindow'
 import { makeItem } from './builtins'
 import type { Commands } from './Commands'
 import type { Core } from '../windows/WindowManager'
+import { handle, isCommandName, rendererPayload } from '../security/IpcGuard'
+import { isScriptUrl, refusedInput } from '../security/urlPolicy'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
@@ -28,7 +30,8 @@ export function createMini(core: Core, url?: string): MiniWindow {
   const space = spaceById(s, from?.activeSpaceId) ?? regularSpaces(s)[0] ?? sortedSpaces(s)[0]
   const profile = s.profiles.find((x) => x.id === space.profileId) ?? s.profiles[0]
   const target = url ? resolveWithSettings(url, s.settings).url : 'about:blank'
-  const m = new MiniWindow(core, /^\s*(javascript|file|swyr):/i.test(target) ? 'about:blank' : target, profile)
+  // a Mini Window holds web pages only: script URLs, local files and swyr:// pages open a blank page instead
+  const m = new MiniWindow(core, refusedInput(target, true) || /^\s*swyr:/i.test(target) ? 'about:blank' : target, profile)
   core.registerMini(m)
   return m
 }
@@ -74,10 +77,10 @@ const MINI_IPC = new Set(['mini.openInMain', 'mini.close', 'mini.navigate', 'min
 export function registerMiniCommands(c: Commands, core: Core): void {
   coreRef = core
 
-  ipcMain.handle('swyr:mini:invoke', async (event, command: unknown, payload: unknown) => {
-    const m = core.minis.find((x) => !x.closed && x.win.webContents === event.sender)
-    if (!m || typeof command !== 'string' || !MINI_IPC.has(command)) throw new Error('not allowed')
-    const p = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {}
+  handle('swyr:mini:invoke', ['miniChrome'], async (sender, command, payload) => {
+    const m = sender.mini
+    if (!m || !isCommandName(command) || !MINI_IPC.has(command)) throw new Error('not allowed')
+    const p = rendererPayload(command, payload)
     const result = await core.commands.run(command, { ...p, miniId: m.id }, core.current())
     try {
       return JSON.parse(JSON.stringify(result ?? null))
@@ -85,7 +88,7 @@ export function registerMiniCommands(c: Commands, core: Core): void {
       return null
     }
   })
-  ipcMain.handle('swyr:mini:getState', (event) => core.minis.find((x) => !x.closed && x.win.webContents === event.sender)?.viewState() ?? null)
+  handle('swyr:mini:getState', ['miniChrome'], (sender) => sender.mini?.viewState() ?? null)
 
   c.register('mini.new', ({ core: k }, p) => createMini(k, str(p.url)).id)
 
@@ -108,7 +111,7 @@ export function registerMiniCommands(c: Commands, core: Core): void {
     const wc = m?.contents()
     if (!m || !wc || !input) return false
     const url = resolveWithSettings(input, k.store.state.settings).url
-    if (/^\s*(javascript|file|swyr):/i.test(url)) return false
+    if (isScriptUrl(url) || refusedInput(url, true) || /^\s*swyr:/i.test(url)) return false
     void wc.loadURL(url).catch(() => undefined)
     return true
   })

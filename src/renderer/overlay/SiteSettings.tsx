@@ -1,19 +1,26 @@
 // Site Settings popover: ad blocking, styles, zoom, permissions, site data, mini window and extensions
 // for the active site. Opened from the URL row (siteSettings.open), anchored under it.
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { AppWindow, Bell, Blocks, Camera, ClipboardList, MapPin, Mic, Paintbrush, ShieldCheck, Trash2, ZoomIn } from 'lucide-react'
+import { AppWindow, Bell, Blocks, Camera, ClipboardList, Clock, Keyboard, MapPin, Mic, Monitor, MousePointer2, Network, Paintbrush, Piano, ShieldCheck, Trash2, Type, ZoomIn } from 'lucide-react'
 import type { SiteInfo, SitePermission, ViewState } from '@shared/types'
 import { invoke } from '../common/store'
 import { Favicon } from '../common/Favicon'
 import '../pages/settings/settings.css'
 import { Button, Toggle } from '../pages/settings/ui'
 
-const PERMISSION_LABELS: Record<SitePermission, { label: string; icon: typeof Camera }> = {
-  camera: { label: 'Camera', icon: Camera },
-  microphone: { label: 'Microphone', icon: Mic },
-  notifications: { label: 'Notifications', icon: Bell },
-  location: { label: 'Location', icon: MapPin },
-  clipboard: { label: 'Clipboard', icon: ClipboardList }
+export const PERMISSION_LABELS: Record<SitePermission, { label: string; icon: typeof Camera; ask: string }> = {
+  camera: { label: 'Camera', icon: Camera, ask: 'use your camera' },
+  microphone: { label: 'Microphone', icon: Mic, ask: 'use your microphone' },
+  notifications: { label: 'Notifications', icon: Bell, ask: 'show notifications' },
+  location: { label: 'Location', icon: MapPin, ask: 'know your location' },
+  clipboard: { label: 'Clipboard', icon: ClipboardList, ask: 'see text and images you copy' },
+  midi: { label: 'MIDI devices', icon: Piano, ask: 'use your MIDI devices' },
+  pointerLock: { label: 'Pointer lock', icon: MousePointer2, ask: 'hide and lock your pointer' },
+  keyboardLock: { label: 'Keyboard lock', icon: Keyboard, ask: 'capture your keyboard' },
+  idleDetection: { label: 'Idle detection', icon: Clock, ask: 'know when you are away' },
+  windowManagement: { label: 'Window management', icon: Monitor, ask: 'manage windows on your displays' },
+  localFonts: { label: 'Local fonts', icon: Type, ask: 'use the fonts on this Mac' },
+  localNetwork: { label: 'Local network', icon: Network, ask: 'connect to devices on your network' }
 }
 
 /** the card frame shared by the URL row popovers, under the URL field */
@@ -147,23 +154,30 @@ export function SiteSettings({ vs }: { vs: ViewState }): ReactNode {
             <Button disabled={info.zoom === 0} onClick={() => run('zoom.reset')}>Reset</Button>
           </Line>
         </Group>
-        <Group title="Permissions">
+        <Group
+          title="Permissions"
+          action={
+            perms.length > 0 && (
+              <button className="rounded-md px-1.5 py-0.5 text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--select)]" onClick={() => run('siteSettings.resetPermissions', { origin: info.origin })}>
+                Reset all
+              </button>
+            )
+          }
+        >
           {perms.length === 0 ? (
-            <div className="py-1.5 text-[13px] font-medium">This site has not asked for any permissions.</div>
+            <div className="py-1.5 text-[13px] font-medium">This site has not asked for any permissions. swyr asks you the first time it does.</div>
           ) : (
             perms.map((p) => {
               const meta = PERMISSION_LABELS[p]
               const Icon = meta.icon
               const allowed = info.permissions[p] === 'allow'
+              const set = (value: 'allow' | 'deny' | null): void => run('siteSettings.setPermission', { origin: info.origin, permission: p, value })
               return (
                 <Line key={p} icon={<Icon size={16} strokeWidth={1.9} />} label={meta.label} detail={allowed ? 'Allowed' : 'Blocked'}>
-                  {allowed ? (
-                    <Button kind="danger" onClick={() => run('siteSettings.setPermission', { origin: info.origin, permission: p, value: 'deny' })}>
-                      Revoke
-                    </Button>
-                  ) : (
-                    <Button onClick={() => run('siteSettings.setPermission', { origin: info.origin, permission: p, value: null })}>Reset</Button>
-                  )}
+                  <Toggle label={allowed ? `Block ${meta.label.toLowerCase()}` : `Allow ${meta.label.toLowerCase()}`} on={allowed} onChange={(v) => set(v ? 'allow' : 'deny')} />
+                  <Button onClick={() => set(null)} title="Forget this decision; the site asks again next time">
+                    Reset
+                  </Button>
                 </Line>
               )
             })

@@ -1,5 +1,7 @@
 // Turn command bar input into a URL: a real URL, a bare domain, or a search.
 
+// javascript: and vbscript: are not here (typed, they are searched for); data: and file: typed in a renderer are
+// refused by the IPC guard (src/main/security/IpcGuard.ts)
 const SCHEME_RE = /^(https?|swyr|file|about|data|chrome|view-source|mailto):/i
 const DOMAIN_RE = /^([a-z0-9-]+\.)+[a-z]{2,}(:\d+)?(\/.*)?$/i
 const HOST_PORT_RE = /^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?(\/.*)?$/i
