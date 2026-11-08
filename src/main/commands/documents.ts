@@ -5,6 +5,7 @@ import type { CanvasDocument, DocumentSummary, Item, MediaEntry, NoteDocument, P
 import { childrenOf, itemTitle, nextOrder, siblingsOf, sortedSpaces, spaceById } from '@shared/ops'
 import { newId } from '../util/id'
 import { documents, docIdFromUrl, docUrl, isDocId } from '../documents/DocumentStore'
+import { blankBoardDataUrl } from '../documents/BoardThumb'
 import { AUTO_REFRESH_MS, cleanConfig, isLiveSource, liveFolders, refreshFolder } from '../livefolders/LiveFolders'
 import { archiveItems } from './builtins'
 import type { Commands } from './Commands'
@@ -87,6 +88,16 @@ function pushToPages(core: Core, docId: string, detail: Record<string, unknown>)
   return pages.length
 }
 
+/** tell every open Library page that a document's summary changed (a new canvas thumbnail), so it lists it again */
+function pushToLibrary(core: Core, docId: string, detail: Record<string, unknown>): void {
+  for (const w of core.windows) {
+    for (const [, v] of w.tabs.views) {
+      const wc = v.webContents
+      if (!wc.isDestroyed() && /^swyr:\/\/library(\/|$|[?#])/.test(wc.getURL())) wc.send('swyr:doc-updated', { docId, ...detail })
+    }
+  }
+}
+
 /** rename the sidebar items of a document (unless the user gave an item its own name) */
 function retitleItems(core: Core, docId: string, title: string): void {
   const items = itemsFor(core.store.state, docId)
@@ -111,6 +122,8 @@ function createDocItem(core: Core, w: SwyrWindow | undefined, kind: 'note' | 'ca
       ? { id, kind: 'note', title, markdown: typeof p.markdown === 'string' ? p.markdown : '', updatedAt: 0 }
       : { id, kind: 'canvas', title, elements: [], appState: {}, files: {}, updatedAt: 0 }
   documents().put(doc)
+  // a canvas has a thumbnail from the start (an empty board); the canvas page replaces it with every save
+  if (doc.kind === 'canvas') documents().setThumbnail(id, blankBoardDataUrl())
   const section: Section = str(p.section) === 'pinned' ? 'pinned' : 'today'
   const itemId = addItemFor(core, w, doc, space.id, section, p.activate !== false)
   return itemId
@@ -165,7 +178,7 @@ function summarize(core: Core, doc: SwyrDocument): DocumentSummary {
     itemIds: items.map((i) => i.id),
     spaceIds: [...new Set(items.map((i) => i.spaceId).filter((x): x is string => Boolean(x)))],
     preview: doc.kind === 'note' ? firstText(doc.markdown) : `${doc.elements.filter(live).length} ${doc.elements.filter(live).length === 1 ? 'element' : 'elements'}`,
-    ...(doc.kind === 'canvas' ? { thumbnail: documents().thumbnail(doc.id) } : {})
+    ...(doc.kind === 'canvas' ? { thumbnail: documents().thumbnail(doc.id) ?? blankBoardDataUrl() } : {})
   }
 }
 
@@ -359,7 +372,7 @@ export function registerDocumentCommands(c: Commands): void {
     }
     documents().put(doc)
     // the page exports a small PNG of the scene with every save; the Library shows it
-    if (typeof p.thumbnail === 'string') documents().setThumbnail(doc.id, p.thumbnail)
+    if (typeof p.thumbnail === 'string' && documents().setThumbnail(doc.id, p.thumbnail)) pushToLibrary(core, doc.id, { kind: 'canvas', thumbnail: true })
     return { ok: true, kept: kept.length }
   })
 

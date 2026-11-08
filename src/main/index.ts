@@ -1,5 +1,5 @@
 // swyr main process: lifecycle, protocol, windows, menus, test hook.
-import { app } from 'electron'
+import { app, BrowserWindow, webContents } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { registerSchemePrivileges } from './protocol/Protocol'
@@ -15,6 +15,7 @@ import { startOnboarding } from './onboarding/Onboarding'
 import { frontmostApp, type SourceApp } from './linkrules/SourceApp'
 import { registerUpdateCommands, startUpdateChecks } from './updates/Updater'
 import { installHardening } from './security/Hardening'
+import { installQuitGuard } from './util/QuitGuard'
 
 const TEST = process.env.SWYR_TEST === '1'
 
@@ -124,6 +125,24 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => core?.store.flush())
+
+// the quit path: once quitting starts, every window and view is destroyed and the process exits within seconds,
+// whatever a page or view does: a vetoed close, or a view whose renderer was killed, would otherwise cancel or
+// stall the quit and leave swyr running
+installQuitGuard(app, {
+  teardown: () => {
+    core?.store.flush()
+    let left = 0
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (win.isDestroyed()) continue
+      left++
+      win.destroy()
+    }
+    for (const wc of webContents.getAllWebContents()) if (!wc.isDestroyed()) wc.close()
+    return left
+  },
+  log: (msg) => console.warn(msg)
+})
 
 if (process.env.SWYR_DEBUG === '1') {
   for (const ev of ['before-quit', 'will-quit', 'quit', 'window-all-closed'] as const) {

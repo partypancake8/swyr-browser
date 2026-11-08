@@ -51,6 +51,15 @@ export function DocumentsView({ vs, kind }: { vs: ViewState | null; kind: Docume
     document.addEventListener('visibilitychange', on)
     return () => document.removeEventListener('visibilitychange', on)
   }, [load])
+  // main tells the Library when a document's summary changes (a canvas saved a new thumbnail): list it again live
+  useEffect(() => {
+    const on = (e: Event): void => {
+      const d = (e as CustomEvent<{ kind?: string } | undefined>).detail
+      if (d && d.kind === kind) load()
+    }
+    window.addEventListener('doc-updated', on)
+    return () => window.removeEventListener('doc-updated', on)
+  }, [load, kind])
   const copy = COPY[kind]
   const Icon = kind === 'note' ? StickyNote : Shapes
   const spaces = new Map((vs?.state.spaces ?? []).map((s) => [s.id, s]))

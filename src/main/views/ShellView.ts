@@ -2,6 +2,7 @@
 import { WebContentsView, type WebContents } from 'electron'
 import path from 'node:path'
 import { securePrefs } from '../security/Hardening'
+import { appQuitting } from '../util/QuitGuard'
 
 export function preloadPath(name: 'index' | 'page' | 'mini'): string {
   return path.join(__dirname, `../preload/${name}.js`)
@@ -15,9 +16,9 @@ export function rendererUrl(host: 'shell' | 'overlay' | 'mini'): string {
 /** swyr's own UI pages (shell, overlay, mini chrome) reload themselves when their renderer process dies */
 export function reviveOnCrash(wc: WebContents, url: string): void {
   wc.on('render-process-gone', (_e, details) => {
-    if (details.reason === 'clean-exit' || wc.isDestroyed()) return
+    if (details.reason === 'clean-exit' || wc.isDestroyed() || appQuitting()) return
     setTimeout(() => {
-      if (!wc.isDestroyed()) void wc.loadURL(url).catch(() => undefined)
+      if (!wc.isDestroyed() && !appQuitting()) void wc.loadURL(url).catch(() => undefined)
     }, 50)
   })
 }

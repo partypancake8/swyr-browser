@@ -9,6 +9,7 @@ import type { SwyrWindow } from '../windows/SwyrWindow'
 import { leavesSite, previewSource } from '../commands/preview'
 import { isErrorPageUrl, showErrorPage } from '../errorpage/ErrorPage'
 import { securePrefs } from '../security/Hardening'
+import { appQuitting } from '../util/QuitGuard'
 import { webContentMayOpen } from '../security/urlPolicy'
 
 export const WARM_CACHE = 8
@@ -203,7 +204,7 @@ export class TabViews {
   /** reload a tab whose renderer process died (crash, out of memory, killed) */
   private reviveIfCrashed(id: string): void {
     const wc = this.views.get(id)?.webContents
-    if (!wc || wc.isDestroyed() || !wc.isCrashed()) return
+    if (!wc || wc.isDestroyed() || !wc.isCrashed() || appQuitting()) return
     // a page that keeps crashing is left alone after a few quick attempts
     const now = Date.now()
     const recent = (this.revived.get(id) ?? []).filter((t) => now - t < 30000)

@@ -142,6 +142,8 @@ function CanvasPage(): ReactNode {
   const api = useRef<ExcalidrawImperativeAPI | null>(null)
   const lastSig = useRef('')
   const queued = useRef<Raw[]>([])
+  /** the board has loaded its stored scene (first onChange); elements added before that wait in `queued` */
+  const sceneReady = useRef(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const saver = useMemo(
@@ -157,21 +159,36 @@ function CanvasPage(): ReactNode {
   )
   const titleSaver = useMemo(() => debounce((t: string) => void invoke('canvas.setTitle', { docId: DOC_ID, title: t, fromPage: true }), 300), [])
 
-  /** add elements (skeletons) to the running board; before it mounts they wait in a queue */
-  const addSkeletons = useCallback((skeletons: Raw[]) => {
-    const a = api.current
-    if (!a) {
-      queued.current.push(...skeletons)
-      return
-    }
-    void fontsReady().then(() => {
-      const fresh = realize(skeletons.map((s) => ({ ...s, swyrSkeleton: true })))
-      const have = new Set(a.getSceneElementsIncludingDeleted().map((e) => e.id))
-      const add = fresh.filter((e) => !have.has(e.id))
-      if (!add.length) return
-      a.updateScene({ elements: [...a.getSceneElementsIncludingDeleted(), ...add], captureUpdate: CaptureUpdateAction.IMMEDIATELY })
-    })
-  }, [])
+  /**
+   * add elements (skeletons) to the running board and save; until the board has loaded its stored scene they wait
+   * in a queue (an update before that would be replaced by the scene load, and never saved)
+   */
+  const addSkeletons = useCallback(
+    (skeletons: Raw[]) => {
+      const a = api.current
+      if (!a || !sceneReady.current) {
+        queued.current.push(...skeletons)
+        return
+      }
+      void fontsReady().then(() => {
+        const fresh = realize(skeletons.map((s) => ({ ...s, swyrSkeleton: true })))
+        const have = new Set(a.getSceneElementsIncludingDeleted().map((e) => e.id))
+        const add = fresh.filter((e) => !have.has(e.id))
+        if (!add.length) return
+        a.updateScene({ elements: [...a.getSceneElementsIncludingDeleted(), ...add], captureUpdate: CaptureUpdateAction.IMMEDIATELY })
+        // an element main added is saved (with a new thumbnail) whether or not the board reports the change
+        saver.run(a.getSceneElementsIncludingDeleted(), a.getAppState(), a.getFiles())
+      })
+    },
+    [saver]
+  )
+
+  /** the stored scene is on the board: elements that arrived meanwhile go on it now */
+  const markSceneReady = useCallback(() => {
+    if (sceneReady.current) return
+    sceneReady.current = true
+    if (queued.current.length) addSkeletons(queued.current.splice(0))
+  }, [addSkeletons])
 
   useEffect(() => {
     const off = onDocUpdated(DOC_ID, (u) => {
@@ -291,12 +308,11 @@ function CanvasPage(): ReactNode {
             theme={dark ? 'dark' : 'light'}
             excalidrawAPI={(a) => {
               api.current = a
-              if (queued.current.length) {
-                const q = queued.current.splice(0)
-                setTimeout(() => addSkeletons(q), 0)
-              }
+              // the first onChange marks the scene loaded; a board that never reports one is taken as loaded soon after
+              setTimeout(markSceneReady, 1500)
             }}
             onChange={(elements, appState, files) => {
+              if (!sceneReady.current) setTimeout(markSceneReady, 0)
               const sig = `${getSceneVersion(elements)}|${Object.keys(files).length}|${Math.round(appState.scrollX)}|${Math.round(appState.scrollY)}|${appState.zoom.value}|${appState.viewBackgroundColor}`
               if (!lastSig.current) {
                 lastSig.current = sig
