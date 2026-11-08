@@ -1,11 +1,12 @@
 // Chrome extensions: electron-chrome-extensions (MIT) on every profile session, the Chrome Web Store
 // through electron-chrome-web-store (MIT), and unpacked extensions loaded from settings.
-import { BaseWindow, dialog, nativeImage, type Session, type WebContents } from 'electron'
+import { BaseWindow, BrowserWindow, dialog, nativeImage, type Session, type WebContents } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { installChromeWebStore, uninstallExtension } from 'electron-chrome-web-store'
 import type { ExtensionRuntime, ExtensionSetting, Profile } from '@shared/types'
+import { installNativeMessaging } from './NativeMessaging'
 
 export const WEB_STORE_URL = 'https://chromewebstore.google.com/'
 
@@ -32,7 +33,19 @@ interface Anchor {
 interface PopupLike {
   browserWindow?: Electron.BrowserWindow
   extensionId: string
+  setSize(size: { width: number; height: number }): void
+  updatePosition(): void
+  show(): void
+  isDestroyed(): boolean
+  hidden: boolean
 }
+
+/** Chrome's action popup limits */
+const POPUP_MIN = 25
+const POPUP_MAX = { width: 800, height: 600 }
+
+/** the swyr preload for extension service workers and pages (built next to the other preloads) */
+const EXTENSION_PRELOAD = path.join(__dirname, '../preload/extension.js')
 
 interface BrowserActionInternals {
   activateClick(details: { eventType: string; extensionId: string; tabId: number; anchorRect: Anchor; alignment?: string }): void
@@ -118,20 +131,44 @@ export class Extensions {
       removeTab: (wc) => host.closeTab(wc),
       createWindow: async (details) => host.createWindow(Array.isArray(details.url) ? details.url[0] : details.url)
     })
-    ece.on('browser-action-popup-created', (popup: PopupLike) => {
-      const win = popup.browserWindow
-      if (!win) return
-      if (host.test) {
-        // headless: the popup renders but is never shown
-        win.show = () => undefined
-        win.showInactive = () => undefined
-      }
-    })
+    ece.on('browser-action-popup-created', (popup: PopupLike) => this.popupCreated(popup))
+    const ctx = (ece as unknown as { ctx: { router: Parameters<typeof installNativeMessaging>[0] } }).ctx
+    installNativeMessaging(ctx.router)
+    try {
+      ses.registerPreloadScript({ id: 'swyr-extension-preload', type: 'service-worker', filePath: EXTENSION_PRELOAD })
+      ses.registerPreloadScript({ id: 'swyr-extension-page-preload', type: 'frame', filePath: EXTENSION_PRELOAD })
+    } catch (err) {
+      console.warn('[swyr] extension preload failed', (err as Error).message)
+    }
     const exts = ses.extensions
     exts.on('extension-loaded', (_e, ext) => this.onLoaded(profile, ext))
     exts.on('extension-unloaded', () => host.changed())
     const ready = this.init(ses, profile)
     this.bySession.set(ses, { profile, ece, ready })
+  }
+
+  /** sizes an action popup to its document like Chrome: preferred size from Chromium, the page's scroll size as a fallback */
+  private popupCreated(popup: PopupLike): void {
+    const win = popup.browserWindow
+    if (!win) return
+    if (this.host.test) {
+      // headless: the popup renders but is never shown
+      win.show = () => undefined
+      win.showInactive = () => undefined
+    }
+    const wc = win.webContents
+    let preferred = false
+    wc.on('preferred-size-changed', (_e, size: { width: number; height: number }) => {
+      if (size.width > 0 && size.height > 0) preferred = true
+    })
+    const onSize = (_e: Electron.IpcMainEvent, size: { width?: unknown; height?: unknown }): void => {
+      if (popup.isDestroyed() || win.isDestroyed() || preferred) return
+      const n = (v: unknown, max: number): number => Math.min(max, Math.max(POPUP_MIN, typeof v === 'number' && Number.isFinite(v) ? Math.ceil(v) : POPUP_MIN))
+      popup.setSize({ width: n(size?.width, POPUP_MAX.width), height: n(size?.height, POPUP_MAX.height) })
+      popup.updatePosition()
+      if (popup.hidden) popup.show()
+    }
+    wc.ipc.on('swyr:extension-page-size', onSize)
   }
 
   private async init(ses: Session, profile: Profile): Promise<void> {
@@ -229,6 +266,24 @@ export class Extensions {
     this.host.saveSettings(list.filter((x) => x !== s))
     this.host.changed()
     return true
+  }
+
+  /** test support: writes values into an extension's chrome.storage.local through a hidden page of that extension */
+  async setStorageLocal(ses: Session, id: string, values: Record<string, unknown>): Promise<boolean> {
+    await this.whenReady(ses)
+    const ext = ses.extensions.getExtension(id)
+    if (!ext) throw new Error('extension not loaded: ' + id)
+    const manifest = (ext.manifest ?? {}) as Manifest & { options_page?: string; options_ui?: { page?: string } }
+    const action = manifest.action ?? manifest.browser_action
+    let page = action?.default_popup ?? manifest.options_ui?.page ?? manifest.options_page
+    if (!page) page = fs.readdirSync(ext.path).find((f) => f.endsWith('.html')) ?? 'manifest.json'
+    const win = new BrowserWindow({ show: false, width: 100, height: 100, webPreferences: { session: ses, sandbox: true, contextIsolation: true } })
+    try {
+      await win.webContents.loadURL(`chrome-extension://${id}/${page.replace(/^\//, '')}`)
+      return Boolean(await win.webContents.executeJavaScript(`chrome.storage.local.set(${JSON.stringify(values)}).then(() => true)`, true))
+    } finally {
+      win.destroy()
+    }
   }
 
   /** opens the extension's action popup anchored to a rect in window content coordinates */

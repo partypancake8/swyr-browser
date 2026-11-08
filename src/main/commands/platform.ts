@@ -494,12 +494,22 @@ export function registerPlatformCommands(c: Commands): void {
     return P.extensions.setEnabled(sessionFor(core, profileId, w).ses, profileId, id, enabled)
   })
   c.register('extensions.openPopup', ({ w }, p) => {
-    const id = str(p.id)
+    const id = str(p.id) ?? str(p.extensionId)
     const tab = w?.activeContents()
     if (!P || !id || !tab) return false
     const a = (p.anchor ?? {}) as Partial<Record<'x' | 'y' | 'width' | 'height', number>>
     const n = (v: unknown, d: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : d)
     return P.extensions.openPopup(tab, id, { x: n(a.x, 12), y: n(a.y, 84), width: n(a.width, 28), height: n(a.height, 28) })
+  })
+
+  // test-only: hand values to an extension through its chrome.storage.local
+  c.register('extensions.setStorageLocal', async ({ core, w }, p) => {
+    if (!core.test || process.env.SWYR_TEST !== '1') throw new Error('extensions.setStorageLocal is only available in test mode')
+    const id = str(p.extensionId) ?? str(p.id)
+    if (!P || !id) return false
+    const values = p.values && typeof p.values === 'object' ? (p.values as Record<string, unknown>) : {}
+    const profileId = extProfile(core, id, str(p.profileId), w)
+    return P.extensions.setStorageLocal(sessionFor(core, profileId, w).ses, id, values)
   })
 
   // ----- ad blocker

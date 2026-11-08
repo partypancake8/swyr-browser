@@ -127,10 +127,14 @@ Status of every row of the feature inventory swyr set out to match. done = prove
 | 86 | Onboarding | done | swyr://onboarding steps Welcome, Import, Make it yours, Defaults (with the web app picker added this round), Done; onboarding.complete applies colours, archive timer, ad blocker and picked Favorites; no account step because swyr has no account |
 <!-- feature-table:end -->
 
+## Extension native messaging
+
+Extensions can talk to desktop apps (1Password, Bitwarden, KeePassXC) through `chrome.runtime.sendNativeMessage` and `chrome.runtime.connectNative`, as in Chrome. Host manifests are read from `<userData>/NativeMessagingHosts/<name>.json` first, then the Chrome, Chromium and Mozilla `NativeMessagingHosts` folders under `~/Library/Application Support` and `/Library`, so apps that registered with Chrome work without extra setup. The manifest's `allowed_origins` must list the extension origin; the host is started with that origin as its argument and speaks 4-byte length-prefixed JSON (1 MB per message from the host, 64 MB to it). Failures surface as Chrome's `chrome.runtime.lastError` texts. `SWYR_NATIVE_HOST_DIRS` (a `:`-separated list) replaces the search path, and `SWYR_NATIVE_DEBUG=1` logs host starts, messages and exits.
+
 ## Layout
 
 - `src/main`: windows (BaseWindow + WebContentsViews), layout, state store, command registry, shortcuts, menus, profiles, auto-archive, the `swyr://` protocol and the test hook.
-- `src/preload`: the bridge for the shell, overlay and internal pages.
+- `src/preload`: the bridge for the shell, overlay and internal pages, plus the extension preload (native messaging errors, popup sizing).
 - `src/renderer`: the sidebar shell, the overlay (command bar, find and replace, space editor, Preview, Site Settings, Styles panel) and the internal pages (`swyr://newtab`, `settings`, `archive`, `library`, `history`, `styles`, `note`, `canvas`, `onboarding`).
 - `src/shared`: state types, command metadata and default shortcuts.
 
