@@ -111,6 +111,11 @@ export class SwyrWindow {
       core.scheduleBroadcast()
     })
     this.win.on('focus', () => core.onWindowFocus(this))
+    // mouse back/forward buttons on Windows and Linux arrive as app commands
+    this.win.on('app-command', (_e, cmd) => {
+      if (cmd === 'browser-backward') void core.commands.run('tab.back', {}, this)
+      if (cmd === 'browser-forward') void core.commands.run('tab.forward', {}, this)
+    })
     this.win.on('closed', () => {
       this.closed = true
       if (this.boundsTimer) clearTimeout(this.boundsTimer)

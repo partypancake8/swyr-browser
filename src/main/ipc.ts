@@ -48,6 +48,17 @@ export function registerIpc(core: Core): void {
       return null
     }
   })
+  // page preload: mouse back/forward buttons. Accepted only from tab and mini window page views; the sender
+  // navigates its own history, so a split pane goes back in that pane.
+  ipcMain.on('swyr:mouseNav', (event, dir: unknown) => {
+    if (dir !== 'back' && dir !== 'forward') return
+    const wc = event.sender
+    const isTab = core.windowFor(wc)?.role === 'tab'
+    if (!isTab && !core.minis.some((m) => m.page?.webContents === wc)) return
+    const h = wc.navigationHistory
+    if (dir === 'back' && h.canGoBack()) h.goBack()
+    if (dir === 'forward' && h.canGoForward()) h.goForward()
+  })
   ipcMain.handle('swyr:getState', (event) => {
     const owner = core.windowFor(event.sender)
     if (!owner) return null

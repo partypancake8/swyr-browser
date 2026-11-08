@@ -84,6 +84,11 @@ export class MiniWindow {
     })
     this.win.on('resize', () => this.layout())
     this.win.on('focus', () => (core.lastMini = this))
+    this.win.on('app-command', (_e, cmd) => {
+      const h = this.page?.webContents.navigationHistory
+      if (cmd === 'browser-backward' && h?.canGoBack()) h.goBack()
+      if (cmd === 'browser-forward' && h?.canGoForward()) h.goForward()
+    })
     this.win.on('closed', () => {
       this.closed = true
       this.releasePage(true)
