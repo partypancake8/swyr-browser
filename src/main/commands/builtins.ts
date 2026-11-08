@@ -15,6 +15,7 @@ import type { Core } from '../windows/WindowManager'
 import type { SwyrWindow } from '../windows/SwyrWindow'
 import { routeSplitClose } from './split'
 import { registerAppCommands } from './app'
+import { registerSuggest } from '../search/Suggest'
 import { isCodeUrl } from '../security/urlPolicy'
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
@@ -472,6 +473,7 @@ export function registerBuiltins(c: Commands): void {
   registerPageCommands(c) // round 3a: styles, site settings, reader, history, capture
   registerDocumentCommands(c) // round 3b: notes, canvases, live folders, library
   registerAppCommands(c) // round 3c: onboarding, window bounds, shortcut table, About, page commands
+  registerSuggest(c) // Command Bar live search suggestions, fetched here, never from the overlay
 
   // test mode: native menus never pop up headless, so the last one is inspectable and clickable by label
   c.register('contextMenu.last', ({ core }) => core.contextMenus.lastLabels())

@@ -155,6 +155,7 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'page.print', title: 'Print…', palette: true },
   { name: 'page.saveAs', title: 'Save Page As…', palette: true },
   { name: 'history.query', title: 'Search History' },
+  { name: 'search.suggest', title: 'Search Suggestions' },
   { name: 'history.clear', title: 'Clear History' },
   { name: 'history.remove', title: 'Remove from History' },
   { name: 'history.open', title: 'History', palette: true },

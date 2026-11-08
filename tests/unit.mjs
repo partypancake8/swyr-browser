@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { computeLayout, normalizeRatios, splitRect, clampSidebar } from '../src/main/layout/Layout.ts'
 import { resolveInput, resolveWithSettings, looksLikeUrl, displayUrl } from '../src/shared/url.ts'
 import { acceleratorLabel, resolveBindings, DEFAULT_BINDINGS, bindingAction, normalizeAccelerator } from '../src/shared/commands.ts'
+import { sectionOrder, strongTabMatch, suggestionRows, suggestEndpoint, parseSuggestions, queryTokens } from '../src/shared/commandbarRank.ts'
 import { sidebarOrder, sameUrl, awayFromPinned, isWithin, depthOf, descendantsOf, windowSpaces } from '../src/shared/ops.ts'
 
 let n = 0
@@ -121,6 +122,31 @@ test('ops: pinned url, nesting helpers', () => {
   assert.ok(!isWithin(state, 'r', 'i'))
   assert.equal(depthOf(state, state.items[2]), 2)
   assert.deepEqual(descendantsOf(state, 'r').map((x) => x.id), ['i', 't'])
+})
+
+
+test('command bar: search and suggestions rank above weakly matching tabs', () => {
+  const decoy = { title: 'fine ill do it myself - Google Search', url: 'https://www.google.com/search?q=fine' }
+  assert.deepEqual(queryTokens('what is pumpking'), ['what', 'pumpking'])
+  assert.equal(strongTabMatch('what is pumpking', decoy.title, decoy.url), false)
+  assert.equal(strongTabMatch('what are jolly ranchers made of search', decoy.title, decoy.url), false)
+  assert.equal(strongTabMatch('pumpkin carving', 'Pumpkin carving guide', 'http://127.0.0.1:1/x'), true)
+  assert.equal(strongTabMatch('github', 'Pull requests', 'https://github.com/pulls'), true, 'host counts')
+  assert.equal(strongTabMatch('go', 'Go docs', 'https://go.dev'), false, 'no token of 3+ characters')
+  assert.equal(strongTabMatch('example.com/path', 'x', 'https://example.com/path?a=1', true), true)
+  assert.deepEqual(sectionOrder('what is pumpking', 'search', false).slice(0, 3), ['search', 'suggestion', 'tab'])
+  assert.deepEqual(sectionOrder('what are jolly ranchers made', 'search', true).slice(0, 3), ['search', 'suggestion', 'tab'], 'long query keeps search first even with a strong tab')
+  assert.deepEqual(sectionOrder('pumpkin carving', 'search', true).slice(0, 2), ['tab', 'search'])
+  assert.equal(sectionOrder('example.com/path', 'url', true)[0], 'url')
+  assert.equal(sectionOrder('yt cats', 'siteSearch', false)[0], 'sitesearch')
+  assert.deepEqual(sectionOrder('', 'search', false), ['tab', 'command'])
+  assert.deepEqual(suggestionRows('cats', ['cats', 'cats memes', 'Cats Memes', 'cat videos', '', 'a', 'b', 'c', 'd']), ['cats memes', 'cat videos', 'a', 'b', 'c', 'd'])
+  assert.match(suggestEndpoint('https://www.google.com/search?q=%s'), /suggestqueries\.google\.com.*client=chrome/)
+  assert.match(suggestEndpoint('https://duckduckgo.com/?q=%s'), /ac\.duckduckgo\.com\/ac\/\?type=list/)
+  assert.match(suggestEndpoint('https://www.bing.com/search?q=%s'), /api\.bing\.com\/osjson/)
+  assert.equal(suggestEndpoint('https://kagi.com/search?q=%s'), null)
+  assert.deepEqual(parseSuggestions(['q', ['a', 'b', 3], [], { x: 1 }]), ['a', 'b'])
+  assert.deepEqual(parseSuggestions({ q: 1 }), [])
 })
 
 console.log(`unit: ${n} passed`)
