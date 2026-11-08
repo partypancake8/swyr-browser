@@ -15,14 +15,17 @@ You install the DMG once. After that swyr updates itself (see Updates).
 You need macOS, npm and Node 22.12 or newer. swyr is developed and tested on Node 26.7, which electron-vite 6 accepts.
 
 ```sh
-npm install        # also downloads the Electron binary (postinstall)
+npm ci             # installs the exact locked versions and downloads the Electron binary (postinstall)
 npm run dev        # run with hot reload
 npm run build      # build main, preload and renderers into out/
 npm run typecheck
 npm run lint
 npm test           # build, then unit checks and headless end-to-end flows
+npm run audit      # npm audit of the production dependencies
 npm run dist       # package dist/swyr-<version>-arm64.dmg, the zip and latest-mac.yml
 ```
+
+Use `npm ci`, not `npm install`, so the lockfile decides every version. SECURITY.md covers how to report a vulnerability and how the packaged app is hardened.
 
 ## Headless tests
 
@@ -30,7 +33,7 @@ Tests launch the built app with `SWYR_TEST=1` through Playwright's `_electron.la
 
 - `npm test` runs every suite one after another, never in parallel, and ends with the parity suite.
 - `node tests/parity.mjs` re-proves every feature marked done in the table below. It prints `PARITY <row> ok` for each row, or `PARITY <row> FAIL <reason>` and exits non-zero. Pages come from a local HTTP server, so it needs no network. Set `SWYR_TEST_OUT=<dir>` to keep its captures.
-- `node tests/packaged.mjs` smoke-tests the packaged app after `npm run dist`.
+- `node tests/packaged.mjs` smoke-tests the packaged app after `npm run dist`. Its fuses lock out the Node inspector, so this test and `node tests/packaged-platform.mjs` (extensions, native messaging and the ad blocker in the signed app) drive it over the Chrome DevTools Protocol instead of Playwright.
 - `node tests/updater.mjs` proves an update offered by a local feed reaches state and the sidebar.
 
 Gestures and window chrome (hover reveal, swipe, drags, full screen, traffic lights, DevTools and picture-in-picture windows) cannot be driven headless. For these the suite proves the command or state change that the gesture triggers, and the row's note says so.

@@ -7,9 +7,8 @@
     <true/>
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
     <true/>
-    <!-- extension native helpers are signed by others -->
-    <key>com.apple.security.cs.disable-library-validation</key>
-    <true/>
+    <!-- library validation stays on: swyr loads no native modules, and native messaging hosts run as their own
+         processes, so no code signed by another team is loaded into swyr -->
     <key>com.apple.security.network.client</key>
     <true/>
     <!-- sites may ask for the camera and microphone (video calls); macOS shows the usage strings from Info.plist -->
