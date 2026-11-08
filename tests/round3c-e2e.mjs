@@ -109,6 +109,37 @@ try {
   })
   await t.waitFor((s) => /example\.com/.test(activeUrl(s)), 'back via Cmd+Shift+[', 10000)
 
+  step('a rebound key works from the page at once, the old key stops, Opt+1 jumps to the first favorite')
+  const press = (accel, urlPattern) =>
+    t.app.evaluate(({ webContents }, a) => {
+      const mods = a.accel.split('+').slice(0, -1).map((m) => ({ Cmd: 'meta', Ctrl: 'control', Shift: 'shift', Opt: 'alt' })[m])
+      const key = a.accel.split('+').pop()
+      const wc = webContents.getAllWebContents().find((w) => new RegExp(a.urlPattern).test(w.getURL()))
+      if (!wc) return false
+      wc.sendInputEvent({ type: 'keyDown', keyCode: key, modifiers: mods })
+      wc.sendInputEvent({ type: 'keyUp', keyCode: key, modifiers: mods })
+      return true
+    }, { accel, urlPattern })
+  const barOpen = (s) => /command/i.test(s.windows[0].overlay?.kind || '')
+  assert.equal((await t.dispatch('shortcuts.set', { id: 'commandbar.current', accelerator: 'Cmd+K' })).ok, true)
+  assert.equal((await t.dispatch('shortcuts.list')).find((b) => b.id === 'commandbar.current').accelerator, 'Cmd+K')
+  assert.ok(await press('Cmd+K', 'example\\.com'))
+  await t.waitFor((s) => barOpen(s) && s.windows[0].overlay.mode === 'current', 'command bar via rebound Cmd+K', 5000)
+  await t.dispatch('commandbar.close')
+  await t.waitFor((s) => !barOpen(s), 'bar closed', 5000)
+  assert.ok(await press('Cmd+L', 'example\\.com'))
+  await sleep(1000)
+  assert.ok(!barOpen(await t.state()), 'old Cmd+L no longer opens the bar')
+  await t.dispatch('shortcuts.reset', { id: 'commandbar.current' })
+  const favId = (await t.state()).windows[0].activeItemId
+  await t.dispatch('tab.new', { url: 'https://example.net' })
+  await t.waitFor((s) => /example\.net/.test(activeUrl(s)), 'example.net')
+  await t.waitIdle()
+  assert.ok(await press('Opt+1', 'example\\.net'))
+  await t.waitFor((s) => s.windows[0].activeItemId === favId, 'Opt+1 activates the first favorite', 5000)
+  await t.dispatch('tab.goTo', { index: 1 })
+  await t.dispatch('tab.close')
+
   step('error page keeps the failed URL and retries')
   await t.dispatch('tab.new', { url: 'http://localhost:1/' })
   await sleep(2500)

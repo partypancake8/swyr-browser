@@ -1,4 +1,7 @@
-// Keyboard shortcuts: menu accelerators for the bindings the menu bar carries, before-input-event for the rest.
+// Keyboard shortcuts: every main-scope binding is matched in before-input-event, before the page sees the key.
+// The menu bar shows the same accelerators; preventDefault in before-input-event keeps them from firing twice.
+// A key left to the menu alone never fired when the page consumed it first (many sites take Cmd+K), and a
+// rebound key then looked dead, so the menu is only the fallback for contents without a handler (DevTools).
 // Round 3c: the full default table lives in src/shared/commands.ts; this module also lists, changes and
 // resets bindings (shortcuts.list / shortcuts.set / shortcuts.reset) with conflict checks.
 import type { Event, Input } from 'electron'
@@ -68,8 +71,6 @@ export type SetResult = { ok: true; accelerator: string } | { ok: false; error: 
 export class Shortcuts {
   bindings: Binding[] = []
   private raw: Matcher[] = []
-  /** binding ids the menu bar registers as accelerators (everything else goes through handleInput) */
-  private menuBound = new Set<string>()
   /** while the Settings recorder listens, no shortcut fires */
   paused = false
 
@@ -80,16 +81,14 @@ export class Shortcuts {
   reload(): void {
     this.bindings = resolveBindings(this.core.store.state.settings.shortcuts)
     this.raw = this.bindings
-      .filter((b) => b.scope !== 'mini' && b.accelerator && (b.raw || !this.menuBound.has(b.id)))
+      .filter((b) => b.scope !== 'mini' && b.accelerator)
       .map((b) => parseAccelerator(b.accelerator, b))
   }
 
-  /** called by the menu after every rebuild */
-  setMenuBound(ids: Iterable<string>): void {
-    const next = new Set(ids)
-    if (next.size === this.menuBound.size && [...next].every((id) => this.menuBound.has(id))) return
-    this.menuBound = next
+  /** after a change: rebuild the key table and the menu bar now, not on the next broadcast */
+  private applied(): void {
     this.reload()
+    this.core.menu.refresh()
   }
 
   /** the first main-scope binding of a command (optionally with a payload) */
@@ -167,7 +166,7 @@ export class Shortcuts {
       else next[id] = accelerator
       s.settings.shortcuts = next
     })
-    this.reload()
+    this.applied()
     return { ok: true, accelerator: isDefault ? target.accelerator : accelerator }
   }
 
@@ -181,7 +180,7 @@ export class Shortcuts {
         s.settings.shortcuts = next
       }
     })
-    this.reload()
+    this.applied()
     return true
   }
 }

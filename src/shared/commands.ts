@@ -20,6 +20,7 @@ export const COMMANDS: CommandMeta[] = [
   { name: 'tab.duplicate', title: 'Duplicate Tab', palette: true },
   { name: 'tab.activate', title: 'Switch to Tab' },
   { name: 'tab.goTo', title: 'Go to Sidebar Item' },
+  { name: 'favorite.goTo', title: 'Go to Favorite' },
   { name: 'tab.navigate', title: 'Navigate' },
   { name: 'tab.back', title: 'Back', palette: true },
   { name: 'tab.forward', title: 'Forward', palette: true },
@@ -263,6 +264,14 @@ export const DEFAULT_BINDINGS: Binding[] = [
   { id: 'tab.backBrace', command: 'tab.back', accelerator: 'Cmd+Shift+[', raw: true },
   { id: 'tab.forwardBrace', command: 'tab.forward', accelerator: 'Cmd+Shift+]', raw: true },
   ...nums(9).map((n) => ({ id: `tab.goTo:${n}`, command: 'tab.goTo', payload: { index: n - 1 }, accelerator: `Cmd+${n}` })),
+  // Opt+1..9: the Nth tile of the Favorites grid (Cmd+1..9 counts every sidebar item)
+  ...nums(9).map((n) => ({
+    id: `favorite.goTo.${n}`,
+    command: 'favorite.goTo',
+    payload: { index: n - 1 },
+    accelerator: `Alt+${n}`,
+    title: `Go to Favorite ${n}`
+  })),
   ...nums(9).map((n) => ({
     id: `space.switch:${n}`,
     command: 'space.switch',

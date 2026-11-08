@@ -55,7 +55,7 @@ The table lists every row of the feature inventory swyr set out to match. A row 
 | 8 | Next/prev space | done | Cmd+Opt+Right / Left keys through the shell run space.next / space.prev |
 | 9 | Per-space profile | done | space.edit profileId links Work to the Alt profile; activePartition of its tab is persist:profile-<alt>; Favorites shared only within a profile |
 | 10 | Profiles | done | profile.new makes a second partition; a cookie set in one profile session is absent in the other |
-| 11 | Favorites | done | tab.favorite moves the tab to the profile grid (spaceId null); Cmd+1 menu item opens it; shown in another space of the same profile, hidden in a space of another profile |
+| 11 | Favorites | done | tab.favorite moves the tab to the profile grid (spaceId null); Cmd+1 menu item opens it, Opt+1..Opt+9 open the Nth favorite tile; shown in another space of the same profile, hidden in a space of another profile |
 | 12 | Pinned tabs | done | Cmd+D menu item runs tab.togglePin; pinnedUrl set, row under [data-section=pinned]; never auto-archived (row 14) |
 | 13 | Today tabs | done | tab.new lands in section today below the divider ([data-section=today] row) |
 | 14 | Auto-archive timer | done | settings archiveAfter 24h: archive.runAuto at +23 h keeps the tab, at +25 h archives it with reason auto, pinned stays; never archives nothing at +400 days |

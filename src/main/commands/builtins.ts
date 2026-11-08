@@ -178,6 +178,17 @@ export function registerBuiltins(c: Commands): void {
     return Boolean(item)
   })
 
+  c.register('favorite.goTo', ({ core, w }, p) => {
+    // the Nth tile of the active profile's Favorites grid, as a click on it
+    if (!w) return false
+    const space = spaceById(core.store.state, w.activeSpaceId)
+    if (!space) return false
+    const index = num(p.index) ?? 0
+    const item = favoritesFor(core.store.state, space.profileId)[index]
+    if (item) w.activate(item.id)
+    return Boolean(item)
+  })
+
   c.register('tab.close', ({ core, w }, p) => {
     const routed = routeSplitClose(core, w, p)
     if (routed !== undefined) return routed
