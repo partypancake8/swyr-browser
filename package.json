@@ -1,7 +1,7 @@
 {
   "name": "swyr",
   "productName": "swyr",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "swyr, an open-source macOS browser with a vertical sidebar, spaces and a command bar",
   "license": "MIT",
   "author": "Sawyer Smith",
