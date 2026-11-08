@@ -1,16 +1,12 @@
-// One session per profile, with a Chrome-like user agent and the swyr:// protocol.
+// One session per profile, with Chrome's user agent and client hints (ChromeIdentity) and the swyr:// protocol.
 // Persistent profiles use persist:profile-<id>; private windows use an in-memory incognito-<n> partition.
 import { app, session, type Session } from 'electron'
 import type { PersistedState, Profile } from '@shared/types'
 import { handleProtocol } from '../protocol/Protocol'
 import { newId } from '../util/id'
+import { applyChromeIdentity, chromeLikeUserAgent } from './ChromeIdentity'
 
-export function chromeLikeUserAgent(ua: string): string {
-  return ua
-    .replace(/\s(swyr|Electron)\/\S+/gi, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
-}
+export { chromeLikeUserAgent } from './ChromeIdentity'
 
 const sessions = new Map<string, Session>()
 const profilesById = new Map<string, Profile>()
@@ -34,7 +30,7 @@ export function profileSession(profile: Profile): Session {
   const partition = partitionFor(profile)
   const ses = session.fromPartition(partition)
   partitions.set(ses, partition)
-  ses.setUserAgent(chromeLikeUserAgent(ses.getUserAgent()))
+  applyChromeIdentity(ses)
   handleProtocol(ses)
   ses.setPermissionRequestHandler((_wc, permission, callback) => {
     const deny = new Set(['openExternal'])
@@ -101,5 +97,6 @@ export function regularProfiles(s: PersistedState): Profile[] {
 
 export function setupDefaultSession(): void {
   app.userAgentFallback = chromeLikeUserAgent(app.userAgentFallback)
+  applyChromeIdentity(session.defaultSession)
   handleProtocol(session.defaultSession)
 }

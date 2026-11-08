@@ -9,6 +9,7 @@ import { ElectronBlocker } from '@ghostery/adblocker-electron'
 import type { AdblockStats } from '@shared/types'
 import { BUNDLED_FILTERS } from './bundled'
 
+const DEBUG = process.env.SWYR_DEBUG === '1'
 const COSMETIC_CHANNELS = ['@ghostery/adblocker/inject-cosmetic-filters', '@ghostery/adblocker/is-mutation-observer-enabled'] as const
 
 export interface AdblockHost {
@@ -25,6 +26,28 @@ export function hostAllowed(host: string, allow: string[]): boolean {
     const p = a.toLowerCase().trim().replace(/^www\./, '')
     return p !== '' && (h === p || h.endsWith('.' + p))
   })
+}
+
+const MEDIA_HOSTS = /(^|\.)(googlevideo\.com|ytimg\.com|ggpht\.com)$/i
+const YOUTUBE_HOSTS = /(^|\.)(youtube\.com|youtube-nocookie\.com|youtu\.be)$/i
+
+/** the last two labels of a host: enough to tell a site's own media from a third party's */
+function siteOf(host: string): string {
+  return host.toLowerCase().split('.').slice(-2).join('.')
+}
+
+/**
+ * requests the blocker never touches, whatever the lists say: YouTube's video and image CDNs, YouTube's own
+ * player, API and playback reporting on YouTube pages (blocking those stalls or blacks out the player), and
+ * media a site serves from its own domain
+ */
+export function neverBlock(url: string, pageUrl: string | undefined, resourceType?: string): boolean {
+  const host = hostOfUrl(url)
+  if (!host) return false
+  if (MEDIA_HOSTS.test(host)) return true
+  const page = hostOfUrl(pageUrl)
+  if (YOUTUBE_HOSTS.test(host) && YOUTUBE_HOSTS.test(page)) return true
+  return resourceType === 'media' && Boolean(page) && siteOf(host) === siteOf(page)
 }
 
 function hostOfUrl(url: string | undefined): string {
@@ -108,13 +131,16 @@ export class Adblock {
         return
       }
       const pageUrl = wc && !wc.isDestroyed() ? wc.getURL() : undefined
-      if (!/^(https?|wss?):/i.test(details.url) || !this.active(pageUrl)) {
+      if (!/^(https?|wss?):/i.test(details.url) || !this.active(pageUrl) || neverBlock(details.url, pageUrl, details.resourceType)) {
         callback({})
         return
       }
       try {
         this.engine.onBeforeRequest(details, (res) => {
-          if (res.cancel || res.redirectURL) this.count(details.webContentsId)
+          if (res.cancel || res.redirectURL) {
+            this.count(details.webContentsId)
+            if (DEBUG) console.log('[swyr:adblock] blocked', details.resourceType, details.url.slice(0, 200), 'on', pageUrl?.slice(0, 80))
+          }
           callback(res)
         })
       } catch {
