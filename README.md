@@ -1,16 +1,16 @@
 # swyr
 
-swyr is an open-source macOS browser built around a vertical sidebar. Spaces hold their own pinned tabs, Today tabs and colours; Favorites sit at the top of the sidebar; a command bar opens tabs, searches the web and runs every command; Today tabs archive themselves after 12 hours. It is an open-source alternative to Arc, written from scratch on Electron (Chromium).
+swyr is an open-source macOS browser built around a vertical sidebar, written from scratch on Electron (Chromium) as an alternative to Arc. Each space holds its own pinned tabs, Today tabs and colours. Favorites sit at the top of the sidebar. A command bar opens tabs, searches the web and runs every command, and Today tabs move to the Archive on their own after 12 hours.
 
 ## Install
 
-1. Download `swyr-0.1.0-arm64.dmg` (Apple silicon) from the releases page, or build it yourself with `npm run dist` (it lands in `dist/`).
+1. Download `swyr-0.1.0-arm64.dmg` (Apple silicon) from the releases page, or build it with `npm run dist`, which writes it to `dist/`.
 2. Open the DMG and drag swyr into Applications.
-3. Start swyr. The first run opens a short guide: import your sidebar or your Chrome, Safari or Firefox bookmarks (passwords stay behind: Electron has no password store), pick colours and web apps, and choose the defaults.
+3. Start swyr. The first run opens a short guide that imports your sidebar or your Chrome, Safari or Firefox bookmarks, lets you pick colours and web apps, and sets the defaults. Passwords are not imported because Electron has no password store.
 
 ## Build and run
 
-Requirements: macOS, Node 22.12 or newer (developed and tested on Node 26.7, which electron-vite 6 accepts), npm.
+You need macOS, npm and Node 22.12 or newer. swyr is developed and tested on Node 26.7, which electron-vite 6 accepts.
 
 ```sh
 npm install        # also downloads the Electron binary (postinstall)
@@ -24,17 +24,17 @@ npm run dist       # package dist/swyr-0.1.0-arm64.dmg (and a zip)
 
 ## Headless tests
 
-Tests run the built app with `SWYR_TEST=1`: windows are never shown, every page starts muted (set `SWYR_AUDIO=1` to hear it), `SWYR_USER_DATA` points the profile at a temporary folder, and `globalThis.__swyr` (getState, dispatch, dispatchIn, waitIdle, capture, captureMini, evalInActiveTab, partitionOf, activePartition) drives it through Playwright's `_electron.launch`.
+Tests launch the built app with `SWYR_TEST=1` through Playwright's `_electron.launch`. In that mode windows are never shown and every page starts muted (set `SWYR_AUDIO=1` to hear it). `SWYR_USER_DATA` points the profile at a temporary folder, and the test drives the app through `globalThis.__swyr` (getState, dispatch, dispatchIn, waitIdle, capture, captureMini, evalInActiveTab, partitionOf, activePartition).
 
-- `npm test` runs every suite one after another (never in parallel), ending with the parity suite.
-- `node tests/parity.mjs` re-proves every feature marked done in the table below and prints `PARITY <row> ok` for each one (or `PARITY <row> FAIL <reason>` and exits non-zero). Pages come from a local HTTP server, so it needs no network. Set `SWYR_TEST_OUT=<dir>` to keep its captures.
+- `npm test` runs every suite one after another, never in parallel, and ends with the parity suite.
+- `node tests/parity.mjs` re-proves every feature marked done in the table below. It prints `PARITY <row> ok` for each row, or `PARITY <row> FAIL <reason>` and exits non-zero. Pages come from a local HTTP server, so it needs no network. Set `SWYR_TEST_OUT=<dir>` to keep its captures.
 - `node tests/packaged.mjs` smoke-tests the packaged app after `npm run dist`.
 
-Gestures and window chrome (hover reveal, swipe, drags, full screen, traffic lights, DevTools and picture-in-picture windows) cannot be driven headless; the suite proves the command or state change the gesture triggers, and the table says so.
+Gestures and window chrome (hover reveal, swipe, drags, full screen, traffic lights, DevTools and picture-in-picture windows) cannot be driven headless. For these the suite proves the command or state change that the gesture triggers, and the row's note says so.
 
 ## Features
 
-Status of every row of the feature inventory swyr set out to match. done = proven by `tests/parity.mjs`; partial = works with a named gap; out-of-scope = deliberately not built, with the reason.
+The table lists every row of the feature inventory swyr set out to match. A row marked done is proven by `tests/parity.mjs`. A row marked partial works with a named gap, and a row marked out-of-scope was deliberately not built, with the reason in its note.
 
 <!-- feature-table:start -->
 | Row | Feature | Status | Note |
@@ -129,23 +129,24 @@ Status of every row of the feature inventory swyr set out to match. done = prove
 
 ## Site compatibility
 
-swyr presents itself to websites exactly as the matching Google Chrome build does, so sign-in pages (Google included) and video players treat it as Chrome:
+swyr presents itself to websites as the matching Google Chrome build, so sign-in pages (Google included) and video players treat it as Chrome. Every session sends Chrome's reduced user agent, `Chrome/<major>.0.0.0`, with the major version always equal to the bundled Chromium and no Electron or swyr token. This applies wherever a session is created: profiles, private windows, the mini window, previews and extension pages. The `Sec-CH-UA` client hint headers and `navigator.userAgentData` carry Chrome's brand list (GREASE, Chromium and Google Chrome, in Chrome's order), and secure navigations send these headers as Chrome's do. Web pages also see `window.chrome` with `app`, `csi`, `loadTimes` and `runtime`, as in Chrome.
 
-- every session, wherever it is created (profiles, private windows, mini window, previews, extension pages), sends Chrome's reduced user agent (`Chrome/<major>.0.0.0`, the major always equal to the bundled Chromium) with no Electron or swyr token;
-- the `Sec-CH-UA` client hint headers and `navigator.userAgentData` carry Chrome's brand list (GREASE, Chromium and Google Chrome in Chrome's order), and secure navigations carry them as Chrome's do;
-- web pages see `window.chrome` with `app`, `csi`, `loadTimes` and `runtime`, as in Chrome;
-- the ad blocker never blocks YouTube's video and image CDNs, YouTube's own player, API and playback reports on YouTube pages, or media a site serves from its own domain. Ad and tracker hosts stay blocked.
+The built-in ad blocker never blocks YouTube's video and image CDNs, YouTube's own player, API and playback reports on YouTube pages, or media that a site serves from its own domain. Ad and tracker hosts stay blocked.
 
 DRM video (Netflix, Disney+, Prime Video, Spotify web) still needs Widevine, which stock Electron does not ship.
 
 ## Extension native messaging
 
-Extensions can talk to desktop apps (1Password, Bitwarden, KeePassXC) through `chrome.runtime.sendNativeMessage` and `chrome.runtime.connectNative`, as in Chrome. Host manifests are read from `<userData>/NativeMessagingHosts/<name>.json` first, then the Chrome, Chromium and Mozilla `NativeMessagingHosts` folders under `~/Library/Application Support` and `/Library`, so apps that registered with Chrome work without extra setup. The manifest's `allowed_origins` must list the extension origin; the host is started with that origin as its argument and speaks 4-byte length-prefixed JSON (1 MB per message from the host, 64 MB to it). Failures surface as Chrome's `chrome.runtime.lastError` texts. `SWYR_NATIVE_HOST_DIRS` (a `:`-separated list) replaces the search path, and `SWYR_NATIVE_DEBUG=1` logs host starts, messages and exits.
+Extensions reach desktop apps such as 1Password, Bitwarden and KeePassXC through `chrome.runtime.sendNativeMessage` and `chrome.runtime.connectNative`, as in Chrome. swyr reads host manifests from `<userData>/NativeMessagingHosts/<name>.json` first, then from the Chrome, Chromium and Mozilla `NativeMessagingHosts` folders under `~/Library/Application Support` and `/Library`, so an app that registered with Chrome works without extra setup. The manifest's `allowed_origins` must list the extension origin. swyr starts the host with that origin as its argument, and the host speaks 4-byte length-prefixed JSON, up to 1 MB per message from the host and 64 MB to it. Failures surface as Chrome's `chrome.runtime.lastError` texts. `SWYR_NATIVE_HOST_DIRS`, a `:`-separated list, replaces the search path, and `SWYR_NATIVE_DEBUG=1` logs host starts, messages and exits.
+
+## Settings search
+
+The search box at the top of `swyr://settings` indexes every setting and every shortcut binding title across the panes. Each result names its pane, and clicking a result opens that pane, scrolls to the row and highlights it briefly.
 
 ## Layout
 
 - `src/main`: windows (BaseWindow + WebContentsViews), layout, state store, command registry, shortcuts, menus, profiles, auto-archive, the `swyr://` protocol and the test hook.
-- `src/preload`: the bridge for the shell, overlay and internal pages, plus the extension preload (native messaging errors, popup sizing).
+- `src/preload`: the bridge for the shell, overlay and internal pages, the tab preload (Chrome's `window.chrome` and brand list on web pages, mouse back and forward buttons) and the extension preload (native messaging errors, popup sizing).
 - `src/renderer`: the sidebar shell, the overlay (command bar, find and replace, space editor, Preview, Site Settings, Styles panel) and the internal pages (`swyr://newtab`, `settings`, `archive`, `library`, `history`, `styles`, `note`, `canvas`, `onboarding`).
 - `src/shared`: state types, command metadata and default shortcuts.
 
