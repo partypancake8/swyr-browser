@@ -3,6 +3,7 @@ import { app } from 'electron'
 import path from 'node:path'
 import { registerSchemePrivileges } from './protocol/Protocol'
 import { setupDefaultSession } from './profiles/Profiles'
+import { installChromeIdentity } from './profiles/ChromeIdentity'
 import { Core } from './windows/WindowManager'
 import { registerIpc } from './ipc'
 import { startAutoArchive, runAutoArchive } from './archive/AutoArchive'
@@ -20,6 +21,16 @@ if (TEST && process.env.SWYR_USER_DATA) app.setPath('userData', path.resolve(pro
 if (TEST) app.commandLine.appendSwitch('renderer-process-limit', process.env.SWYR_RENDERER_LIMIT || '4')
 
 registerSchemePrivileges()
+// site compatibility: every session (created anywhere) sends Chrome's user agent and client hint brands
+installChromeIdentity()
+// headless test runs stay silent: every webContents (tabs, panes, mini, preview, window.open children) starts muted,
+// unless SWYR_AUDIO=1; muted media still fires media-started-playing, so the media bar sees it as playing
+if (TEST && process.env.SWYR_AUDIO !== '1') {
+  app.on('web-contents-created', (_e, wc) => {
+    wc.setAudioMuted(true)
+    wc.on('did-create-window', (win) => win.webContents.setAudioMuted(true))
+  })
+}
 
 let core: Core | null = null
 const pendingUrls: Array<{ url: string; source: Promise<SourceApp | null> }> = []

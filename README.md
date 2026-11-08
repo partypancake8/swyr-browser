@@ -24,7 +24,7 @@ npm run dist       # package dist/swyr-0.1.0-arm64.dmg (and a zip)
 
 ## Headless tests
 
-Tests run the built app with `SWYR_TEST=1`: windows are never shown, `SWYR_USER_DATA` points the profile at a temporary folder, and `globalThis.__swyr` (getState, dispatch, dispatchIn, waitIdle, capture, captureMini, evalInActiveTab, partitionOf, activePartition) drives it through Playwright's `_electron.launch`.
+Tests run the built app with `SWYR_TEST=1`: windows are never shown, every page starts muted (set `SWYR_AUDIO=1` to hear it), `SWYR_USER_DATA` points the profile at a temporary folder, and `globalThis.__swyr` (getState, dispatch, dispatchIn, waitIdle, capture, captureMini, evalInActiveTab, partitionOf, activePartition) drives it through Playwright's `_electron.launch`.
 
 - `npm test` runs every suite one after another (never in parallel), ending with the parity suite.
 - `node tests/parity.mjs` re-proves every feature marked done in the table below and prints `PARITY <row> ok` for each one (or `PARITY <row> FAIL <reason>` and exits non-zero). Pages come from a local HTTP server, so it needs no network. Set `SWYR_TEST_OUT=<dir>` to keep its captures.
@@ -126,6 +126,17 @@ Status of every row of the feature inventory swyr set out to match. done = prove
 | 85 | Mobile companion | out-of-scope | mobile app, not part of a desktop browser |
 | 86 | Onboarding | done | swyr://onboarding steps Welcome, Import, Make it yours, Defaults (with the web app picker added this round), Done; onboarding.complete applies colours, archive timer, ad blocker and picked Favorites; no account step because swyr has no account |
 <!-- feature-table:end -->
+
+## Site compatibility
+
+swyr presents itself to websites exactly as the matching Google Chrome build does, so sign-in pages (Google included) and video players treat it as Chrome:
+
+- every session, wherever it is created (profiles, private windows, mini window, previews, extension pages), sends Chrome's reduced user agent (`Chrome/<major>.0.0.0`, the major always equal to the bundled Chromium) with no Electron or swyr token;
+- the `Sec-CH-UA` client hint headers and `navigator.userAgentData` carry Chrome's brand list (GREASE, Chromium and Google Chrome in Chrome's order), and secure navigations carry them as Chrome's do;
+- web pages see `window.chrome` with `app`, `csi`, `loadTimes` and `runtime`, as in Chrome;
+- the ad blocker never blocks YouTube's video and image CDNs, YouTube's own player, API and playback reports on YouTube pages, or media a site serves from its own domain. Ad and tracker hosts stay blocked.
+
+DRM video (Netflix, Disney+, Prime Video, Spotify web) still needs Widevine, which stock Electron does not ship.
 
 ## Layout
 

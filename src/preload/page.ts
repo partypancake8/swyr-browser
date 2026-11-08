@@ -1,5 +1,7 @@
-// Preload for tab views. Only swyr:// internal pages get an API; web pages get nothing.
+// Preload for tab views. Only swyr:// internal pages get an API. Web pages get no API, only Chrome's look
+// (navigator.userAgentData brands and window.chrome, see chromeLook.ts), set before page scripts run.
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { chromeLook } from './chromeLook'
 
 const loc = (globalThis as unknown as { location?: { protocol: string } }).location
 if (loc?.protocol === 'swyr:') {
@@ -15,4 +17,10 @@ if (loc?.protocol === 'swyr:') {
       return () => undefined
     }
   })
+} else if (loc && /^(https?|file):$/.test(loc.protocol)) {
+  try {
+    contextBridge.executeInMainWorld({ func: chromeLook })
+  } catch {
+    /* the page keeps the stock objects */
+  }
 }
