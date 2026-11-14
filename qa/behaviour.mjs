@@ -7,6 +7,9 @@ import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
 import { launch, repo, sleep } from '../tests/harness.mjs'
+import { watchdog } from './watchdog.mjs'
+
+watchdog('behaviour', 15)
 
 process.env.SWYR_WARM_TABS ??= '2'
 const outDir = path.join(repo, 'qa/out')

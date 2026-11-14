@@ -4,6 +4,9 @@ import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
 import { ensureBuilt, jsIn, launch, sleep, tempProfile, waitForJs, writeJson } from './lib.mjs'
+import { watchdog } from './watchdog.mjs'
+
+watchdog('reliability', 10)
 
 ensureBuilt()
 const checks = []

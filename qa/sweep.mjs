@@ -6,6 +6,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { detectorSource, ensureBuilt, jsIn, launch, outDir, sleep, tempProfile, waitForJs, writeJson } from './lib.mjs'
+import { watchdog } from './watchdog.mjs'
+
+watchdog('sweep', 15)
 
 const SELFTEST = process.argv.includes('--selftest')
 const shots = path.join(outDir, 'shots')

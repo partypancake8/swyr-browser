@@ -9,8 +9,12 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { ensureBuilt, outDir, repo, tempProfile } from './lib.mjs'
+import { watchdog } from './watchdog.mjs'
 
-const TIMEOUT_MS = 6 * 60 * 1000
+watchdog('sitecheck', 5)
+
+// the app has its own run limit (220 s); this one stops it by PID if even that fails
+const TIMEOUT_MS = 4 * 60 * 1000
 
 ensureBuilt()
 fs.mkdirSync(outDir, { recursive: true })
@@ -24,10 +28,13 @@ const child = spawn(electron, [path.join(repo, 'out/main/index.js')], { env, std
 const log = []
 child.stdout.on('data', (d) => log.push(String(d)))
 child.stderr.on('data', (d) => log.push(String(d)))
+let timedOut = false
 const code = await new Promise((resolve) => {
   const timer = setTimeout(() => {
+    timedOut = true
     console.log(`app ${child.pid} still running after ${TIMEOUT_MS / 1000} s; stopping it`)
-    child.kill('SIGKILL')
+    process.kill(child.pid, 'SIGTERM')
+    setTimeout(() => child.exitCode === null && child.signalCode === null && process.kill(child.pid, 'SIGKILL'), 3000).unref()
   }, TIMEOUT_MS)
   child.once('exit', (c, sig) => {
     clearTimeout(timer)
@@ -35,6 +42,7 @@ const code = await new Promise((resolve) => {
   })
 })
 
+const lastStep = () => (log.join('').match(/\[sitecheck\] [^\n]*/g) ?? []).pop() ?? ''
 let rows = []
 try {
   rows = JSON.parse(fs.readFileSync(file, 'utf8')).rows ?? []
@@ -43,7 +51,7 @@ try {
 }
 const expected = ['youtube video plays for 60 s', 'google search results load', 'reddit loads', 'google docs reaches the editor or the sign-in page']
 for (const name of expected) {
-  if (!rows.some((r) => r.name === name)) rows.push({ name, status: 'fail', pass: false, driver: 'in-process', webdriver: null, detail: `no result (app exit ${code})` })
+  if (!rows.some((r) => r.name === name)) rows.push({ name, status: 'fail', pass: false, driver: 'in-process', webdriver: null, detail: timedOut ? `runner timed out (${lastStep() || 'no step reported'})` : `no result (app exit ${code})` })
 }
 fs.writeFileSync(file, JSON.stringify({ rows }, null, 2) + '\n')
 for (const r of rows) console.log(`${r.status.toUpperCase()} ${r.name}: ${r.detail}`)

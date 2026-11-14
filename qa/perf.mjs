@@ -8,6 +8,9 @@ import path from 'node:path'
 import http from 'node:http'
 import { createRequire } from 'node:module'
 import { repo, sleep } from '../tests/harness.mjs'
+import { watchdog } from './watchdog.mjs'
+
+watchdog('perf', 20)
 
 const { _electron } = createRequire(path.join(repo, 'package.json'))('playwright')
 
