@@ -115,7 +115,8 @@ export class Store {
     const tmp = this.file + '.tmp'
     try {
       fs.mkdirSync(path.dirname(this.file), { recursive: true })
-      fs.writeFileSync(tmp, JSON.stringify(this.state, withoutSecrets, 1))
+      // compact JSON: indenting a long-used profile's state costs more time than the rest of the write and adds bytes
+      fs.writeFileSync(tmp, JSON.stringify(this.state, withoutSecrets))
       fs.renameSync(tmp, this.file)
     } catch (err) {
       console.error('[swyr] state write failed', err)
