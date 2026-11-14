@@ -179,6 +179,7 @@ function GeneralPane({ vs, p }: { vs: ViewState; p: PlatformRuntime | null }): R
 
 function updateDetail(u: UpdateRuntime): string {
   const when = u.checkedAt ? `Last checked ${new Date(u.checkedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}.` : 'Not checked yet.'
+  if (u.status === 'local') return 'Updates are installed locally: this copy was built and installed by hand, so it does not check for new versions.'
   const state =
     u.status === 'checking'
       ? 'Checking now.'
@@ -199,10 +200,15 @@ function updateDetail(u: UpdateRuntime): string {
 function UpdatesSection({ p }: { p: PlatformRuntime | null }): ReactNode {
   const u = p?.update
   return (
-    <Section title="Updates" note="swyr checks for a new version 20 seconds after it starts and every 2 hours, downloads it, and installs it when you quit.">
+    <Section
+      title="Updates"
+      note={u?.status === 'local' ? 'This copy of swyr was installed locally.' : 'swyr checks for a new version 20 seconds after it starts and every 2 hours, downloads it, and installs it when you quit.'}
+    >
       <Row setting="updates" label={u ? `swyr ${u.current}` : 'swyr'} detail={u ? updateDetail(u) : ''}>
         {u?.version && u.status !== 'ready' && <Button onClick={() => invoke('update.openReleaseNotes')}>Release notes</Button>}
-        {u?.status === 'ready' ? (
+        {u?.status === 'local' ? (
+          <Button disabled>Installed locally</Button>
+        ) : u?.status === 'ready' ? (
           <Button kind="primary" onClick={() => invoke('update.install')}>
             Restart to update
           </Button>

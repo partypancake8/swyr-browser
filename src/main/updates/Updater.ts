@@ -4,6 +4,8 @@
 // the last check started more than 30 minutes ago (under SWYR_TEST, on every focus). Under SWYR_TEST only SWYR_UPDATE_FEED (a generic feed) is
 // checked, and only when a test runs update.check; SWYR_UPDATE_NO_DOWNLOAD=1 stops after "available".
 import { app, dialog } from 'electron'
+import fs from 'node:fs'
+import path from 'node:path'
 import electronUpdater, { type AppUpdater } from 'electron-updater'
 import type { UpdateRuntime } from '@shared/types'
 import type { Commands } from '../commands/Commands'
@@ -17,6 +19,17 @@ const FOCUS_GAP_MS = TEST ? 0 : 30 * 60 * 1000
 
 /** commands the internal pages (swyr://settings) may run over IPC */
 export const UPDATE_PAGE_COMMANDS = ['update.check', 'update.install', 'update.openReleaseNotes', 'update.state']
+
+/**
+ * a packaged build without app-update.yml (made with electron-builder --dir and installed by hand) has no feed:
+ * it stays quiet instead of reporting the missing file as an error. Tests pretend with SWYR_UPDATE_LOCAL=1.
+ */
+function localBuild(): boolean {
+  if (TEST) return process.env.SWYR_UPDATE_LOCAL === '1'
+  return app.isPackaged && !fs.existsSync(path.join(process.resourcesPath, 'app-update.yml'))
+}
+
+const LOCAL_TEXT = 'Installed locally. This copy of swyr does not update itself.'
 
 let state: Omit<UpdateRuntime, 'current'> = { status: 'idle' }
 let changed: () => void = () => undefined
@@ -41,6 +54,7 @@ function message(err: unknown): string {
 /** the updater, or null when this build cannot update (development builds outside tests) */
 function setup(): AppUpdater | null {
   if (updater) return updater
+  if (localBuild()) return null
   const feed = TEST ? process.env.SWYR_UPDATE_FEED : undefined
   if (TEST && !feed) return null
   if (!TEST && !app.isPackaged) return null
@@ -82,7 +96,8 @@ export async function checkForUpdates(opts: { background?: boolean } = {}): Prom
   lastStart = Date.now()
   const u = setup()
   if (!u) {
-    if (opts.background) set({ checkedAt: lastStart })
+    if (localBuild()) set({ status: 'local', error: undefined, checkedAt: undefined })
+    else if (opts.background) set({ checkedAt: lastStart })
     else set({ status: 'error', error: 'This build does not update itself. Install a release build.', checkedAt: lastStart })
     return updateRuntime()
   }
@@ -101,6 +116,7 @@ export function releaseUrl(version = state.version): string {
 
 export function registerUpdateCommands(c: Commands, onChange: () => void): void {
   changed = onChange
+  if (localBuild()) state = { status: 'local' }
   c.register('update.state', () => updateRuntime())
   c.register('update.check', () => checkForUpdates())
   // the app menu item: check, then say what happened (the sidebar row and Settings carry the rest)
@@ -108,7 +124,9 @@ export function registerUpdateCommands(c: Commands, onChange: () => void): void 
     const r = await checkForUpdates()
     if (TEST) return r
     const detail =
-      r.status === 'upToDate'
+      r.status === 'local'
+        ? LOCAL_TEXT
+        : r.status === 'upToDate'
         ? `swyr ${r.current} is the newest version.`
         : r.status === 'ready'
           ? `swyr ${r.version} is ready. Restart swyr to update.`
@@ -140,6 +158,7 @@ function checkOnForeground(): void {
 
 /** packaged builds: first check 20 s after launch, then every 2 hours, and on coming to the foreground after a gap */
 export function startUpdateChecks(): void {
+  if (localBuild()) return
   if (TEST || app.isPackaged) {
     app.on('browser-window-focus', checkOnForeground)
     app.on('activate', checkOnForeground)

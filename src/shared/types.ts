@@ -392,7 +392,8 @@ export interface PlatformRuntime {
   update: UpdateRuntime
 }
 
-export type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error' | 'upToDate'
+/** local: a build installed by hand (electron-builder --dir), with no update feed; it never checks */
+export type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error' | 'upToDate' | 'local'
 
 /** round 7: the updater's runtime state (src/main/updates/Updater.ts) */
 export interface UpdateRuntime {
