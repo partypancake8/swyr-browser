@@ -113,15 +113,16 @@ await check('session restore round trip (tabs, pinned, spaces)', async () => {
     await t.waitFor((s) => s.windows?.length === 1, 'first window')
     const space = await t.dispatch('space.new', { name: 'Restore space', icon: 'briefcase', activate: false })
     for (const n of ['keep1', 'keep2', 'pinme']) await t.dispatch('tab.new', { url: P(n) })
-    let s = await t.waitFor((s) => ['keep1', 'keep2', 'pinme'].every((n) => s.items.some((i) => i.title === 'Page ' + n)), 'three tabs')
-    await t.dispatch('tab.pin', { itemId: s.items.find((i) => i.title === 'Page pinme').id })
+    // matched by URL: titles of tabs opened in a quick burst are bug 4 in BUGS.md, not what this check is about
+    let s = await t.waitFor((s) => ['keep1', 'keep2', 'pinme'].every((n) => s.items.some((i) => (i.url || '').endsWith('/' + n))), 'three tabs')
+    await t.dispatch('tab.pin', { itemId: s.items.find((i) => (i.url || '').endsWith('/pinme')).id })
     await sleep(300)
     const { done, ms } = await quitTimed(t)
     if (!done) return { pass: false, detail: `first quit hung (${ms} ms)` }
     t = await launch({ userData: dir })
     s = await t.waitFor((s) => s.windows?.length === 1, 'restored window')
     const titles = ['keep1', 'keep2', 'pinme'].map((n) => 'Page ' + n)
-    const missing = titles.filter((x) => !s.items.some((i) => i.title === x || (i.url || '').endsWith('/' + x.slice(5))))
+    const missing = titles.filter((x) => !s.items.some((i) => (i.url || '').endsWith('/' + x.slice(5))))
     const pinned = s.items.find((i) => (i.url || '').endsWith('/pinme'))?.section
     const spaceBack = s.spaces.some((sp) => sp.id === space && sp.name === 'Restore space')
     const pass = missing.length === 0 && pinned === 'pinned' && spaceBack
@@ -162,7 +163,9 @@ await check('local build: update check stays quiet', async () => {
     await t.waitFor((s) => s.windows?.length === 1 && s.update, 'update state')
     const r = await t.dispatch('update.check')
     await t.dispatch('settings.open')
-    const text = await waitForJs(t, 'swyr://settings', `(() => { const r = document.querySelector('[data-setting="updates"]'); return r ? r.innerText : null })()`, 'updates row')
+    // the row renders before the update state arrives; give it a few seconds to say something about updates
+    const rowJs = `(() => { const r = document.querySelector('[data-setting="updates"]'); return r ? r.innerText : null })()`
+    const text = await waitForJs(t, 'swyr://settings', `(() => { const x = ${rowJs}; return x && /installed locally|last checked|not checked/i.test(x) ? x : null })()`, 'updates row').catch(() => jsIn(t, 'swyr://settings', rowJs))
     const quiet = r.status === 'local' && !r.error
     const says = /installed locally/i.test(text)
     return { pass: quiet && says, detail: `status ${r.status}, error ${r.error ?? 'none'}; settings row: ${String(text).replace(/\s+/g, ' ').slice(0, 160)}` }
