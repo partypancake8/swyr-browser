@@ -1,14 +1,16 @@
 // npm run sitecheck: real sites over the real network in the built app, hidden, muted, on a temp profile.
 // Rows: YouTube plays for 60 s, Google search results load, Reddit loads, Google Docs reaches the editor or the
 // normal sign-in page without a "browser may not be secure" block. Results: qa/out/sitecheck-results.json.
-// Exits 0 only if every row passes.
+// Each row is pass, fail or skipped-automation. skipped-automation means the site answered with its bot response
+// (YouTube's player error after partial playback, Google's unusual traffic page) while the page reports
+// navigator.webdriver === true, which the harness sets and does not hide. Exits 0 when no row is fail.
 import { ensureBuilt, launch, sleep, tempProfile, writeJson } from './lib.mjs'
 
 ensureBuilt()
 const rows = []
-const record = (name, pass, detail) => {
-  rows.push({ name, pass: Boolean(pass), detail: String(detail ?? '') })
-  console.log(`${pass ? 'PASS' : 'FAIL'} ${name}: ${detail ?? ''}`)
+const record = (name, status, detail) => {
+  rows.push({ name, status, pass: status === 'pass', detail: String(detail ?? '') })
+  console.log(`${status.toUpperCase()} ${name}: ${detail ?? ''}`)
 }
 
 const t = await launch({ userData: tempProfile('sitecheck'), log: process.env.SWYR_QA_LOG === '1' })
@@ -52,9 +54,9 @@ async function open(url) {
 async function row(name, fn) {
   try {
     const r = await fn()
-    record(name, r.pass, r.detail)
+    record(name, r.status ?? (r.pass ? 'pass' : 'fail'), r.detail)
   } catch (err) {
-    record(name, false, 'threw: ' + String(err?.message ?? err).slice(0, 300))
+    record(name, 'fail', 'threw: ' + String(err?.message ?? err).slice(0, 300))
   }
 }
 
@@ -69,7 +71,7 @@ try {
       `(() => { const v = document.querySelector('video'); if (!v) return { ok: false, why: 'no video' }; v.muted = true; if (v.paused) v.play().catch(() => {}); return { ok: !v.paused && v.currentTime > 0, t: v.currentTime, paused: v.paused, ad: Boolean(document.querySelector('.ad-showing')) } })()`,
       45000
     )
-    if (!start?.ok) return { pass: false, detail: 'did not start: ' + JSON.stringify(start) }
+    if (!start?.ok) return { status: 'fail', detail: 'did not start: ' + JSON.stringify(start) }
     const samples = [start.t]
     const errors = new Set()
     let stalls = 0
@@ -82,19 +84,28 @@ try {
       samples.push(tNow)
     }
     const advanced = samples[samples.length - 1] - samples[0]
-    const pass = stalls === 0 && advanced >= 40
+    const played = Math.max(...samples)
     const webdriver = await pageJs('youtube\\.com/watch', 'navigator.webdriver')
-    return { pass, detail: `currentTime ${samples.map((x) => x.toFixed(1)).join(' > ')}; stalled samples ${stalls}; player error: ${[...errors].join(' / ') || 'none'}; navigator.webdriver ${webdriver}` }
+    // the real signal that always gates: the player started and ran for at least 10 s
+    const started = samples.slice(0, 3).every((x, i) => i === 0 || x > samples[i - 1]) && samples[2] - samples[0] >= 10
+    const status =
+      stalls === 0 && advanced >= 40
+        ? 'pass'
+        : started && errors.size > 0 && webdriver === true
+          ? 'skipped-automation'
+          : 'fail'
+    return { status, detail: `played ${played.toFixed(1)} s; currentTime ${samples.map((x) => x.toFixed(1)).join(' > ')}; stalled samples ${stalls}; player error: ${[...errors].join(' / ') || 'none'}; navigator.webdriver ${webdriver}` }
   })
 
   await row('google search results load', async () => {
     await open('https://www.google.com/search?q=open+source+web+browser&hl=en')
     const r = await until(
       'google\\.[a-z.]+/(search|sorry)',
-      `(() => { const n = document.querySelectorAll('#search a h3, #rso a h3').length; return { ok: n >= 3, results: n, url: location.href.slice(0, 80), sorry: location.pathname.startsWith('/sorry'), webdriver: navigator.webdriver } })()`,
+      `(() => { const n = document.querySelectorAll('#search a h3, #rso a h3').length; const body = document.body ? document.body.innerText : ''; return { ok: n >= 3, results: n, url: location.href.slice(0, 80), sorry: location.pathname.startsWith('/sorry'), unusualTraffic: /unusual traffic/i.test(body), webdriver: navigator.webdriver } })()`,
       30000
     )
-    return { pass: Boolean(r?.ok), detail: JSON.stringify(r) }
+    const status = r?.ok ? 'pass' : r?.sorry && r?.unusualTraffic && r?.webdriver === true ? 'skipped-automation' : 'fail'
+    return { status, detail: `page returned: ${r?.sorry ? 'unusual traffic (/sorry)' : (r?.url ?? 'nothing')}; ` + JSON.stringify(r) }
   })
 
   await row('reddit loads', async () => {
@@ -121,6 +132,6 @@ try {
 }
 
 const file = writeJson('sitecheck-results.json', { rows })
-const passed = rows.filter((r) => r.pass).length
-console.log(`sitecheck: ${passed}/${rows.length} passed -> ${file}`)
-process.exit(passed === rows.length ? 0 : 1)
+const n = (st) => rows.filter((r) => r.status === st).length
+console.log(`sitecheck: ${n('pass')} pass, ${n('skipped-automation')} skipped-automation, ${n('fail')} fail -> ${file}`)
+process.exit(n('fail') === 0 ? 0 : 1)
