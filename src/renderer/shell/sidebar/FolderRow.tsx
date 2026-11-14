@@ -65,7 +65,7 @@ export function FolderRow({ folder, depth, vs, space }: { folder: Item; depth: n
       {renaming ? (
         <RenameInput item={folder} />
       ) : (
-        <span className="ml-0.5 min-w-0 flex-1 truncate text-[13px] font-semibold leading-none">{itemTitle(folder)}</span>
+        <span className="ml-0.5 min-w-0 flex-1 truncate text-[13px] font-semibold leading-[18px]">{itemTitle(folder)}</span>
       )}
       {!renaming && !open && count > 0 && <span className="shrink-0 rounded-md bg-[var(--select)] px-1.5 text-[11px] font-semibold leading-[18px]">{count}</span>}
       <DropLine indicator={dnd.indicator} depth={depth} />

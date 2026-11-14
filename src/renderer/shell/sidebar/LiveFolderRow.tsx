@@ -69,7 +69,7 @@ export function LiveFolderRow({ folder, depth, vs, space: _space }: { folder: It
     >
       <ChevronRight size={14} strokeWidth={2.2} className="shrink-0 transition-transform duration-150" style={{ transform: open ? 'rotate(90deg)' : 'none' }} />
       <FolderSync size={16} strokeWidth={1.9} className="shrink-0" />
-      <span className="ml-0.5 min-w-0 flex-1 truncate text-[13px] font-semibold leading-none">{itemTitle(folder)}</span>
+      <span className="ml-0.5 min-w-0 flex-1 truncate text-[13px] font-semibold leading-[18px]">{itemTitle(folder)}</span>
       {error ? (
         <AlertCircle size={14} strokeWidth={2.2} className="shrink-0 text-[var(--danger)]" aria-label="Refresh failed" />
       ) : (

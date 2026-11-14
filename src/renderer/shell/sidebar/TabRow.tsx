@@ -160,7 +160,7 @@ export function TabRow({ item, depth, vs, space }: { item: Item; depth: number; 
       {renaming ? (
         <RenameInput item={item} />
       ) : (
-        <span className="min-w-0 flex-1 truncate text-[13px] leading-none" style={{ fontWeight: active ? 600 : 500 }}>
+        <span className="min-w-0 flex-1 truncate text-[13px] leading-[18px]" style={{ fontWeight: active ? 600 : 500 }}>
           {title}
         </span>
       )}
