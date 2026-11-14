@@ -1,0 +1,2 @@
+iteration	time	batch bug ids	sweep findings before	sweep findings after	tests exit	sitecheck pass/total	review verdict	pushed sha	installed sha
+1	2026-11-14T14:20-05:00	1,2,3	62	0	0	2/4	pending	pending	pending
