@@ -112,7 +112,10 @@
     "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/unit.mjs",
     "dist": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=true electron-builder --mac --arm64",
     "icon": "node scripts/make-icon.mjs",
-    "audit": "npm audit --omit=dev"
+    "audit": "npm audit --omit=dev",
+    "sweep": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON qa/sweep.mjs",
+    "sitecheck": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON qa/sitecheck.mjs",
+    "reliability": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON qa/reliability.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
