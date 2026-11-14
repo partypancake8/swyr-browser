@@ -9,6 +9,7 @@ import { Core } from './windows/WindowManager'
 import { registerIpc } from './ipc'
 import { startAutoArchive, runAutoArchive } from './archive/AutoArchive'
 import { installTestHook, installTestStdio } from './test/TestHook'
+import { runSiteCheck } from './test/SiteCheck'
 import { initPlatform } from './commands/platform'
 import { setupAppIdentity } from './menu/About'
 import { startOnboarding } from './onboarding/Onboarding'
@@ -57,6 +58,8 @@ const ready = new Promise<Core>((resolve) => (markReady = resolve))
 if (TEST) {
   installTestHook(ready, () => core)
   installTestStdio()
+  // the in-process site check: test runs only, started from the environment, never from a page
+  if (process.env.SWYR_SITECHECK) void runSiteCheck(ready, path.resolve(process.env.SWYR_SITECHECK))
 }
 
 /**
