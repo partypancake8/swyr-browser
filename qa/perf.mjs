@@ -2,11 +2,15 @@
 // Writes qa/out/perf-results.json. With --compare, exits 1 when a metric is more than 25 percent worse
 // than qa/perf-baseline.json (its "after" block when present, else its "metrics").
 // Options: --runs N (default 3), --compare, --save-baseline before|after (writes the medians into the baseline file).
+/* global process, console, setTimeout, setInterval, clearInterval, performance, Buffer */
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import http from 'node:http'
-import { launch, repo, sleep } from '../tests/harness.mjs'
+import { createRequire } from 'node:module'
+import { repo, sleep } from '../tests/harness.mjs'
+
+const { _electron } = createRequire(path.join(repo, 'package.json'))('playwright')
 
 const argv = process.argv.slice(2)
 const flag = (name) => argv.includes(name)
@@ -27,8 +31,53 @@ const SETTINGS = {
   window: 'hidden (SWYR_TEST=1)',
   warmTabs: 'app default (SWYR_WARM_TABS unset)',
   rendererProcessLimit: process.env.SWYR_RENDERER_LIMIT,
-  userData: 'fresh temp dir per run',
+  userData: 'fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)',
+  switches: 'Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)',
   pages: 'qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)'
+}
+
+const withTimeout = (p, ms, label) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout: ' + label)), ms))])
+
+/** the built app under the test hook, like tests/harness.mjs, with throttling left as it is in a normal launch */
+async function launch({ userData }) {
+  const app = await _electron.launch({
+    args: ['-r', path.join(repo, 'qa/perf-switches.cjs'), path.join(repo, 'out/main/index.js')],
+    env: { ...process.env, SWYR_TEST: '1', SWYR_USER_DATA: userData, SWYR_SKIP_ONBOARDING: '1' },
+    timeout: 60000
+  })
+  const t = {
+    app,
+    state: () => withTimeout(app.evaluate(() => globalThis.__swyr?.getState() ?? null), 10000, 'getState'),
+    dispatch: (command, payload) => withTimeout(app.evaluate((_e, [c, p]) => globalThis.__swyr.dispatch(c, p), [command, payload]), 15000, command),
+    async waitFor(pred, label, ms = 30000) {
+      const t0 = Date.now()
+      while (Date.now() - t0 < ms) {
+        const s = await t.state()
+        if (s && pred(s)) return s
+        await sleep(250)
+      }
+      throw new Error('timeout waiting for ' + label)
+    },
+    close: () => withTimeout(app.close(), 15000, 'close').catch(() => app.process().kill('SIGKILL'))
+  }
+  return t
+}
+
+// warm-up launch: fills the disk cache and fetches the ad blocker lists once, as a returning user has them
+const seedDir = fs.mkdtempSync(path.join(os.tmpdir(), 'swyr-perf-seed-'))
+let adblockLists = 'bundled'
+{
+  const t = await launch({ userData: seedDir })
+  for (let i = 0; i < 40 && adblockLists !== 'full'; i++) {
+    await sleep(250)
+    adblockLists = (await t.dispatch('platform.state', {}).catch(() => null))?.adblockLists ?? adblockLists
+  }
+  await t.close()
+}
+SETTINGS.adblockLists = adblockLists
+const seed = (dir) => {
+  const src = path.join(seedDir, 'adblock')
+  if (fs.existsSync(src)) fs.cpSync(src, path.join(dir, 'adblock'), { recursive: true })
 }
 
 // fixture server: local files only, no network
@@ -75,22 +124,117 @@ async function openTabs(t, from, to) {
   await waitLoaded(t)
 }
 
+/** median of 20 switches among the 4 most recent tabs, until the sidebar shows the new active row */
+async function switchLatency(t) {
+  const ids = (await t.state()).windows[0].loaded.slice(0, 4)
+  const switches = []
+  for (let i = 0; i < 20; i++) {
+    const id = ids[(i + 1) % ids.length]
+    switches.push(
+      await t.app.evaluate(async ({ webContents }, id) => {
+        const shell = webContents.getAllWebContents().find((w) => w.getURL().startsWith('swyr://shell'))
+        const start = performance.now()
+        await globalThis.__swyr.dispatch('tab.activate', { id })
+        const probe = `(() => { const el = document.querySelector('[data-item-id="${id}"]'); return Boolean(el && el.className.includes('row-active')) })()`
+        while (!(await shell.executeJavaScript(probe))) await new Promise((r) => setTimeout(r, 1))
+        return performance.now() - start
+      }, id)
+    )
+    await sleep(150)
+  }
+  return median(switches)
+}
+
+async function waitReady(t) {
+  for (;;) {
+    const ready = await t.app.evaluate(({ webContents }) => {
+      const all = webContents.getAllWebContents()
+      const shell = all.find((w) => w.getURL().startsWith('swyr://shell'))
+      return Boolean(globalThis.__swyr?.getState()?.windows?.length && shell && !all.some((w) => w.isLoading()))
+    })
+    if (ready) return
+    await sleep(10)
+  }
+}
+
+/** cumulative CPU seconds of the main process, the shell and the overlay */
+async function cpuByRole(t) {
+  return t.app.evaluate(({ app, webContents }) => {
+    const role = new Map()
+    for (const w of webContents.getAllWebContents()) {
+      const u = w.getURL()
+      role.set(w.getOSProcessId(), u.startsWith('swyr://shell') ? 'shell' : u.startsWith('swyr://overlay') ? 'overlay' : 'page')
+    }
+    const out = { main: 0, shell: 0, overlay: 0 }
+    for (const m of app.getAppMetrics()) {
+      const k = m.type === 'Browser' ? 'main' : role.get(m.pid)
+      if (k in out) out[k] += m.cpu.cumulativeCPUUsage ?? 0
+    }
+    return out
+  })
+}
+
+/**
+ * a returning user's profile: 60 pinned tabs and a full archive (2000 entries), every item with a small data: favicon,
+ * the shape a few months of use leave in state.json
+ */
+function writeHeavyState(dir) {
+  const st = JSON.parse(fs.readFileSync(path.join(seedDir, 'state.json'), 'utf8'))
+  const space = st.spaces[0]
+  const icon = 'data:image/png;base64,' + Buffer.alloc(900, 7).toString('base64')
+  const now = Date.now()
+  const mk = (i, section) => ({
+    id: 'perf' + i,
+    spaceId: space.id,
+    profileId: space.profileId,
+    parentId: null,
+    section,
+    kind: 'tab',
+    order: i,
+    customTitle: null,
+    pinnedUrl: section === 'pinned' ? `https://site${i}.example/` : null,
+    url: `https://site${i}.example/some/long/path/${i}?q=${'x'.repeat(40)}`,
+    title: `Some page title number ${i} - Example site`,
+    favicon: icon,
+    createdAt: now - 1e8,
+    lastActiveAt: now - 1e7
+  })
+  st.items.push(...Array.from({ length: 60 }, (_, i) => mk(i, 'pinned')))
+  st.archive = Array.from({ length: 2000 }, (_, i) => ({ id: 'perfa' + i, item: mk(1000 + i, 'today'), archivedAt: now - i * 1e5, reason: 'auto' }))
+  fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify(st))
+}
+
+async function heavyRun(r) {
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'swyr-perf-heavy-'))
+  seed(userData)
+  writeHeavyState(userData)
+  const t = await launch({ userData })
+  try {
+    await waitReady(t)
+    await sleep(2000)
+    const c0 = await cpuByRole(t)
+    await openTabs(t, 100, 110)
+    await sleep(3000)
+    const c1 = await cpuByRole(t)
+    r.heavyMainCpu = c1.main - c0.main
+    r.heavyUiCpu = c1.shell - c0.shell + (c1.overlay - c0.overlay)
+    r.heavyTabSwitch = await switchLatency(t)
+    r.heavyStateSize = fs.statSync(path.join(userData, 'state.json')).size / 1024
+  } finally {
+    await t.close()
+    fs.rmSync(userData, { recursive: true, force: true })
+  }
+}
+
 async function oneRun(run) {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'swyr-perf-'))
+  seed(userData)
   const r = {}
   const t0 = performance.now()
   const t = await launch({ userData })
   try {
     // cold start: process spawn until the window's shell and overlay finished loading and nothing is loading
-    for (;;) {
-      const ready = await t.app.evaluate(({ webContents }) => {
-        const all = webContents.getAllWebContents()
-        const shell = all.find((w) => w.getURL().startsWith('swyr://shell'))
-        return Boolean(globalThis.__swyr?.getState()?.windows?.length && shell && !all.some((w) => w.isLoading()))
-      })
-      if (ready) break
-      await sleep(10)
-    }
+    await waitReady(t)
     r.coldStart = performance.now() - t0
     await sleep(2000)
 
@@ -150,24 +294,7 @@ async function oneRun(run) {
     r.loadedAt20 = (await t.state()).windows[0].loaded.length
 
     // tab switch latency: command until the sidebar shows the new active row, over the 4 most recent (warm) tabs
-    const s = await t.state()
-    const ids = s.windows[0].loaded.slice(0, 4)
-    const switches = []
-    for (let i = 0; i < 20; i++) {
-      const id = ids[(i + 1) % ids.length]
-      switches.push(
-        await t.app.evaluate(async ({ webContents }, id) => {
-          const shell = webContents.getAllWebContents().find((w) => w.getURL().startsWith('swyr://shell'))
-          const start = performance.now()
-          await globalThis.__swyr.dispatch('tab.activate', { id })
-          const probe = `(() => { const el = document.querySelector('[data-item-id="${id}"]'); return Boolean(el && el.className.includes('row-active')) })()`
-          while (!(await shell.executeJavaScript(probe))) await new Promise((r) => setTimeout(r, 1))
-          return performance.now() - start
-        }, id)
-      )
-      await sleep(150)
-    }
-    r.tabSwitch = median(switches)
+    r.tabSwitch = await switchLatency(t)
 
     // command bar open latency: command until the overlay renders a focused command input
     const opens = []
@@ -187,6 +314,13 @@ async function oneRun(run) {
     }
     r.commandBar = median(opens)
 
+    // leaks on tab close: close 19 of the 20 tabs, then count what is still alive
+    const keepId = (await t.state()).windows[0].activeItemId
+    for (const item of (await t.state()).items.filter((i) => i.kind === 'tab' && i.id !== keepId)) await t.dispatch('tab.close', { id: item.id })
+    await sleep(3000)
+    r.liveAfterClose = await t.app.evaluate(({ webContents }) => webContents.getAllWebContents().filter((w) => !w.isDestroyed()).length)
+    r.rssAfterClose = totalMB(await metrics(t))
+
     // quit time: app.quit() until the main process exits
     const proc = t.app.process()
     const exited = new Promise((res) => proc.once('exit', res))
@@ -205,6 +339,7 @@ async function oneRun(run) {
   } finally {
     fs.rmSync(userData, { recursive: true, force: true })
   }
+  await heavyRun(r)
   console.log(`run ${run}:`, JSON.stringify(Object.fromEntries(Object.entries(r).map(([k, v]) => [k, round(v)]))))
   return r
 }
@@ -217,7 +352,13 @@ const DEFS = [
   ['idle_cpu_10_bg_tabs_pct', 'idleCpu', '% of one core', '30 s idle, 1 active + 10 background fixture tabs'],
   ['tab_switch_ms', 'tabSwitch', 'ms', 'median of 20 switches among 4 warm tabs, until the sidebar row is active'],
   ['command_bar_open_ms', 'commandBar', 'ms', 'median of 10 opens, until the command input has focus'],
-  ['quit_ms', 'quit', 'ms', 'app.quit() until the main process exits, 20 tabs open'],
+  ['live_webcontents_after_close', 'liveAfterClose', 'webContents', 'live webContents after closing 19 of 20 tabs (shell, overlay, 1 tab expected)'],
+  ['rss_after_close_mb', 'rssAfterClose', 'MB', 'total working set 3 s after closing 19 of 20 tabs'],
+  ['quit_ms', 'quit', 'ms', 'app.quit() until the main process exits, 1 tab left open'],
+  ['heavy_tab_switch_ms', 'heavyTabSwitch', 'ms', 'tab switch as above, returning-user profile (60 pinned tabs, 2000 archive entries)'],
+  ['heavy_main_cpu_10_opens_s', 'heavyMainCpu', 'CPU s', 'main process CPU seconds while 10 tabs open and load, returning-user profile'],
+  ['heavy_ui_cpu_10_opens_s', 'heavyUiCpu', 'CPU s', 'shell + overlay renderer CPU seconds while 10 tabs open and load, returning-user profile'],
+  ['heavy_state_json_kb', 'heavyStateSize', 'KB', 'state.json size, returning-user profile'],
   ['state_writes_60s_idle', 'stateWrites', 'writes', 'state.json replacements during 60 s idle, 11 tabs'],
   ['state_json_kb', 'stateSize', 'KB', 'state.json size after the idle window, 11 tabs'],
   ['loaded_views_at_idle', 'loadedAtIdle', 'views', 'tab views kept loaded during the idle window (of 11 tabs)'],
@@ -229,6 +370,7 @@ try {
   for (let i = 1; i <= RUNS; i++) runs.push(await oneRun(i))
 } finally {
   server.close()
+  fs.rmSync(seedDir, { recursive: true, force: true })
 }
 
 const result = {
@@ -264,7 +406,7 @@ if (flag('--compare')) {
   const base = JSON.parse(fs.readFileSync(baselineFile, 'utf8'))
   const ref = base.after?.metrics ?? base.metrics
   // lower is better for every metric; small absolute slack keeps near-zero values from tripping on noise
-  const SLACK = { ms: 15, MB: 40, '% of one core': 2, writes: 1, KB: 1, views: 0 }
+  const SLACK = { ms: 15, MB: 40, '% of one core': 2, writes: 1, KB: 1, views: 0, webContents: 0, 'CPU s': 0.05 }
   let worse = 0
   for (const m of result.metrics) {
     const b = ref.find((x) => x.name === m.name)
