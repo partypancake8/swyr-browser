@@ -1,0 +1,175 @@
+{
+  "note": "medians of npm run perf; \"metrics\" is the code before the performance fixes, \"after\" once they landed",
+  "date": "2026-11-14T19:01:51.983Z",
+  "runs": 3,
+  "metrics": [
+    {
+      "name": "cold_start_ms",
+      "value": 446.4,
+      "unit": "ms",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "spawn until shell and overlay loaded and idle"
+      }
+    },
+    {
+      "name": "rss_1_tab_mb",
+      "value": 891.5,
+      "unit": "MB",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "sum of working set over app.getAppMetrics(), 1 fixture tab"
+      }
+    },
+    {
+      "name": "rss_10_tabs_mb",
+      "value": 1674.1,
+      "unit": "MB",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "same, 10 fixture tabs opened"
+      }
+    },
+    {
+      "name": "rss_20_tabs_mb",
+      "value": 1543.3,
+      "unit": "MB",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "same, 20 fixture tabs opened"
+      }
+    },
+    {
+      "name": "idle_cpu_10_bg_tabs_pct",
+      "value": 41.2,
+      "unit": "% of one core",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "30 s idle, 1 active + 10 background fixture tabs"
+      }
+    },
+    {
+      "name": "tab_switch_ms",
+      "value": 5.6,
+      "unit": "ms",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "median of 20 switches among 4 warm tabs, until the sidebar row is active"
+      }
+    },
+    {
+      "name": "command_bar_open_ms",
+      "value": 4.5,
+      "unit": "ms",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "median of 10 opens, until the command input has focus"
+      }
+    },
+    {
+      "name": "quit_ms",
+      "value": 59.6,
+      "unit": "ms",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "app.quit() until the main process exits, 20 tabs open"
+      }
+    },
+    {
+      "name": "state_writes_60s_idle",
+      "value": 0,
+      "unit": "writes",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "state.json replacements during 60 s idle, 11 tabs"
+      }
+    },
+    {
+      "name": "state_json_kb",
+      "value": 5.8,
+      "unit": "KB",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "state.json size after the idle window, 11 tabs"
+      }
+    },
+    {
+      "name": "loaded_views_at_idle",
+      "value": 8,
+      "unit": "views",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "tab views kept loaded during the idle window (of 11 tabs)"
+      }
+    },
+    {
+      "name": "loaded_views_at_20",
+      "value": 8,
+      "unit": "views",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "how": "tab views kept loaded with 20 tabs open"
+      }
+    }
+  ]
+}
