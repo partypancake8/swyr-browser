@@ -115,6 +115,8 @@ export class Extensions {
   private readonly iconCache = new Map<string, string | undefined>()
   /** true while swyr itself reports a selection, so the host callback does not echo it back */
   private selecting = false
+  /** the tab swyr last reported as focused */
+  private lastSelected: WebContents | null = null
 
   constructor(private readonly host: ExtensionsHost) {}
 
@@ -356,10 +358,18 @@ export class Extensions {
 
   // ----- tab tracking (called by TabViews)
   tabAdded(wc: WebContents, win: BaseWindow): void {
+    // the extensions library marks every tab it starts tracking as the active one and asks the host to select it,
+    // which brought background tabs (Cmd+click) to the front; adding a tab is not a selection, so swyr ignores that
+    // and tells the library again which tab really has focus
+    this.selecting = true
     try {
       ElectronChromeExtensions.fromSession(wc.session)?.addTab(wc, win)
+      const last = this.lastSelected
+      if (last && last !== wc && !last.isDestroyed() && last.session === wc.session) ElectronChromeExtensions.fromSession(wc.session)?.selectTab(last)
     } catch {
       /* the tab's session has no extension support */
+    } finally {
+      this.selecting = false
     }
     wc.on('dom-ready', () => relabelStore(wc))
   }
@@ -373,6 +383,7 @@ export class Extensions {
   }
 
   tabSelected(wc: WebContents): void {
+    this.lastSelected = wc
     this.selecting = true
     try {
       if (!wc.isDestroyed()) ElectronChromeExtensions.fromSession(wc.session)?.selectTab(wc)

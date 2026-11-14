@@ -436,6 +436,12 @@ export function registerItemCommands(c: Commands): void {
     }
     core.store.update((st) => {
       st.archive = st.archive.filter((a) => a.id !== entry.id)
+      // a tab closed a moment ago (Cmd+W, then Cmd+Shift+T) goes back to the place it was closed from
+      if (entry.reason === 'closed' && !isFolder && snap.section === 'today' && !snap.parentId && snap.spaceId === space.id) {
+        const list = siblingsOf(st, { section, spaceId: space.id, profileId: space.profileId, parentId: null }).sort((a, b) => a.order - b.order)
+        list.splice(list.filter((i) => i.order < snap.order).length, 0, item)
+        renumber(list)
+      }
       st.items.push(item, ...panes)
     })
     if (space.id !== w.activeSpaceId) w.switchSpace(space.id)
