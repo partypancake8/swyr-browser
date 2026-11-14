@@ -407,11 +407,13 @@ if (flag('--compare')) {
   const ref = base.after?.metrics ?? base.metrics
   // lower is better for every metric; small absolute slack keeps near-zero values from tripping on noise
   const SLACK = { ms: 15, MB: 40, '% of one core': 2, writes: 1, KB: 1, views: 0, webContents: 0, 'CPU s': 0.05 }
+  // quit has rare slow exits (P-008 in bugs/performance.md): one in a few runs takes 150 to 900 ms
+  const SLACK_BY_NAME = { quit_ms: 150 }
   let worse = 0
   for (const m of result.metrics) {
     const b = ref.find((x) => x.name === m.name)
     if (!b) continue
-    const limit = b.value * 1.25 + (SLACK[m.unit] ?? 0)
+    const limit = b.value * 1.25 + (SLACK_BY_NAME[m.name] ?? SLACK[m.unit] ?? 0)
     const bad = m.value > limit
     if (bad) worse++
     console.log(`${bad ? 'WORSE' : 'ok   '} ${m.name}: ${m.value} vs ${b.value} (limit ${round(limit)})`)
