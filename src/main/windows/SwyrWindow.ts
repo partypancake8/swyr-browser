@@ -43,6 +43,8 @@ export class SwyrWindow {
   fullscreen = false
   readonly lastActiveBySpace = new Map<string, string>()
   private overlayAttached = false
+  /** whether the overlay was attached when it was last sent the state */
+  private overlaySynced = false
   private overlaySeq = 0
   private shown = false
   private toastTimer: NodeJS.Timeout | null = null
@@ -395,9 +397,15 @@ export class SwyrWindow {
   sendState(): void {
     if (this.closed) return
     const vs = this.viewState()
-    for (const wc of [this.shell.webContents, this.overlay.webContents]) {
-      if (!wc.isDestroyed()) wc.send('swyr:state', vs)
-    }
+    // every send is a structured clone of the whole state, and the archive (up to 2000 entries) is most of it in a
+    // long-used profile: the sidebar never shows the archive, so it gets the state without it
+    const shell = this.shell.webContents
+    if (!shell.isDestroyed()) shell.send('swyr:state', { ...vs, state: { ...vs.state, archive: [] } })
+    // the overlay is off screen unless it is attached: it gets the state while attached, plus one last time after it
+    // detaches so it never shows a stale overlay when it is attached again (it reads the state itself when it loads)
+    const overlay = this.overlay.webContents
+    if (!overlay.isDestroyed() && (this.overlayAttached || this.overlaySynced)) overlay.send('swyr:state', vs)
+    this.overlaySynced = this.overlayAttached
     for (const [, v] of this.tabs.views) {
       const wc = v.webContents
       if (!wc.isDestroyed() && wc.getURL().startsWith('swyr:')) wc.send('swyr:state', vs)

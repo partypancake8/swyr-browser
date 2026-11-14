@@ -1,0 +1,589 @@
+{
+  "note": "medians of npm run perf; \"metrics\" is the code before the performance fixes, \"after\" once they landed",
+  "date": "2026-11-14T19:23:32.802Z",
+  "runs": 3,
+  "metrics": [
+    {
+      "name": "cold_start_ms",
+      "value": 404.9,
+      "unit": "ms",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "spawn until shell and overlay loaded and idle"
+      }
+    },
+    {
+      "name": "rss_1_tab_mb",
+      "value": 702,
+      "unit": "MB",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "sum of working set over app.getAppMetrics(), 1 fixture tab"
+      }
+    },
+    {
+      "name": "rss_10_tabs_mb",
+      "value": 1492.8,
+      "unit": "MB",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "same, 10 fixture tabs opened"
+      }
+    },
+    {
+      "name": "rss_20_tabs_mb",
+      "value": 1492.6,
+      "unit": "MB",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "same, 20 fixture tabs opened"
+      }
+    },
+    {
+      "name": "idle_cpu_10_bg_tabs_pct",
+      "value": 34.3,
+      "unit": "% of one core",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "30 s idle, 1 active + 10 background fixture tabs"
+      }
+    },
+    {
+      "name": "tab_switch_ms",
+      "value": 4.9,
+      "unit": "ms",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "median of 20 switches among 4 warm tabs, until the sidebar row is active"
+      }
+    },
+    {
+      "name": "command_bar_open_ms",
+      "value": 4,
+      "unit": "ms",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "median of 10 opens, until the command input has focus"
+      }
+    },
+    {
+      "name": "live_webcontents_after_close",
+      "value": 3,
+      "unit": "webContents",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "live webContents after closing 19 of 20 tabs (shell, overlay, 1 tab expected)"
+      }
+    },
+    {
+      "name": "rss_after_close_mb",
+      "value": 758,
+      "unit": "MB",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "total working set 3 s after closing 19 of 20 tabs"
+      }
+    },
+    {
+      "name": "quit_ms",
+      "value": 59.4,
+      "unit": "ms",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "app.quit() until the main process exits, 1 tab left open"
+      }
+    },
+    {
+      "name": "heavy_tab_switch_ms",
+      "value": 11,
+      "unit": "ms",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "tab switch as above, returning-user profile (60 pinned tabs, 2000 archive entries)"
+      }
+    },
+    {
+      "name": "heavy_main_cpu_10_opens_s",
+      "value": 0.3,
+      "unit": "CPU s",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "main process CPU seconds while 10 tabs open and load, returning-user profile"
+      }
+    },
+    {
+      "name": "heavy_ui_cpu_10_opens_s",
+      "value": 0.3,
+      "unit": "CPU s",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "shell + overlay renderer CPU seconds while 10 tabs open and load, returning-user profile"
+      }
+    },
+    {
+      "name": "heavy_state_json_kb",
+      "value": 3623.8,
+      "unit": "KB",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "state.json size, returning-user profile"
+      }
+    },
+    {
+      "name": "state_writes_60s_idle",
+      "value": 0,
+      "unit": "writes",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "state.json replacements during 60 s idle, 11 tabs"
+      }
+    },
+    {
+      "name": "state_json_kb",
+      "value": 5.8,
+      "unit": "KB",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "state.json size after the idle window, 11 tabs"
+      }
+    },
+    {
+      "name": "loaded_views_at_idle",
+      "value": 8,
+      "unit": "views",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "tab views kept loaded during the idle window (of 11 tabs)"
+      }
+    },
+    {
+      "name": "loaded_views_at_20",
+      "value": 8,
+      "unit": "views",
+      "settings": {
+        "build": "production (electron-vite build, out/)",
+        "window": "hidden (SWYR_TEST=1)",
+        "warmTabs": "app default (SWYR_WARM_TABS unset)",
+        "rendererProcessLimit": "64",
+        "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+        "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+        "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+        "adblockLists": "full",
+        "how": "tab views kept loaded with 20 tabs open"
+      }
+    }
+  ],
+  "after": {
+    "date": "2026-11-14T19:28:53.349Z",
+    "runs": 3,
+    "metrics": [
+      {
+        "name": "cold_start_ms",
+        "value": 378.4,
+        "unit": "ms",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "spawn until shell and overlay loaded and idle"
+        }
+      },
+      {
+        "name": "rss_1_tab_mb",
+        "value": 700.5,
+        "unit": "MB",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "sum of working set over app.getAppMetrics(), 1 fixture tab"
+        }
+      },
+      {
+        "name": "rss_10_tabs_mb",
+        "value": 1488.4,
+        "unit": "MB",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "same, 10 fixture tabs opened"
+        }
+      },
+      {
+        "name": "rss_20_tabs_mb",
+        "value": 1479.8,
+        "unit": "MB",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "same, 20 fixture tabs opened"
+        }
+      },
+      {
+        "name": "idle_cpu_10_bg_tabs_pct",
+        "value": 35.4,
+        "unit": "% of one core",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "30 s idle, 1 active + 10 background fixture tabs"
+        }
+      },
+      {
+        "name": "tab_switch_ms",
+        "value": 5.1,
+        "unit": "ms",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "median of 20 switches among 4 warm tabs, until the sidebar row is active"
+        }
+      },
+      {
+        "name": "command_bar_open_ms",
+        "value": 3.8,
+        "unit": "ms",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "median of 10 opens, until the command input has focus"
+        }
+      },
+      {
+        "name": "live_webcontents_after_close",
+        "value": 3,
+        "unit": "webContents",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "live webContents after closing 19 of 20 tabs (shell, overlay, 1 tab expected)"
+        }
+      },
+      {
+        "name": "rss_after_close_mb",
+        "value": 747.7,
+        "unit": "MB",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "total working set 3 s after closing 19 of 20 tabs"
+        }
+      },
+      {
+        "name": "quit_ms",
+        "value": 49.1,
+        "unit": "ms",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "app.quit() until the main process exits, 1 tab left open"
+        }
+      },
+      {
+        "name": "heavy_tab_switch_ms",
+        "value": 6.1,
+        "unit": "ms",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "tab switch as above, returning-user profile (60 pinned tabs, 2000 archive entries)"
+        }
+      },
+      {
+        "name": "heavy_main_cpu_10_opens_s",
+        "value": 0.3,
+        "unit": "CPU s",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "main process CPU seconds while 10 tabs open and load, returning-user profile"
+        }
+      },
+      {
+        "name": "heavy_ui_cpu_10_opens_s",
+        "value": 0.1,
+        "unit": "CPU s",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "shell + overlay renderer CPU seconds while 10 tabs open and load, returning-user profile"
+        }
+      },
+      {
+        "name": "heavy_state_json_kb",
+        "value": 3395.6,
+        "unit": "KB",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "state.json size, returning-user profile"
+        }
+      },
+      {
+        "name": "state_writes_60s_idle",
+        "value": 0,
+        "unit": "writes",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "state.json replacements during 60 s idle, 11 tabs"
+        }
+      },
+      {
+        "name": "state_json_kb",
+        "value": 4.7,
+        "unit": "KB",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "state.json size after the idle window, 11 tabs"
+        }
+      },
+      {
+        "name": "loaded_views_at_idle",
+        "value": 8,
+        "unit": "views",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "tab views kept loaded during the idle window (of 11 tabs)"
+        }
+      },
+      {
+        "name": "loaded_views_at_20",
+        "value": 8,
+        "unit": "views",
+        "settings": {
+          "build": "production (electron-vite build, out/)",
+          "window": "hidden (SWYR_TEST=1)",
+          "warmTabs": "app default (SWYR_WARM_TABS unset)",
+          "rendererProcessLimit": "64",
+          "userData": "fresh temp dir per run, seeded with the ad blocker cache of a warm-up launch (a returning user)",
+          "switches": "Playwright automation switches that stop background throttling removed (qa/perf-switches.cjs)",
+          "pages": "qa/fixtures/perf/page.html over 127.0.0.1 (timers + CSS animation)",
+          "adblockLists": "full",
+          "how": "tab views kept loaded with 20 tabs open"
+        }
+      }
+    ]
+  }
+}

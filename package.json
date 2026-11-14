@@ -116,7 +116,8 @@
     "audit": "npm audit --omit=dev",
     "sweep": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON qa/sweep.mjs",
     "sitecheck": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON qa/sitecheck.mjs",
-    "reliability": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON qa/reliability.mjs"
+    "reliability": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON qa/reliability.mjs",
+    "perf": "electron-vite build && node qa/perf.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

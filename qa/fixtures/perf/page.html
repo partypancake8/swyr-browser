@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perf fixture</title>
+<style>
+  body { font: 15px/1.5 -apple-system, system-ui, sans-serif; margin: 0; color: #222; background: #fafafa; }
+  header { position: sticky; top: 0; background: #fff; border-bottom: 1px solid #ddd; padding: 12px 24px; display: flex; gap: 16px; align-items: center; }
+  .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ccc; border-top-color: #333; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  main { max-width: 760px; margin: 0 auto; padding: 24px; }
+  .card { background: #fff; border: 1px solid #e3e3e3; border-radius: 8px; padding: 16px; margin: 12px 0; }
+</style>
+</head>
+<body>
+<!-- A page shaped like a typical site: sticky header, a spinner, a ticking clock and a feed of cards. -->
+<header><div class="spinner"></div><strong id="name">Perf fixture</strong><span id="clock"></span></header>
+<main id="feed"></main>
+<script>
+  const n = new URLSearchParams(location.search).get('n') || '0'
+  document.title = 'Perf fixture ' + n
+  document.getElementById('name').textContent = 'Perf fixture ' + n
+  const feed = document.getElementById('feed')
+  for (let i = 0; i < 60; i++) {
+    const card = document.createElement('div')
+    card.className = 'card'
+    card.innerHTML = '<h3>Item ' + i + '</h3><p>' + 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(4) + '</p>'
+    feed.appendChild(card)
+  }
+  // the kind of timers real sites keep running: a clock and a little background work
+  const clock = document.getElementById('clock')
+  setInterval(() => { clock.textContent = new Date().toLocaleTimeString() }, 100)
+  let acc = 0
+  setInterval(() => { for (let i = 0; i < 20000; i++) acc = (acc + i * 7) % 1000003 }, 50)
+</script>
+</body>
+</html>
