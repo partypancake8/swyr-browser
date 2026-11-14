@@ -110,6 +110,7 @@
     "postinstall": "install-electron",
     "licenses": "node scripts/licenses.mjs",
     "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/unit.mjs",
+    "behaviour": "electron-vite build && node qa/behaviour.mjs",
     "dist": "electron-vite build && CSC_IDENTITY_AUTO_DISCOVERY=true electron-builder --mac --arm64",
     "icon": "node scripts/make-icon.mjs",
     "audit": "npm audit --omit=dev"

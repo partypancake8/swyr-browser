@@ -1,5 +1,5 @@
 // Test hook (SWYR_TEST=1 only): globalThis.__swyr drives the app headlessly.
-import { nativeImage, type NativeImage, type WebContentsView } from 'electron'
+import { nativeImage, type NativeImage, type WebContents, type WebContentsView } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import type { Rect, TestState } from '@shared/types'
@@ -7,6 +7,7 @@ import { TAB_RADIUS } from '../views/TabViews'
 import { PREVIEW_RADIUS } from '../layout/Layout'
 import { MINI_RADIUS } from '../windows/MiniWindow'
 import type { Core } from '../windows/WindowManager'
+import type { SwyrWindow } from '../windows/SwyrWindow'
 import { activePartition, platformRuntime } from '../commands/platform'
 import { partitionOf } from '../profiles/Profiles'
 import { probe as probeFrontmost, setSourceAppOverride } from '../linkrules/SourceApp'
@@ -35,6 +36,11 @@ export interface SwyrTestHook {
   setSourceApp?(app: { name: string; bundleId?: string } | null | undefined): void
   /** run the real frontmost-app probe once and report what it saw and how long it took */
   probeSourceApp?(): Promise<{ app: { name: string; bundleId: string } | null; ms: number }>
+  // behaviour suite
+  /** send input events (keys, chars, mouse) to the first window's active page, shell or overlay; false when it is not there */
+  sendInput?(target: 'page' | 'shell' | 'overlay', events: Array<Electron.InputEvent & { wait?: number }>): Promise<boolean>
+  /** which of the first window's contents has keyboard focus */
+  focusedTarget?(): 'page' | 'shell' | 'overlay' | null
 }
 
 declare global {
@@ -214,6 +220,41 @@ export function installTestHook(ready: Promise<Core>, current: () => Core | null
     const w = core.windows.find((x) => x.id === windowId && !x.closed)
     if (!w || w.shell.webContents.isDestroyed()) throw new Error(`no window ${windowId}`)
     return json(await w.shell.webContents.executeJavaScript(js, true))
+  }
+  const target = (w: SwyrWindow | undefined, which: 'page' | 'shell' | 'overlay'): WebContents | undefined =>
+    which === 'page' ? w?.activeContents() : which === 'shell' ? w?.shell.webContents : w?.overlay.webContents
+  hook.sendInput = async (which, events) => {
+    const core = await ready
+    for (let i = 0; i < 100; i++) {
+      const wc = target(core.first(), which)
+      if (wc && !wc.isDestroyed() && !wc.isLoading()) {
+        for (const e of events) {
+          if (e.wait) await new Promise((r) => setTimeout(r, e.wait))
+          else wc.sendInputEvent(e as Parameters<WebContents['sendInputEvent']>[0])
+        }
+        return true
+      }
+      await new Promise((r) => setTimeout(r, 100))
+    }
+    return false
+  }
+  // hidden windows never become key, so isFocused() stays false; the last contents swyr asked to focus stands in for it
+  let lastFocused = -1
+  void ready.then((core) => {
+    const proto = Object.getPrototypeOf(core.first()?.shell.webContents ?? {}) as { focus?: (this: WebContents) => void }
+    const original = proto.focus
+    if (typeof original !== 'function') return
+    proto.focus = function (this: WebContents) {
+      lastFocused = this.id
+      return original.call(this)
+    }
+  })
+  hook.focusedTarget = () => {
+    const w = current()?.first()
+    const all = (['page', 'overlay', 'shell'] as const).map((which) => [which, target(w, which)] as const)
+    for (const [which, wc] of all) if (wc && !wc.isDestroyed() && wc.isFocused()) return which
+    for (const [which, wc] of all) if (wc && !wc.isDestroyed() && wc.id === lastFocused) return which
+    return null
   }
   if (!hook.evalInActiveTab) {
     hook.evalInActiveTab = async (js: string): Promise<unknown> => {
