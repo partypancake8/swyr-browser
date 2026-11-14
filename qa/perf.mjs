@@ -2,7 +2,6 @@
 // Writes qa/out/perf-results.json. With --compare, exits 1 when a metric is more than 25 percent worse
 // than qa/perf-baseline.json (its "after" block when present, else its "metrics").
 // Options: --runs N (default 3), --compare, --save-baseline before|after (writes the medians into the baseline file).
-/* global process, console, setTimeout, setInterval, clearInterval, performance, Buffer */
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
